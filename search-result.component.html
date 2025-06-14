@@ -1,0 +1,70 @@
+<!-- We bind to `activeIndex` to control the accordion's open/closed state from our service -->
+<p-accordion [multiple]="true" [activeIndex]="search.isExpanded ? 0 : -1" styleClass="result-accordion">
+  
+    <!-- We use the `p-accordionTab` component. [toggleable] allows users to click the header to close it. -->
+    <p-accordionTab [toggleable]="true" (click)="toggleExpansion()">
+      
+      <!-- The header template is where we build our custom, dynamic header -->
+      <ng-template pTemplate="header">
+        <div class="accordion-header">
+          <!-- Left side: Title and streaming info -->
+          <div class="header-left">
+            <span class="font-bold text-lg mr-3">{{ search.title }}</span>
+            @if(search.isStreaming) {
+              <span class="text-sm text-color-secondary">
+                <i class="pi pi-spin pi-spinner mr-2"></i>
+                Streaming... ({{ search.data.length }} records)
+              </span>
+            }
+          </div>
+          
+          <!-- Right side: Stop button and Close button -->
+          <div class="header-right">
+            @if(search.isStreaming) {
+              <button pButton type="button" icon="pi pi-stop-circle" label="Stop" class="p-button-sm p-button-danger mr-2" 
+                      (click)="orchestrator.stopSseStream(search.id); $event.stopPropagation()"></button>
+            }
+            <button pButton type="button" icon="pi pi-times" class="p-button-text p-button-danger" 
+                    pTooltip="Close Panel" (click)="closePanel(); $event.stopPropagation()"></button>
+          </div>
+        </div>
+      </ng-template>
+  
+      <!-- The content of the accordion panel -->
+      <ng-template pTemplate="content">
+        <!-- Render the correct toolbar based on the search type -->
+        @if(search.type === 'transaction') {
+          <app-transaction-toolbar 
+            [views]="availableViews()" 
+            [(ngModel)]="selectedViewId">
+          </app-transaction-toolbar>
+        } @else {
+          <app-streaming-toolbar
+            [allColumns]="allColumnsForViewType()"
+            [visibleColumns]="logViewer?.visibleColumns() || []"
+            (columnsChange)="logViewer?.visibleColumns.set($event)"
+            (reset)="resetColumns()">
+          </app-streaming-toolbar>
+        }
+        
+        <!-- This wrapper ensures the table inside can use flex height -->
+        <div class="result-content-wrapper">
+          @if (search.isLoading && search.data.length === 0) {
+            <!-- Show skeleton only on initial load -->
+            <app-table-skeleton [columns]="allColumnsForViewType()"></app-table-skeleton>
+          } @else if (search.error) {
+            <p class="p-3 text-red-500 font-bold"><i class="pi pi-exclamation-circle mr-2"></i>{{ search.error }}</p>
+          } @else {
+            <!-- Render the powerful log viewer, passing it all necessary data -->
+            <app-log-viewer #logViewer
+              [searchInstance]="search"
+              [allColumnsForViewType]="allColumnsForViewType()" 
+              [viewId]="selectedViewId()"
+              (rowDrilldown)="onDrilldown($event)">
+            </app-log-viewer>
+          }
+        </div>
+      </ng-template>
+  
+    </p-accordionTab>
+  </p-accordion>

@@ -1,7 +1,8 @@
 import { Injectable, inject, signal, WritableSignal } from '@angular/core';
-import { ActiveSearch, SearchRequest, SearchType } from '../models/search.model';
+import { ActiveSearch, ElkHit, SearchRequest, SearchType, SseDataPayload } from '../models/search.model';
 import { SseStrategy } from '../search-strategies/sse-strategy';
-import { SseEvent } from 'src/app/core/services/sse.service';
+import { GuidSearchStrategy } from '../search-strategies/guid-search.strategy';
+import { SseService, SseEvent } from 'src/app/core/services/sse.service';
 import { Subscription, Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
@@ -9,11 +10,12 @@ export class SearchOrchestratorService {
   public activeSearches: WritableSignal<ActiveSearch[]> = signal([]);
   private strategies: { [key in SearchType]?: any } = {};
   private activeSseSubscriptions: Map<string, Subscription> = new Map();
+  private sseService = inject(SseService);
 
   constructor() {
     this.strategies['browse'] = inject(SseStrategy);
     this.strategies['error'] = inject(SseStrategy);
-    // this.strategies['transaction'] = inject(GuidSearchStrategy);
+    this.strategies['transaction'] = inject(GuidSearchStrategy);
   }
 
   public performSearch(request: SearchRequest): void {
@@ -29,7 +31,7 @@ export class SearchOrchestratorService {
     if (search.isStreaming) this.startSseStream(search);
     else this.fetchHttpRequest(search, strategy);
   }
-  
+
   private fetchHttpRequest(search: ActiveSearch, strategy: any): void {
     this.updateSearchState(search.id, { isLoading: true });
     const httpRequest$: Observable<any> = strategy.execute(search.query);
@@ -53,8 +55,13 @@ export class SearchOrchestratorService {
         switch(event.type) {
           case 'OPEN': return { ...s, isLoading: true, data: [] };
           case 'DATA':
-            const newData = [...s.data, ...(event.data ?? [])];
-            return { ...s, data: newData, totalRecords: event.data?.[0]?.total ?? s.totalRecords };
+            // ✨ FIX 1: `event.data` is the payload object `{ hits: ElkHit[], total: number }`
+            const payload = event.data as SseDataPayload;
+            // Ensure payload.hits is an array before spreading
+            const newHits = payload.hits ?? [];
+            const updatedData = [...s.data, ...newHits];
+            // ✨ FIX 2: `total` is on the payload, not the individual hits
+            return { ...s, data: updatedData, totalRecords: payload.total ?? s.totalRecords };
           case 'END':
           case 'ERROR': return { ...s, isLoading: false, isStreaming: false, error: event.error?.message };
           default: return s;

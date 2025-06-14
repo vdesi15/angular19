@@ -1,0 +1,50 @@
+<p-table #dt2 [value]="tableData()" [columns]="activeColumns()" dataKey="_id"
+  [paginator]="true" [rows]="50" [rowsPerPageOptions]="[25, 50, 100]"
+  [globalFilterFields]="activeColumns().map(c => c.name)"
+  [scrollable]="true" scrollHeight="flex" 
+  [resizableColumns]="true" columnResizeMode="expand"
+  styleClass="p-datatable-striped p-datatable-gridlines">
+
+  <ng-template pTemplate="caption">
+    <div class="flex">
+      <!-- We can put the StreamingToolbarComponent here if it's a streaming search -->
+      <p-iconField iconPosition="left" class="ml-auto">
+        <p-inputIcon><i class="pi pi-search"></i></p-inputIcon>
+        <input pInputText type="text" (input)="applyGlobalFilter($event)" placeholder="Search in results" />
+      </p-iconField>
+    </div>
+  </ng-template>
+
+  <ng-template pTemplate="header" let-columns>
+    <tr>
+      @for(col of columns; track col.id) {
+        <th [pSortableColumn]="col.enableSorting ? col.name : undefined" [style.width]="col.width">
+          {{ col.displayName }}
+          @if(col.enableSorting) { <p-sortIcon [field]="col.name"></p-sortIcon> }
+        </th>
+      }
+    </tr>
+    <!-- Optional: Row for column-specific filters -->
+    <tr>
+      @for(col of columns; track col.id) {
+        <th>
+          @if(col.enableFiltering) {
+            <p-columnFilter [type]="'text'" [field]="col.name"></p-columnFilter>
+          }
+        </th>
+      }
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="body" let-rowData let-columns="columns">
+    <tr (click)="handleRowClick(rowData)" [pTooltip]="'Click to view transaction details'" tooltipPosition="top" style="cursor: pointer;">
+      @for(col of columns; track col.id) {
+        <td>{{ rowData[col.name] | transform:col.transform:rowData._original }}</td>
+      }
+    </tr>
+  </ng-template>
+  
+  <ng-template pTemplate="emptymessage" let-columns>
+      <tr><td [attr.colspan]="columns.length">No records found for the selected criteria.</td></tr>
+  </ng-template>
+</p-table>
