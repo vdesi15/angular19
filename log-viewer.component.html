@@ -1,16 +1,27 @@
-<p-table #logTable [value]="tableData()" [columns]="activeColumns()" dataKey="_id"
-  [paginator]="true" [rows]="50" [rowsPerPageOptions]="[25, 50, 100, 250]"
-  [globalFilterFields]="activeColumns().map(c => c.name)"
-  [scrollable]="true" scrollHeight="flex" 
-  [resizableColumns]="true" columnResizeMode="expand"
+<p-table #logTable 
+  [value]="tableData()" 
+  [columns]="visibleColumns()" 
+  dataKey="_id"
+  [paginator]="true" 
+  [rows]="50" 
+  [rowsPerPageOptions]="[25, 50, 100, 250]"
+  [globalFilterFields]="visibleColumns().map(c => c.name)"
+  [scrollable]="true" 
+  scrollHeight="flex" 
+  [resizableColumns]="true" 
+  columnResizeMode="expand"
   styleClass="p-datatable-striped p-datatable-gridlines">
 
-  <!-- CAPTION: Contains the global search bar -->
+  <!-- CAPTION: Contains the global search bar for filtering rendered results -->
   <ng-template pTemplate="caption">
-    <div class="flex justify-content-end">
+    <div class="flex justify-content-end align-items-center">
       <p-iconField iconPosition="left">
         <p-inputIcon><i class="pi pi-search"></i></p-inputIcon>
-        <input pInputText type="text" (input)="applyGlobalFilter($event)" placeholder="Search all columns..." />
+        <input 
+          pInputText 
+          type="text" 
+          (input)="applyGlobalFilter($event)" 
+          placeholder="Filter displayed results..." />
       </p-iconField>
     </div>
   </ng-template>
@@ -20,7 +31,7 @@
     <!-- Row 1: Column Display Names -->
     <tr>
       @for(col of columns; track col.id) {
-        <th [pResizableColumn]="true" [style.width]="col.width">
+        <th [pResizableColumn]="col.enableColumnResizing" [style.width]="col.width">
           {{ col.displayName }}
         </th>
       }
@@ -29,7 +40,6 @@
     <tr>
       @for(col of columns; track col.id) {
         <th>
-          <!-- ✨ FIX 2: Conditionally render a text filter for each column -->
           @if(col.enableFiltering) {
             <p-columnFilter [type]="'text'" [field]="col.name" [placeholder]="'Filter ' + col.displayName"></p-columnFilter>
           }
@@ -40,7 +50,7 @@
 
   <!-- BODY: Renders the data rows -->
   <ng-template pTemplate="body" let-rowData let-columns="columns">
-    <tr (click)="handleRowClick(rowData)" class="p-selectable-row">
+    <tr (click)="handleRowClick(rowData)" class="p-selectable-row" pTooltip="Click to view transaction details" tooltipPosition="top">
       @for(col of columns; track col.id) {
         <td>
           <!-- The transform pipe handles all data formatting -->

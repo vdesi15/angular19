@@ -55,12 +55,19 @@ export class SearchOrchestratorService {
         switch(event.type) {
           case 'OPEN': return { ...s, isLoading: true, data: [] };
           case 'DATA':
-            // ✨ FIX 1: `event.data` is the payload object `{ hits: ElkHit[], total: number }`
+            // ✨ THE FIX: Check if event.data exists before using it.
+            if (!event.data) return s;
+  
+            // `event.data` is the payload of type SseDataPayload, which has `hits` and `total`.
             const payload = event.data as SseDataPayload;
-            // Ensure payload.hits is an array before spreading
+            
+            // Ensure payload.hits is an array before spreading.
             const newHits = payload.hits ?? [];
-            const updatedData = [...s.data, ...newHits];
-            // ✨ FIX 2: `total` is on the payload, not the individual hits
+            
+            // ✨ FIX 2: Ensure s.data is not undefined before spreading.
+            const currentData = s.data ?? [];
+            const updatedData = [...currentData, ...newHits];
+            
             return { ...s, data: updatedData, totalRecords: payload.total ?? s.totalRecords };
           case 'END':
           case 'ERROR': return { ...s, isLoading: false, isStreaming: false, error: event.error?.message };

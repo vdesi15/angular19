@@ -60,17 +60,23 @@ export class SseService {
     }
 
     return this.http.get<SseManifest>(manifestUrl).pipe(
-      switchMap(manifest => {
+      // ✨ FIX: The type of the stream is now explicit
+      switchMap((manifest): Observable<SseEvent> => {
+        // ... same logic to create merge(open$, data$, end$)
         const open$ = of({ type: 'OPEN' } as SseEvent);
         const data$ = from(manifest.files).pipe(
           concatMap(fileUrl => of(fileUrl).pipe(delay(350))),
-          concatMap(fileUrl => this.http.get<ElkHit[]>(fileUrl)),
-          map(chunk => ({ type: 'DATA', data: chunk } as SseEvent))
+          concatMap(fileUrl => this.http.get<SseDataPayload>(fileUrl)), // Fetch the payload object
+          map(payload => ({ type: 'DATA', data: payload } as SseEvent)) // Map it to the event
         );
         const end$ = of({ type: 'END' } as SseEvent).pipe(delay(350 * manifest.files.length + 500));
         return merge(open$, data$, end$);
       }),
-      catchError(error => of({ type: 'ERROR', error: { message: `Could not load manifest: ${manifestUrl}` } } as SseEvent))
+      catchError(error => {
+        console.error(`[SseService] Failed to load mock manifest '${manifestUrl}'`, error);
+        // Ensure the error case also returns an Observable of the correct type
+        return of({ type: 'ERROR', error: { message: `Could not load manifest: ${manifestUrl}` } } as SseEvent);
+      })
     );
   }
 }

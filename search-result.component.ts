@@ -52,7 +52,19 @@ export class SearchResultComponent implements AfterViewInit {
   
   // --- Derived Signals ---
   public allColumnsForViewType: Signal<ColumnDefinition[]> = computed(() => {
-    return this.colDefService.getColumnsFor(this.search.appName, this.search.type);
+    const app = this.search.appName;
+    let viewType: 'browse' | 'error';
+
+    // ✨ THE FIX: Map the search type to an allowed column definition type. ✨
+    // If the search is for a 'transaction', we'll use the 'browse' column set.
+    if (this.search.type === 'transaction') {
+      viewType = 'browse'; 
+    } else {
+      // Otherwise, the type ('browse' or 'error') matches directly.
+      viewType = this.search.type;
+    }
+    
+    return this.colDefService.getColumnsFor(app, viewType);
   });
   
   public availableViews: Signal<ViewDefinition[]> = computed(() => {
