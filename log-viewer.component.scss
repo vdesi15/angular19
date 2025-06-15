@@ -1,0 +1,21 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; // Allows this component to fill the space in its parent (.result-content-wrapper)
+    min-height: 0; // Fix for flexbox overflow issues in some browsers
+    // Set a minimum height so the table doesn't collapse to zero before data loads
+    min-height: 400px; 
+  }
+  
+  // Make the table itself a flex container that fills its host
+  // This is the key to making scrollHeight="flex" work.
+  ::ng-deep .p-datatable.p-component {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  
+    .p-datatable-wrapper {
+      // The wrapper for the scrollable body should take up all available space.
+      flex-grow: 1;
+    }
+  }
