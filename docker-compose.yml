@@ -1,53 +1,110 @@
 version: '3.9'
 
 services:
-  # ... (seal-ui, e2e-runner services are unchanged)
+  # ... (seal-ui, e2e-runner are unchanged)
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
-    # ...
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5   
-   
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.12.2
-    
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      # ✨ Kibana will now use the token for authentication ✨
-      - ELASTICSEARCH_SERVICEACCOUNTTOKEN_FILE=/usr/share/kibana/tokens/kibana-token.json
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5601/api/status"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-     depends_on:
-      master-setup:
-        condition: service_completed_successfully
-
-   master-setup:
-    container_name: master-setup
-    build:
-      context: ./setup # Assumes script and Dockerfile are in a 'setup' folder
-      dockerfile: Dockerfile
+    container_name: elasticsearch
+    ports: ['9200:9200']
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
     networks:
       - monitoring-net
-    # It waits for both ES and Kibana to start listening before it runs.
-   depends_on:
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=changeme # Still need this for the 'elastic' user to create the token
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f -u elastic:changeme http://localhost:9200/_cluster/health?wait_for_status=yellow"]
+      interval: 10s
+      timeout: 10s
+      retries: 24
+
+  # ✨ THE TOKEN CREATION CONTAINER ✨
+  es-token-setup:
+    image: curlimages/curl
+    container_name: es-token-setup
+    volumes:
+      - es-tokens:/tokens # Mount the shared volume
+    command: >
+      sh -c "
+        echo 'Waiting for Elasticsearch...'
+        until curl -s -f -u elastic:changeme http://elasticsearch:9200/_cluster/health?wait_for_status=yellow > /dev/null; do
+          sleep 5;
+        done;
+        echo 'Elasticsearch is ready. Generating Kibana service token...';
+        
+        # This API call creates a token for the built-in kibana service account
+        # and saves the entire JSON response to a file on the shared volume.
+        curl -s -X POST -u elastic:changeme -H 'Content-Type: application/json' \
+        http://elasticsearch:9200/_security/service/elastic/kibana/credential/token/kibana-token \
+        -d'{}' > /tokens/kibana-token.json;
+
+        if [ -s /tokens/kibana-token.json ]; then
+          echo '✅ Kibana token created successfully.';
+          exit 0;
+        else
+          echo '❌ ERROR: Failed to create Kibana token file.';
+          exit 1;
+        fi
+      "
+    networks:
+      - monitoring-net
+    depends_on:
       elasticsearch:
+        condition: service_healthy
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.2
+    container_name: kibana
+    ports: ['5601:5601']
+    volumes:
+      - es-tokens:/usr/share/kibana/config/tokens # Mount token into Kibana's config dir
+    networks:
+      - monitoring-net
+    depends_on:
+      es-token-setup:
+        condition: service_completed_successfully
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      # ✨ This is the key. Tell Kibana to use the token file for authentication. ✨
+      - ELASTICSEARCH_SERVICEACCOUNTTOKEN_FILE=/usr/share/kibana/config/tokens/kibana-token.json
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f http://localhost:5601/api/status | grep -q '\"state\":\"green\"'"]
+      interval: 10s
+      timeout: 10s
+      retries: 24
+
+  # This is your existing PowerShell script container for installing the APM package
+  kibana-apm-setup:
+    build:
+      context: ./setup # Assumes setup-apm-integration.ps1 and Dockerfile.apm are here
+      dockerfile: Dockerfile.apm
+    networks:
+      - monitoring-net
+    depends_on:
+      kibana:
         condition: service_healthy
 
   apm-server:
     image: docker.elastic.co/apm/apm-server:8.12.2
     container_name: apm-server
-    # ... (environment variables are the same)
+    ports: ['8200:8200']
     networks:
       - monitoring-net
-    # This service waits for the one-off setup container to complete successfully
     depends_on:
-      kibana-setup:
+      kibana-apm-setup:
         condition: service_completed_successfully
-
-# ... (networks, volumes)
+    environment:
+      - OUTPUT_ELASTICSEARCH_HOSTS=["elasticsearch:9200"]
+      - OUTPUT_ELASTICSEARCH_USERNAME=elastic
+      - OUTPUT_ELASTICSEARCH_PASSWORD=changeme
+      # ... other APM env vars
+      
+volumes:
+  es-data:
+    driver: local
+  # The shared volume for passing the token
+  es-tokens:
+    driver: local
