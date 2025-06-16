@@ -21,29 +21,16 @@ services:
         until curl -s -f -u elastic:changeme http://elasticsearch:9200/_cluster/health?wait_for_status=yellow > /dev/null; do
           sleep 5
         done
-        echo 'Elasticsearch is ready. Setting up Kibana user...'
+        echo 'Elasticsearch is ready. Setting password for built-in kibana_system user...'
 
-        # Create the 'kibana_system' role if it doesn't exist (usually does)
-        curl -s -X POST -u elastic:changeme -H 'Content-Type: application/json' http://elasticsearch:9200/_security/role/kibana_system -d'
+        # Use the _security/user/kibana_system/_password endpoint
+        # This changes the password for the existing user.
+        curl -s -X POST -u elastic:changeme -H 'Content-Type: application/json' http://elasticsearch:9200/_security/user/kibana_system/_password -d'
         {
-          \"cluster\": [\"manage_ilm\", \"monitor\", \"read_slm\"],
-          \"indices\": [
-            {
-              \"names\": [\".kibana*\", \".tasks\", \".apm-agent-configuration\", \".apm-custom-link\", \"observability-annotations\"],
-              \"privileges\": [\"all\"]
-            }
-          ]
+          \"password\" : \"kibanapass\"
         }'
 
-        # Create the dedicated 'kibana_user' and assign it the 'kibana_system' role
-        curl -s -X POST -u elastic:changeme -H 'Content-Type: application/json' http://elasticsearch:9200/_security/user/kibana_user -d'
-        {
-          \"password\" : \"kibanapass\",
-          \"roles\" : [ \"kibana_system\" ],
-          \"full_name\" : \"Kibana System User\"
-        }'
-
-        echo 'Kibana user setup complete.'
+        echo 'kibana_system user password set successfully.'
       "
     networks: ['monitoring-net']
     depends_on:
