@@ -15,20 +15,37 @@ services:
    elasticsearch-setup:
     image: curlimages/curl
     container_name: elasticsearch-setup
-    volumes:
-      - es-tokens:/usr/share/elasticsearch/tokens # Mount the shared volume
     command: >
       sh -c "
-        echo 'Waiting for Elasticsearch to be healthy...' &&
+        echo 'Waiting for Elasticsearch...'
         until curl -s -f -u elastic:changeme http://elasticsearch:9200/_cluster/health?wait_for_status=yellow > /dev/null; do
-          sleep 5;
-        done;
-        echo 'Elasticsearch is up. Creating Kibana service account token...';
-        curl -s -X POST -u elastic:changeme -H 'Content-Type: application/json' http://elasticsearch:9200/_security/service/elastic/kibana/credential/token/kibana-token -d'{}' | tee /usr/share/elasticsearch/tokens/kibana-token.json;
-        echo 'Token created successfully.'
+          sleep 5
+        done
+        echo 'Elasticsearch is ready. Setting up Kibana user...'
+
+        # Create the 'kibana_system' role if it doesn't exist (usually does)
+        curl -s -X POST -u elastic:changeme -H 'Content-Type: application/json' http://elasticsearch:9200/_security/role/kibana_system -d'
+        {
+          \"cluster\": [\"manage_ilm\", \"monitor\", \"read_slm\"],
+          \"indices\": [
+            {
+              \"names\": [\".kibana*\", \".tasks\", \".apm-agent-configuration\", \".apm-custom-link\", \"observability-annotations\"],
+              \"privileges\": [\"all\"]
+            }
+          ]
+        }'
+
+        # Create the dedicated 'kibana_user' and assign it the 'kibana_system' role
+        curl -s -X POST -u elastic:changeme -H 'Content-Type: application/json' http://elasticsearch:9200/_security/user/kibana_user -d'
+        {
+          \"password\" : \"kibanapass\",
+          \"roles\" : [ \"kibana_system\" ],
+          \"full_name\" : \"Kibana System User\"
+        }'
+
+        echo 'Kibana user setup complete.'
       "
-    networks:
-      - monitoring-net
+    networks: ['monitoring-net']
     depends_on:
       elasticsearch:
         condition: service_healthy
