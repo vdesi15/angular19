@@ -1,58 +1,72 @@
 # This script waits for Kibana to be ready and then installs the APM integration via its API.
 
-$KibanaUrl = "http://kibana:5601"
-$MaxRetries = 24 # Try for 2 minutes (24 * 5 seconds)
+# --- Configuration ---
+$KibanaUri = "http://kibana:5601"
+$ApiStatusUrl = "$KibanaUri/api/status"
+$MaxRetries = 24 # Try for 2 minutes (24 attempts * 5 seconds)
 $RetryCount = 0
 
 Write-Host "--- Kibana APM Setup Initializing ---"
+Write-Host "Polling Kibana status at: $ApiStatusUrl"
 
-# Loop until Kibana is available or we run out of retries.
+# --- Robust Polling Loop ---
 while ($RetryCount -lt $MaxRetries) {
+    $RetryCount++
+    Write-Host "Attempt $RetryCount of $MaxRetries: Checking Kibana status..."
+    
     try {
-        $StatusResponse = Invoke-RestMethod -Uri "$KibanaUrl/api/status" -Method Get -TimeoutSec 5
-        # Check if the overall status is green or yellow (meaning it's ready)
-        if ($StatusResponse.status.overall.state -eq "green" -or $StatusResponse.status.overall.state -eq "yellow") {
-            Write-Host "Kibana is up and running! Proceeding with APM integration setup."
-            break # Exit the loop
+        # Use -UseBasicParsing to avoid issues in some environments.
+        # We check the raw content to see if it's valid JSON before trying to parse.
+        $response = Invoke-WebRequest -Uri $ApiStatusUrl -Method Get -TimeoutSec 5 -UseBasicParsing
+        
+        if ($response.StatusCode -eq 200) {
+            # Convert the content from JSON to a PowerShell object
+            $statusObject = $response.Content | ConvertFrom-Json
+            $overallState = $statusObject.status.overall.state
+
+            Write-Host "Kibana responded with state: $overallState"
+
+            if ($overallState -eq "green" -or $overallState -eq "yellow") {
+                Write-Host "Kibana is up and running! Proceeding with APM integration setup."
+                # Break the loop and proceed to the next step
+                break
+            }
         }
     }
     catch {
-        # This will catch connection errors, timeouts, etc.
-        Write-Host "Kibana is not yet available. Waiting 5 seconds... ($($_.Exception.Message))"
+        # This will catch network errors like 'Connection refused'
+        Write-Warning "Kibana is not yet available. Waiting 5 seconds... (Error: $($_.Exception.Message))"
+    }
+    
+    # If we are here, it means Kibana is not ready yet, or the loop should continue.
+    if ($RetryCount -ge $MaxRetries) {
+        Write-Error "Kibana did not become available after $MaxRetries retries. Exiting with error."
+        exit 1 # Exit with a failure code
     }
     
     Start-Sleep -Seconds 5
-    $RetryCount++
 }
 
-if ($RetryCount -eq $MaxRetries) {
-    Write-Error "Kibana did not become available after $MaxRetries retries. Exiting with error."
-    exit 1
-}
-
-# Now, install the APM integration.
-# This API endpoint installs the latest available version of the APM package.
-$InstallUrl = "$KibanaUrl/api/fleet/epm/packages/apm"
-$Headers = @{
-    "kbn-xsrf" = "true"
-}
-$Body = @{
-    "force" = $true
-} | ConvertTo-Json
+# --- Install APM Integration ---
+# This part of the logic is likely correct and will only run after the loop above succeeds.
+$InstallUrl = "$KibanaUri/api/fleet/epm/packages/apm"
+$Headers = @{ "kbn-xsrf" = "true" }
+$Body = @{ "force" = $true } | ConvertTo-Json
 
 try {
     Write-Host "Sending command to install APM integration..."
-    $InstallResponse = Invoke-RestMethod -Uri $InstallUrl -Method Post -Headers $Headers -Body $Body -ContentType "application/json"
+    Invoke-RestMethod -Uri $InstallUrl -Method Post -Headers $Headers -Body $Body -ContentType "application/json"
     Write-Host "APM integration installation command sent successfully."
-    # You can optionally inspect $InstallResponse here.
 }
 catch {
-    # This might happen if the integration is already installed. We can treat it as a success.
+    # If the integration is already installed, Kibana returns a 409 Conflict error. We can safely ignore this.
     if ($_.Exception.Response.StatusCode -eq 409) {
         Write-Host "APM integration appears to be already installed (Conflict 409). This is OK."
     }
     else {
-        Write-Error "Failed to install APM integration. Status: $($_.Exception.Response.StatusCode). Response: $($_.Exception.Response.GetResponseStream() | ForEach-Object { (New-Object System.IO.StreamReader($_)).ReadToEnd() })"
+        # For any other error, print the details and exit with a failure code.
+        $errorResponse = $_.Exception.Response.GetResponseStream() | ForEach-Object { (New-Object System.IO.StreamReader($_)).ReadToEnd() }
+        Write-Error "Failed to install APM integration. Status: $($_.Exception.Response.StatusCode). Response: $errorResponse"
         exit 1
     }
 }
