@@ -10,21 +10,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
       interval: 10s
       timeout: 5s
-      retries: 5
-    
-    elasticsearch-setup:
-    container_name: elasticsearch-setup
-    # Tell Docker Compose to build the image from the es-setup directory
-    build:
-      context: ./es-setup
-      dockerfile: Dockerfile
-    networks:
-      - monitoring-net
-    # This service must wait for Elasticsearch to pass its healthcheck before it runs
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-
+      retries: 5   
+   
   kibana:
     image: docker.elastic.co/kibana/kibana:8.12.2
     
@@ -36,22 +23,20 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
+     depends_on:
+      master-setup:
+        condition: service_completed_successfully
 
-  # ✨ THE UPDATED SETUP SERVICE ✨
-  kibana-setup:
-    container_name: kibana-setup
-    # Tell Docker Compose to build the image from the kibana-setup directory
+   master-setup:
+    container_name: master-setup
     build:
-      context: ./kibana-setup
+      context: ./setup # Assumes script and Dockerfile are in a 'setup' folder
       dockerfile: Dockerfile
     networks:
       - monitoring-net
-    # This service must wait for Kibana to be healthy before it runs
-    depends_on:
-      kibana:
+    # It waits for both ES and Kibana to start listening before it runs.
+   depends_on:
+      elasticsearch:
         condition: service_healthy
 
   apm-server:
