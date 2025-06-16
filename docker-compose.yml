@@ -17,20 +17,30 @@ services:
     container_name: elasticsearch-setup
     command: >
       sh -c "
-        echo 'Waiting for Elasticsearch...'
+        echo '--- Starting Elasticsearch Setup ---'
+        
+        # --- Stage 1: Wait for Elasticsearch to be healthy ---
+        echo 'Waiting for Elasticsearch health...'
         until curl -s -f -u elastic:changeme http://elasticsearch:9200/_cluster/health?wait_for_status=yellow > /dev/null; do
+          echo 'Elasticsearch not ready yet, sleeping 5s...'
           sleep 5
         done
-        echo 'Elasticsearch is ready. Setting password for built-in kibana_system user...'
-
-        # Use the _security/user/kibana_system/_password endpoint
-        # This changes the password for the existing user.
-        curl -s -X POST -u elastic:changeme -H 'Content-Type: application/json' http://elasticsearch:9200/_security/user/kibana_system/_password -d'
-        {
-          \"password\" : \"kibanapass\"
-        }'
-
-        echo 'kibana_system user password set successfully.'
+        echo 'Elasticsearch is healthy!'
+        
+        # --- Stage 2: Set password for kibana_system user ---
+        echo 'Attempting to set password for kibana_system user...'
+        
+        # ✨ THE FIX: Use a shell `if` statement to check the curl command's success.
+        # We remove `-s` to see output and use `-f` to make it fail on HTTP errors.
+        if curl -f -X POST -u elastic:changeme -H 'Content-Type: application/json' http://elasticsearch:9200/_security/user/kibana_system/_password -d '{\"password\" : \"kibanapass\"}'; then
+          echo '✅ Successfully set password for kibana_system user.'
+        else
+          # If the curl command fails (non-zero exit code), this block will execute.
+          echo '❌ ERROR: Failed to set password for kibana_system user. See curl output above for details.'
+          exit 1 # Exit the container with a failure code.
+        fi
+        
+        echo '--- Elasticsearch Setup Complete ---'
       "
     networks: ['monitoring-net']
     depends_on:
