@@ -11,10 +11,34 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    
+   elasticsearch-setup:
+    image: curlimages/curl
+    container_name: elasticsearch-setup
+    volumes:
+      - es-tokens:/usr/share/elasticsearch/tokens # Mount the shared volume
+    command: >
+      sh -c "
+        echo 'Waiting for Elasticsearch to be healthy...' &&
+        until curl -s -f -u elastic:changeme http://elasticsearch:9200/_cluster/health?wait_for_status=yellow > /dev/null; do
+          sleep 5;
+        done;
+        echo 'Elasticsearch is up. Creating Kibana service account token...';
+        curl -s -X POST -u elastic:changeme -H 'Content-Type: application/json' http://elasticsearch:9200/_security/service/elastic/kibana/credential/token/kibana-token -d'{}' | tee /usr/share/elasticsearch/tokens/kibana-token.json;
+        echo 'Token created successfully.'
+      "
+    networks:
+      - monitoring-net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.12.2
-    # ...
+    
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      # ✨ Kibana will now use the token for authentication ✨
+      - ELASTICSEARCH_SERVICEACCOUNTTOKEN_FILE=/usr/share/kibana/tokens/kibana-token.json
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5601/api/status"]
       interval: 10s
