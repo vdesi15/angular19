@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  # ... (seal-ui, e2e-runner services are unchanged)
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    # ...
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.2
+    # ...
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5601/api/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  # ✨ THE UPDATED SETUP SERVICE ✨
+  kibana-setup:
+    container_name: kibana-setup
+    # Tell Docker Compose to build the image from the kibana-setup directory
+    build:
+      context: ./kibana-setup
+      dockerfile: Dockerfile
+    networks:
+      - monitoring-net
+    # This service must wait for Kibana to be healthy before it runs
+    depends_on:
+      kibana:
+        condition: service_healthy
+
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:8.12.2
+    container_name: apm-server
+    # ... (environment variables are the same)
+    networks:
+      - monitoring-net
+    # This service waits for the one-off setup container to complete successfully
+    depends_on:
+      kibana-setup:
+        condition: service_completed_successfully
+
+# ... (networks, volumes)

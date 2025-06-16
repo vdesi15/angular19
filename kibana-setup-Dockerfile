@@ -1,0 +1,11 @@
+# Use an official Microsoft image that includes PowerShell Core
+FROM mcr.microsoft.com/powershell:latest
+
+# Set the working directory inside the container
+WORKDIR /setup
+
+# Copy our PowerShell script into the container
+COPY setup-apm.ps1 .
+
+# The command that will be executed when the container starts
+CMD ["pwsh", "-File", "./setup-apm.ps1"]
