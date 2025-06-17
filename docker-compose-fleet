@@ -37,10 +37,10 @@ services:
       timeout: 10s
       retries: 120
 
-  # --- Create Fleet User ---
-  create-fleet-user:
+  # --- Setup Users ---
+  setup-users:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
-    container_name: create-fleet-user
+    container_name: setup-users
     networks:
       - monitoring-net
     depends_on:
@@ -48,7 +48,7 @@ services:
         condition: service_healthy
     command: >
       bash -c '
-        echo "Creating Fleet service account...";
+        echo "Setting up users and passwords...";
         
         # Wait for Elasticsearch to be ready
         until curl -s -f -u "elastic:pass" "http://elasticsearch:9200/_cluster/health?wait_for_status=yellow"; do 
@@ -56,16 +56,31 @@ services:
           sleep 5; 
         done;
         
-        # Create kibana_system user password
-        curl -X POST -u "elastic:pass" -H "Content-Type: application/json" \
-          "http://elasticsearch:9200/_security/user/kibana_system/_password" \
-          -d "{\"password\": \"pass\"}" || echo "Password may already be set";
+        echo "Setting kibana_system password...";
+        # Set kibana_system user password (retry with backoff)
+        for i in {1..10}; do
+          if curl -X POST -u "elastic:pass" -H "Content-Type: application/json" \
+            "http://elasticsearch:9200/_security/user/kibana_system/_password" \
+            -d "{\"password\": \"pass\"}"; then
+            echo "kibana_system password set successfully";
+            break;
+          else
+            echo "Attempt $i failed, retrying in 5 seconds...";
+            sleep 5;
+          fi
+        done;
         
-        # Create Fleet service account
+        echo "Setting other built-in user passwords...";
+        # Set other built-in user passwords
         curl -X POST -u "elastic:pass" -H "Content-Type: application/json" \
-          "http://elasticsearch:9200/_security/service/elastic/fleet-server" \
-          -d "{}" || echo "Service account may already exist";
+          "http://elasticsearch:9200/_security/user/beats_system/_password" \
+          -d "{\"password\": \"pass\"}" || echo "beats_system password may already be set";
         
+        curl -X POST -u "elastic:pass" -H "Content-Type: application/json" \
+          "http://elasticsearch:9200/_security/user/logstash_system/_password" \
+          -d "{\"password\": \"pass\"}" || echo "logstash_system password may already be set";
+        
+        echo "Creating Fleet user...";
         # Create Fleet user with proper roles
         curl -X POST -u "elastic:pass" -H "Content-Type: application/json" \
           "http://elasticsearch:9200/_security/user/fleet_user" \
@@ -76,7 +91,7 @@ services:
             \"email\": \"fleet@example.com\"
           }" || echo "Fleet user may already exist";
         
-        echo "Fleet user setup completed!";
+        echo "User setup completed successfully!";
       '
 
   # --- Kibana ---
@@ -90,7 +105,7 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
-      create-fleet-user:
+      setup-users:
         condition: service_completed_successfully
     environment:
       - SERVERNAME=kibana
