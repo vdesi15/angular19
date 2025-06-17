@@ -1,0 +1,326 @@
+version: '3.9'
+
+services:
+  # --- Elasticsearch ---
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    container_name: elasticsearch
+    ports:
+      - '9200:9200'
+      - '9300:9300'
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+      - es-certs:/usr/share/elasticsearch/config/certs
+    networks:
+      - monitoring-net
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=docker-cluster
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=changeme
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - xpack.license.self_generated.type=basic
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f -u elastic:changeme http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=10s"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
+  # --- Kibana ---
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.2
+    container_name: kibana
+    ports:
+      - '5601:5601'
+    networks:
+      - monitoring-net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      - SERVERNAME=kibana
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=changeme
+      - xpack.security.enabled=true
+      - xpack.encryptedSavedObjects.encryptionKey=fhjskloppd678ehkdfdlliverpoolfcr
+      - xpack.reporting.encryptionKey=gesjdfjl678ehkdfdlliverpoolfcr
+      - xpack.security.encryptionKey=fhjskloppd678ehkdfdlliverpoolfcr
+      - xpack.fleet.agents.elasticsearch.hosts=["http://elasticsearch:9200"]
+      - xpack.fleet.agents.fleet_server.hosts=["http://fleet-server:8220"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"'"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
+  # --- Fleet Setup Container ---
+  fleet-setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    container_name: fleet-setup
+    networks:
+      - monitoring-net
+    depends_on:
+      kibana:
+        condition: service_healthy
+    command: >
+      bash -c '
+        echo "Setting up Fleet...";
+        
+        # Wait for Kibana to be fully ready
+        until curl -s -f -u "elastic:changeme" "http://kibana:5601/api/status" | grep -q "available"; do 
+          echo "Waiting for Kibana..."; 
+          sleep 10; 
+        done;
+        
+        # Setup Fleet
+        echo "Setting up Fleet Server hosts...";
+        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
+          "http://kibana:5601/api/fleet/settings" \
+          -d "{
+            \"fleet_server_hosts\": [\"http://fleet-server:8220\"],
+            \"has_seen_add_data_notice\": true
+          }" || echo "Fleet settings may already be configured";
+        
+        # Create Fleet Server policy
+        echo "Creating Fleet Server policy...";
+        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
+          "http://kibana:5601/api/fleet/agent_policies" \
+          -d "{
+            \"id\": \"fleet-server-policy\",
+            \"name\": \"Fleet Server Policy\",
+            \"namespace\": \"default\",
+            \"description\": \"Policy for Fleet Server\",
+            \"monitoring_enabled\": [\"logs\", \"metrics\"]
+          }" || echo "Fleet Server policy may already exist";
+        
+        # Add Fleet Server integration to policy
+        echo "Adding Fleet Server integration...";
+        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
+          "http://kibana:5601/api/fleet/package_policies" \
+          -d "{
+            \"policy_id\": \"fleet-server-policy\",
+            \"package\": {\"name\": \"fleet_server\", \"version\": \"1.4.1\"},
+            \"name\": \"fleet_server-1\",
+            \"namespace\": \"default\",
+            \"inputs\": {}
+          }" || echo "Fleet Server integration may already be added";
+        
+        # Create APM policy
+        echo "Creating APM policy...";
+        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
+          "http://kibana:5601/api/fleet/agent_policies" \
+          -d "{
+            \"name\": \"APM Policy\",
+            \"namespace\": \"default\",
+            \"description\": \"Policy for APM agents\",
+            \"monitoring_enabled\": [\"logs\", \"metrics\"]
+          }" > /tmp/apm_policy.json || echo "APM policy may already exist";
+        
+        # Install APM integration
+        echo "Installing APM integration...";
+        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
+          "http://kibana:5601/api/fleet/epm/packages/apm" \
+          -d "{\"force\": true}" || echo "APM integration may already be installed";
+        
+        # Add APM integration to policy
+        echo "Adding APM integration to policy...";
+        APM_POLICY_ID=$(cat /tmp/apm_policy.json 2>/dev/null | grep -o "\"id\":\"[^\"]*\"" | cut -d"\"" -f4 | head -1);
+        if [ ! -z "$APM_POLICY_ID" ]; then
+          curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
+            "http://kibana:5601/api/fleet/package_policies" \
+            -d "{
+              \"policy_id\": \"$APM_POLICY_ID\",
+              \"package\": {\"name\": \"apm\", \"version\": \"8.12.2\"},
+              \"name\": \"apm-1\",
+              \"namespace\": \"default\",
+              \"inputs\": {
+                \"apm-server\": {
+                  \"enabled\": true,
+                  \"vars\": {
+                    \"host\": {\"value\": \"0.0.0.0:8200\", \"type\": \"text\"},
+                    \"rum_enabled\": {\"value\": true, \"type\": \"bool\"},
+                    \"rum_allow_origins\": {\"value\": [\"*\"], \"type\": \"text\"}
+                  }
+                }
+              }
+            }" || echo "APM integration may already be added to policy";
+        fi;
+        
+        echo "Fleet setup completed!";
+      '
+
+  # --- Fleet Server ---
+  fleet-server:
+    image: docker.elastic.co/beats/elastic-agent:8.12.2
+    container_name: fleet-server
+    ports:
+      - '8220:8220'
+    networks:
+      - monitoring-net
+    depends_on:
+      fleet-setup:
+        condition: service_completed_successfully
+    environment:
+      - FLEET_SERVER_ENABLE=true
+      - FLEET_SERVER_ELASTICSEARCH_HOST=http://elasticsearch:9200
+      - FLEET_SERVER_ELASTICSEARCH_USERNAME=elastic
+      - FLEET_SERVER_ELASTICSEARCH_PASSWORD=changeme
+      - FLEET_SERVER_POLICY_ID=fleet-server-policy
+      - FLEET_URL=http://fleet-server:8220
+      - KIBANA_FLEET_SETUP=true
+      - KIBANA_FLEET_HOST=http://kibana:5601
+      - KIBANA_FLEET_USERNAME=elastic
+      - KIBANA_FLEET_PASSWORD=changeme
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f http://localhost:8220/api/status | grep -q '\"status\":\"HEALTHY\"' || curl -s -f http://localhost:8220/"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+
+  # --- Elastic Agent with APM ---
+  elastic-agent-apm:
+    image: docker.elastic.co/beats/elastic-agent:8.12.2
+    container_name: elastic-agent-apm
+    ports:
+      - '8200:8200'  # APM Server port
+    networks:
+      - monitoring-net
+    depends_on:
+      fleet-server:
+        condition: service_healthy
+    environment:
+      - FLEET_ENROLL=true
+      - FLEET_URL=http://fleet-server:8220
+      - KIBANA_HOST=http://kibana:5601
+      - KIBANA_USERNAME=elastic
+      - KIBANA_PASSWORD=changeme
+      - FLEET_ENROLLMENT_TOKEN=
+    command: >
+      bash -c '
+        # Get enrollment token for APM policy
+        until ENROLLMENT_TOKEN=$$(curl -s -X GET -u "elastic:changeme" -H "kbn-xsrf: true" \
+          "http://kibana:5601/api/fleet/enrollment_api_keys" | \
+          grep -o "\"api_key\":\"[^\"]*\"" | head -1 | cut -d"\"" -f4); do
+          echo "Waiting for enrollment token...";
+          sleep 10;
+        done;
+        
+        echo "Got enrollment token: $$ENROLLMENT_TOKEN";
+        
+        # Enroll and start agent
+        elastic-agent enroll \
+          --url=http://fleet-server:8220 \
+          --enrollment-token=$$ENROLLMENT_TOKEN \
+          --force;
+        
+        elastic-agent run;
+      '
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f http://localhost:8200/ | grep -q 'publish_ready\\|ok' || curl -s -f http://localhost:8200/"]
+      interval: 15s
+      timeout: 10s
+      retries: 40
+
+  # --- APM Test Service ---
+  apm-test:
+    image: node:18-alpine
+    container_name: apm-test
+    networks:
+      - monitoring-net
+    depends_on:
+      elastic-agent-apm:
+        condition: service_healthy
+    working_dir: /app
+    volumes:
+      - ./apm-test:/app
+    command: >
+      sh -c '
+        if [ ! -f package.json ]; then
+          npm init -y;
+          npm install elastic-apm-node;
+          cat > test-app.js << EOF
+const apm = require("elastic-apm-node").start({
+  serviceName: "fleet-test-service",
+  serverUrl: "http://elastic-agent-apm:8200",
+  environment: "development"
+});
+
+const http = require("http");
+
+const server = http.createServer((req, res) => {
+  const span = apm.startSpan("custom-span");
+  
+  setTimeout(() => {
+    if (span) span.end();
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("Hello from Fleet-managed APM!");
+  }, Math.random() * 100);
+});
+
+server.listen(3000, () => {
+  console.log("Fleet test service running on port 3000");
+  
+  setInterval(() => {
+    http.get("http://localhost:3000", (res) => {
+      console.log("Test request sent, status:", res.statusCode);
+    });
+  }, 5000);
+});
+EOF
+        fi;
+        node test-app.js;
+      '
+
+  # --- Your Angular Application ---
+  seal-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: seal-ui
+    ports:
+      - '4200:4200'
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - monitoring-net
+    depends_on:
+      elastic-agent-apm:
+        condition: service_healthy
+
+  # --- E2E Test Runner Container ---
+  e2e-runner:
+    image: cypress/included:13.7.2
+    container_name: e2e-runner
+    networks:
+      - monitoring-net
+    depends_on:
+      - seal-ui
+    working_dir: /e2e
+    volumes:
+      - .:/e2e
+
+# --- Docker Network and Volumes ---
+networks:
+  monitoring-net:
+    driver: bridge
+
+volumes:
+  es-data:
+    driver: local
+  es-certs:
+    driver: local
