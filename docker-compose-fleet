@@ -17,7 +17,7 @@ services:
       - node.name=elasticsearch
       - cluster.name=docker-cluster
       - discovery.type=single-node
-      - ELASTIC_PASSWORD=changeme
+      - ELASTIC_PASSWORD=pass
       - bootstrap.memory_lock=true
       - xpack.security.enabled=true
       - xpack.security.http.ssl.enabled=false
@@ -32,10 +32,52 @@ services:
         soft: 65536
         hard: 65536
     healthcheck:
-      test: ["CMD-SHELL", "curl -s -f -u elastic:changeme http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=10s"]
+      test: ["CMD-SHELL", "curl -s -f -u elastic:pass http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=10s"]
       interval: 10s
       timeout: 10s
       retries: 120
+
+  # --- Create Fleet User ---
+  create-fleet-user:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    container_name: create-fleet-user
+    networks:
+      - monitoring-net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    command: >
+      bash -c '
+        echo "Creating Fleet service account...";
+        
+        # Wait for Elasticsearch to be ready
+        until curl -s -f -u "elastic:pass" "http://elasticsearch:9200/_cluster/health?wait_for_status=yellow"; do 
+          echo "Waiting for Elasticsearch..."; 
+          sleep 5; 
+        done;
+        
+        # Create kibana_system user password
+        curl -X POST -u "elastic:pass" -H "Content-Type: application/json" \
+          "http://elasticsearch:9200/_security/user/kibana_system/_password" \
+          -d "{\"password\": \"pass\"}" || echo "Password may already be set";
+        
+        # Create Fleet service account
+        curl -X POST -u "elastic:pass" -H "Content-Type: application/json" \
+          "http://elasticsearch:9200/_security/service/elastic/fleet-server" \
+          -d "{}" || echo "Service account may already exist";
+        
+        # Create Fleet user with proper roles
+        curl -X POST -u "elastic:pass" -H "Content-Type: application/json" \
+          "http://elasticsearch:9200/_security/user/fleet_user" \
+          -d "{
+            \"password\": \"pass\",
+            \"roles\": [\"superuser\"],
+            \"full_name\": \"Fleet User\",
+            \"email\": \"fleet@example.com\"
+          }" || echo "Fleet user may already exist";
+        
+        echo "Fleet user setup completed!";
+      '
 
   # --- Kibana ---
   kibana:
@@ -48,11 +90,13 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+      create-fleet-user:
+        condition: service_completed_successfully
     environment:
       - SERVERNAME=kibana
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=changeme
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=pass
       - xpack.security.enabled=true
       - xpack.encryptedSavedObjects.encryptionKey=fhjskloppd678ehkdfdlliverpoolfcr
       - xpack.reporting.encryptionKey=gesjdfjl678ehkdfdlliverpoolfcr
@@ -79,14 +123,14 @@ services:
         echo "Setting up Fleet...";
         
         # Wait for Kibana to be fully ready
-        until curl -s -f -u "elastic:changeme" "http://kibana:5601/api/status" | grep -q "available"; do 
+        until curl -s -f -u "fleet_user:pass" "http://kibana:5601/api/status" | grep -q "available"; do 
           echo "Waiting for Kibana..."; 
           sleep 10; 
         done;
         
         # Setup Fleet
         echo "Setting up Fleet Server hosts...";
-        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
+        curl -X POST -u "fleet_user:pass" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
           "http://kibana:5601/api/fleet/settings" \
           -d "{
             \"fleet_server_hosts\": [\"http://fleet-server:8220\"],
@@ -95,7 +139,7 @@ services:
         
         # Create Fleet Server policy
         echo "Creating Fleet Server policy...";
-        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
+        curl -X POST -u "fleet_user:pass" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
           "http://kibana:5601/api/fleet/agent_policies" \
           -d "{
             \"id\": \"fleet-server-policy\",
@@ -107,7 +151,7 @@ services:
         
         # Add Fleet Server integration to policy
         echo "Adding Fleet Server integration...";
-        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
+        curl -X POST -u "fleet_user:pass" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
           "http://kibana:5601/api/fleet/package_policies" \
           -d "{
             \"policy_id\": \"fleet-server-policy\",
@@ -119,7 +163,7 @@ services:
         
         # Create APM policy
         echo "Creating APM policy...";
-        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
+        curl -X POST -u "fleet_user:pass" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
           "http://kibana:5601/api/fleet/agent_policies" \
           -d "{
             \"name\": \"APM Policy\",
@@ -130,7 +174,7 @@ services:
         
         # Install APM integration
         echo "Installing APM integration...";
-        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
+        curl -X POST -u "fleet_user:pass" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
           "http://kibana:5601/api/fleet/epm/packages/apm" \
           -d "{\"force\": true}" || echo "APM integration may already be installed";
         
@@ -138,7 +182,7 @@ services:
         echo "Adding APM integration to policy...";
         APM_POLICY_ID=$(cat /tmp/apm_policy.json 2>/dev/null | grep -o "\"id\":\"[^\"]*\"" | cut -d"\"" -f4 | head -1);
         if [ ! -z "$APM_POLICY_ID" ]; then
-          curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
+          curl -X POST -u "fleet_user:pass" -H "Content-Type: application/json" -H "kbn-xsrf: true" \
             "http://kibana:5601/api/fleet/package_policies" \
             -d "{
               \"policy_id\": \"$APM_POLICY_ID\",
@@ -176,13 +220,13 @@ services:
       - FLEET_SERVER_ENABLE=true
       - FLEET_SERVER_ELASTICSEARCH_HOST=http://elasticsearch:9200
       - FLEET_SERVER_ELASTICSEARCH_USERNAME=elastic
-      - FLEET_SERVER_ELASTICSEARCH_PASSWORD=changeme
+      - FLEET_SERVER_ELASTICSEARCH_PASSWORD=pass
       - FLEET_SERVER_POLICY_ID=fleet-server-policy
       - FLEET_URL=http://fleet-server:8220
       - KIBANA_FLEET_SETUP=true
       - KIBANA_FLEET_HOST=http://kibana:5601
-      - KIBANA_FLEET_USERNAME=elastic
-      - KIBANA_FLEET_PASSWORD=changeme
+      - KIBANA_FLEET_USERNAME=fleet_user
+      - KIBANA_FLEET_PASSWORD=pass
     healthcheck:
       test: ["CMD-SHELL", "curl -s -f http://localhost:8220/api/status | grep -q '\"status\":\"HEALTHY\"' || curl -s -f http://localhost:8220/"]
       interval: 15s
@@ -204,13 +248,13 @@ services:
       - FLEET_ENROLL=true
       - FLEET_URL=http://fleet-server:8220
       - KIBANA_HOST=http://kibana:5601
-      - KIBANA_USERNAME=elastic
-      - KIBANA_PASSWORD=changeme
+      - KIBANA_USERNAME=fleet_user
+      - KIBANA_PASSWORD=pass
       - FLEET_ENROLLMENT_TOKEN=
     command: >
       bash -c '
         # Get enrollment token for APM policy
-        until ENROLLMENT_TOKEN=$$(curl -s -X GET -u "elastic:changeme" -H "kbn-xsrf: true" \
+        until ENROLLMENT_TOKEN=$$(curl -s -X GET -u "fleet_user:pass" -H "kbn-xsrf: true" \
           "http://kibana:5601/api/fleet/enrollment_api_keys" | \
           grep -o "\"api_key\":\"[^\"]*\"" | head -1 | cut -d"\"" -f4); do
           echo "Waiting for enrollment token...";
