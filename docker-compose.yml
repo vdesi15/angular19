@@ -10,7 +10,6 @@ services:
       - '9300:9300'
     volumes:
       - es-data:/usr/share/elasticsearch/data
-      - es-certs:/usr/share/elasticsearch/config/certs
     networks:
       - monitoring-net
     environment:
@@ -37,6 +36,29 @@ services:
       timeout: 10s
       retries: 120
 
+  # --- Setup Container (runs once to configure passwords) ---
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    container_name: setup
+    networks:
+      - monitoring-net
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    command: >
+      bash -c '
+        echo "Setting kibana_system password";
+        until curl -s -X POST -u "elastic:changeme" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"kibanapass\"}" | grep -q "^{}"; do sleep 10; done;
+        echo "Setting apm_system password";
+        until curl -s -X POST -u "elastic:changeme" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/apm_system/_password -d "{\"password\":\"apmpass\"}" | grep -q "^{}"; do sleep 10; done;
+        echo "All done!";
+      '
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f -u kibana_system:kibanapass http://elasticsearch:9200/_cluster/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # --- Kibana ---
   kibana:
     image: docker.elastic.co/kibana/kibana:8.12.2
@@ -46,13 +68,13 @@ services:
     networks:
       - monitoring-net
     depends_on:
-      elasticsearch:
+      setup:
         condition: service_healthy
     environment:
       - SERVERNAME=kibana
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=changeme
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=kibanapass
       - xpack.security.enabled=true
       - xpack.encryptedSavedObjects.encryptionKey=fhjskloppd678ehkdfdlliverpoolfcr
       - xpack.reporting.encryptionKey=gesjdfjl678ehkdfdlliverpoolfcr
@@ -84,8 +106,8 @@ services:
         -E apm-server.kibana.username=elastic
         -E apm-server.kibana.password=changeme
         -E output.elasticsearch.hosts=["elasticsearch:9200"]
-        -E output.elasticsearch.username=elastic
-        -E output.elasticsearch.password=changeme
+        -E output.elasticsearch.username=apm_system
+        -E output.elasticsearch.password=apmpass
         -E setup.kibana.host=kibana:5601
         -E setup.kibana.username=elastic
         -E setup.kibana.password=changeme
@@ -136,6 +158,4 @@ networks:
 
 volumes:
   es-data:
-    driver: local
-  es-certs:
     driver: local
