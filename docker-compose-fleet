@@ -115,8 +115,8 @@ services:
         sleep 30;
         
         # Ensure the token directory exists and has proper permissions
-        mkdir -p /tmp/tokens
-        chmod 755 /tmp/tokens
+        mkdir -p /tmp/tokens;
+        chmod 755 /tmp/tokens;
         
         echo "Generating Kibana service account token...";
         
@@ -138,20 +138,20 @@ services:
           TOKEN_RESPONSE=$(curl -s -X POST -u "elastic:pass" \
             -H "Content-Type: application/json" \
             "http://elasticsearch:9200/_security/service/elastic/kibana/credential/token/kibana-docker-token" \
-            -d "{}")
+            -d "{}");
           
           echo "Token response attempt $i: $TOKEN_RESPONSE";
           
           if echo "$TOKEN_RESPONSE" | grep -q "\"value\""; then
-            TOKEN=$(echo "$TOKEN_RESPONSE" | grep -o "\"value\":\"[^\"]*\"" | cut -d"\"" -f4)
+            TOKEN=$(echo "$TOKEN_RESPONSE" | grep -o "\"value\":\"[^\"]*\"" | cut -d"\"" -f4);
             if [ ! -z "$TOKEN" ]; then
-              echo "$TOKEN" > /tmp/tokens/kibana_token
-              chmod 644 /tmp/tokens/kibana_token
+              echo "$TOKEN" > /tmp/tokens/kibana_token;
+              chmod 644 /tmp/tokens/kibana_token;
               echo "✓ Service token generated and saved successfully";
               echo "Token preview: ${TOKEN:0:20}...";
               exit 0;
-            fi
-          fi
+            fi;
+          fi;
           
           echo "Attempt $i failed, retrying in 10 seconds...";
           sleep 10;
@@ -159,7 +159,7 @@ services:
         
         echo "✗ Failed to generate service token after 10 attempts";
         echo "Falling back to using kibana_system user credentials";
-        echo "kibana_system" > /tmp/tokens/kibana_fallback
+        echo "kibana_system" > /tmp/tokens/kibana_fallback;
         exit 0;
       '
 
@@ -361,12 +361,12 @@ services:
         # Get enrollment token for APM policy
         echo "Getting enrollment token...";
         for i in {1..20}; do
-          ENROLLMENT_TOKEN=$$(curl -s -X GET -u "fleet_user:pass" -H "kbn-xsrf: true" \
+          ENROLLMENT_TOKEN=$(curl -s -X GET -u "fleet_user:pass" -H "kbn-xsrf: true" \
             "http://kibana:5601/api/fleet/enrollment_api_keys" | \
             grep -o "\"api_key\":\"[^\"]*\"" | head -1 | cut -d"\"" -f4);
           
           if [ ! -z "$ENROLLMENT_TOKEN" ]; then
-            echo "Got enrollment token: $${ENROLLMENT_TOKEN:0:20}...";
+            echo "Got enrollment token: ${ENROLLMENT_TOKEN:0:20}...";
             break;
           fi;
           
@@ -382,7 +382,7 @@ services:
         # Enroll and start agent
         elastic-agent enroll \
           --url=http://fleet-server:8220 \
-          --enrollment-token=$$ENROLLMENT_TOKEN \
+          --enrollment-token=$ENROLLMENT_TOKEN \
           --force;
         
         elastic-agent run;
