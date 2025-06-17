@@ -53,6 +53,21 @@ services:
         until curl -s -X POST -u "elastic:changeme" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"kibanapass\"}" | grep -q "^{}"; do sleep 10; done;
         echo "Setting apm_system password";
         until curl -s -X POST -u "elastic:changeme" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/apm_system/_password -d "{\"password\":\"apmpass\"}" | grep -q "^{}"; do sleep 10; done;
+        echo "Creating custom APM user with proper permissions";
+        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" http://elasticsearch:9200/_security/role/apm_writer -d "{
+          \"cluster\": [\"monitor\", \"manage_ingest_pipelines\", \"manage_index_templates\", \"manage_ilm\"],
+          \"indices\": [
+            {
+              \"names\": [\"apm-*\", \".apm-*\"],
+              \"privileges\": [\"all\"]
+            }
+          ]
+        }";
+        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/apm_writer -d "{
+          \"password\": \"apmwriterpass\",
+          \"roles\": [\"apm_writer\"],
+          \"full_name\": \"APM Writer User\"
+        }";
         echo "Waiting for Kibana to be fully ready...";
         until curl -s -f -u "elastic:changeme" "http://kibana:5601/api/status" | grep -q "available"; do sleep 10; done;
         echo "Installing APM integration...";
@@ -112,8 +127,8 @@ services:
         -E apm-server.kibana.username=elastic
         -E apm-server.kibana.password=changeme
         -E output.elasticsearch.hosts=["elasticsearch:9200"]
-        -E output.elasticsearch.username=apm_system
-        -E output.elasticsearch.password=apmpass
+        -E output.elasticsearch.username=apm_writer
+        -E output.elasticsearch.password=apmwriterpass
         -E setup.kibana.host=kibana:5601
         -E setup.kibana.username=elastic
         -E setup.kibana.password=changeme
