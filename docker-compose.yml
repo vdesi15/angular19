@@ -1,110 +1,141 @@
 version: '3.9'
 
 services:
-  # ... (seal-ui, e2e-runner are unchanged)
-
+  # --- Elasticsearch ---
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
     container_name: elasticsearch
-    ports: ['9200:9200']
+    ports:
+      - '9200:9200'
+      - '9300:9300'
     volumes:
       - es-data:/usr/share/elasticsearch/data
+      - es-certs:/usr/share/elasticsearch/config/certs
     networks:
       - monitoring-net
     environment:
+      - node.name=elasticsearch
+      - cluster.name=docker-cluster
       - discovery.type=single-node
+      - ELASTIC_PASSWORD=changeme
+      - bootstrap.memory_lock=true
       - xpack.security.enabled=true
-      - ELASTIC_PASSWORD=changeme # Still need this for the 'elastic' user to create the token
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - xpack.license.self_generated.type=basic
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
     healthcheck:
-      test: ["CMD-SHELL", "curl -s -f -u elastic:changeme http://localhost:9200/_cluster/health?wait_for_status=yellow"]
+      test: ["CMD-SHELL", "curl -s -f -u elastic:changeme http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=10s"]
       interval: 10s
       timeout: 10s
-      retries: 24
+      retries: 120
 
-  # ✨ THE TOKEN CREATION CONTAINER ✨
-  es-token-setup:
-    image: curlimages/curl
-    container_name: es-token-setup
-    volumes:
-      - es-tokens:/tokens # Mount the shared volume
-    command: >
-      sh -c "
-        echo 'Waiting for Elasticsearch...'
-        until curl -s -f -u elastic:changeme http://elasticsearch:9200/_cluster/health?wait_for_status=yellow > /dev/null; do
-          sleep 5;
-        done;
-        echo 'Elasticsearch is ready. Generating Kibana service token...';
-        
-        # This API call creates a token for the built-in kibana service account
-        # and saves the entire JSON response to a file on the shared volume.
-        curl -s -X POST -u elastic:changeme -H 'Content-Type: application/json' \
-        http://elasticsearch:9200/_security/service/elastic/kibana/credential/token/kibana-token \
-        -d'{}' > /tokens/kibana-token.json;
-
-        if [ -s /tokens/kibana-token.json ]; then
-          echo '✅ Kibana token created successfully.';
-          exit 0;
-        else
-          echo '❌ ERROR: Failed to create Kibana token file.';
-          exit 1;
-        fi
-      "
+  # --- Kibana ---
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.2
+    container_name: kibana
+    ports:
+      - '5601:5601'
     networks:
       - monitoring-net
     depends_on:
       elasticsearch:
         condition: service_healthy
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.12.2
-    container_name: kibana
-    ports: ['5601:5601']
-    volumes:
-      - es-tokens:/usr/share/kibana/config/tokens # Mount token into Kibana's config dir
-    networks:
-      - monitoring-net
-    depends_on:
-      es-token-setup:
-        condition: service_completed_successfully
     environment:
+      - SERVERNAME=kibana
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      # ✨ This is the key. Tell Kibana to use the token file for authentication. ✨
-      - ELASTICSEARCH_SERVICEACCOUNTTOKEN_FILE=/usr/share/kibana/config/tokens/kibana-token.json
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=changeme
+      - xpack.security.enabled=true
+      - xpack.encryptedSavedObjects.encryptionKey=fhjskloppd678ehkdfdlliverpoolfcr
+      - xpack.reporting.encryptionKey=gesjdfjl678ehkdfdlliverpoolfcr
+      - xpack.security.encryptionKey=fhjskloppd678ehkdfdlliverpoolfcr
     healthcheck:
-      test: ["CMD-SHELL", "curl -s -f http://localhost:5601/api/status | grep -q '\"state\":\"green\"'"]
+      test: ["CMD-SHELL", "curl -s -f http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"'"]
       interval: 10s
       timeout: 10s
-      retries: 24
+      retries: 120
 
-  # This is your existing PowerShell script container for installing the APM package
-  kibana-apm-setup:
-    build:
-      context: ./setup # Assumes setup-apm-integration.ps1 and Dockerfile.apm are here
-      dockerfile: Dockerfile.apm
+  # --- APM Server ---
+  apm-server:
+    image: docker.elastic.co/apm/apm-server:8.12.2
+    container_name: apm-server
+    ports:
+      - '8200:8200'
     networks:
       - monitoring-net
     depends_on:
       kibana:
         condition: service_healthy
+    command: >
+      apm-server -e
+        -E apm-server.rum.enabled=true
+        -E apm-server.rum.allow_origins=['*']
+        -E apm-server.host=0.0.0.0:8200
+        -E apm-server.kibana.enabled=true
+        -E apm-server.kibana.host=kibana:5601
+        -E apm-server.kibana.username=elastic
+        -E apm-server.kibana.password=changeme
+        -E output.elasticsearch.hosts=["elasticsearch:9200"]
+        -E output.elasticsearch.username=elastic
+        -E output.elasticsearch.password=changeme
+        -E setup.kibana.host=kibana:5601
+        -E setup.kibana.username=elastic
+        -E setup.kibana.password=changeme
+        -E setup.template.enabled=true
+        -E setup.dashboards.enabled=true
+        -E logging.level=info
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f http://localhost:8200/"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
 
-  apm-server:
-    image: docker.elastic.co/apm/apm-server:8.12.2
-    container_name: apm-server
-    ports: ['8200:8200']
+  # --- Your Angular Application ---
+  seal-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: seal-ui
+    ports:
+      - '4200:4200'
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
     networks:
       - monitoring-net
     depends_on:
-      kibana-apm-setup:
-        condition: service_completed_successfully
-    environment:
-      - OUTPUT_ELASTICSEARCH_HOSTS=["elasticsearch:9200"]
-      - OUTPUT_ELASTICSEARCH_USERNAME=elastic
-      - OUTPUT_ELASTICSEARCH_PASSWORD=changeme
-      # ... other APM env vars
-      
+      apm-server:
+        condition: service_healthy
+
+  # --- E2E Test Runner Container ---
+  e2e-runner:
+    image: cypress/included:13.7.2
+    container_name: e2e-runner
+    networks:
+      - monitoring-net
+    depends_on:
+      - seal-ui
+    working_dir: /e2e
+    volumes:
+      - .:/e2e
+
+# --- Docker Network and Volumes ---
+networks:
+  monitoring-net:
+    driver: bridge
+
 volumes:
   es-data:
     driver: local
-  # The shared volume for passing the token
-  es-tokens:
+  es-certs:
     driver: local
