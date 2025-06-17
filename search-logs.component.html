@@ -1,0 +1,17 @@
+<div class="page-content">
+    <!-- ✨ Use mode() to read the signal's value ✨ -->
+    @if (mode() === 'search') {
+      <div class="search-page-container">
+        <app-search-bar (search)="handleSearch($event)"></app-search-bar>
+      </div>
+    }
+  
+    <div class="results-area">
+      @for(search of searchOrchestrator.activeSearches(); track search.id) {
+        <app-search-result [search]="search"></app-search-result>
+      }
+      @if (searchOrchestrator.activeSearches().length === 0 && mode() !== 'search') {
+        <p class="p-4 text-center">Loading live data for {{ mode() }} view...</p>
+      }
+    </div>
+  </div>
