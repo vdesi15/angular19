@@ -36,7 +36,7 @@ services:
       timeout: 10s
       retries: 120
 
-  # --- Setup Container (runs once to configure passwords) ---
+  # --- Setup Container (runs once to configure passwords and APM integration) ---
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
     container_name: setup
@@ -45,18 +45,24 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+      kibana:
+        condition: service_healthy
     command: >
       bash -c '
         echo "Setting kibana_system password";
         until curl -s -X POST -u "elastic:changeme" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"kibanapass\"}" | grep -q "^{}"; do sleep 10; done;
         echo "Setting apm_system password";
         until curl -s -X POST -u "elastic:changeme" -H "Content-Type: application/json" http://elasticsearch:9200/_security/user/apm_system/_password -d "{\"password\":\"apmpass\"}" | grep -q "^{}"; do sleep 10; done;
+        echo "Waiting for Kibana to be fully ready...";
+        until curl -s -f -u "elastic:changeme" "http://kibana:5601/api/status" | grep -q "available"; do sleep 10; done;
+        echo "Installing APM integration...";
+        curl -X POST -u "elastic:changeme" -H "Content-Type: application/json" -H "kbn-xsrf: true" "http://kibana:5601/api/fleet/epm/packages/apm" -d "{\"force\": true}" || echo "APM integration may already be installed";
         echo "All done!";
       '
     healthcheck:
-      test: ["CMD-SHELL", "curl -s -f -u kibana_system:kibanapass http://elasticsearch:9200/_cluster/health"]
-      interval: 5s
-      timeout: 5s
+      test: ["CMD-SHELL", "curl -s -f -u elastic:changeme http://kibana:5601/api/fleet/epm/packages/apm | grep -q installed"]
+      interval: 10s
+      timeout: 10s
       retries: 5
 
   # --- Kibana ---
@@ -68,7 +74,7 @@ services:
     networks:
       - monitoring-net
     depends_on:
-      setup:
+      elasticsearch:
         condition: service_healthy
     environment:
       - SERVERNAME=kibana
@@ -94,7 +100,7 @@ services:
     networks:
       - monitoring-net
     depends_on:
-      kibana:
+      setup:
         condition: service_healthy
     command: >
       apm-server -e
