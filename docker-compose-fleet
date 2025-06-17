@@ -46,6 +46,7 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+    restart: "no"
     command: >
       bash -c '
         echo "Setting up users and passwords...";
@@ -94,6 +95,74 @@ services:
         echo "User setup completed successfully!";
       '
 
+  # --- Kibana Service Token Setup ---
+  kibana-token-setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    container_name: kibana-token-setup
+    networks:
+      - monitoring-net
+    depends_on:
+      setup-users:
+        condition: service_completed_successfully
+      elasticsearch:
+        condition: service_healthy
+    restart: "no"
+    volumes:
+      - kibana-token:/tmp/tokens
+    command: >
+      bash -c '
+        echo "Waiting for Elasticsearch and users to be ready...";
+        sleep 30;
+        
+        # Ensure the token directory exists and has proper permissions
+        mkdir -p /tmp/tokens
+        chmod 755 /tmp/tokens
+        
+        echo "Generating Kibana service account token...";
+        
+        # Wait for Elasticsearch to be fully ready
+        until curl -s -f -u "elastic:pass" "http://elasticsearch:9200/_cluster/health"; do
+          echo "Waiting for Elasticsearch cluster...";
+          sleep 5;
+        done;
+        
+        # First, create the kibana service account if it doesnt exist
+        echo "Creating kibana service account...";
+        curl -X POST -u "elastic:pass" -H "Content-Type: application/json" \
+          "http://elasticsearch:9200/_security/service/elastic/kibana" \
+          -d "{}" || echo "Kibana service account may already exist";
+        
+        # Generate service account token with retry logic
+        echo "Generating service account token...";
+        for i in {1..10}; do
+          TOKEN_RESPONSE=$(curl -s -X POST -u "elastic:pass" \
+            -H "Content-Type: application/json" \
+            "http://elasticsearch:9200/_security/service/elastic/kibana/credential/token/kibana-docker-token" \
+            -d "{}")
+          
+          echo "Token response attempt $i: $TOKEN_RESPONSE";
+          
+          if echo "$TOKEN_RESPONSE" | grep -q "\"value\""; then
+            TOKEN=$(echo "$TOKEN_RESPONSE" | grep -o "\"value\":\"[^\"]*\"" | cut -d"\"" -f4)
+            if [ ! -z "$TOKEN" ]; then
+              echo "$TOKEN" > /tmp/tokens/kibana_token
+              chmod 644 /tmp/tokens/kibana_token
+              echo "✓ Service token generated and saved successfully";
+              echo "Token preview: ${TOKEN:0:20}...";
+              exit 0;
+            fi
+          fi
+          
+          echo "Attempt $i failed, retrying in 10 seconds...";
+          sleep 10;
+        done;
+        
+        echo "✗ Failed to generate service token after 10 attempts";
+        echo "Falling back to using kibana_system user credentials";
+        echo "kibana_system" > /tmp/tokens/kibana_fallback
+        exit 0;
+      '
+
   # --- Kibana ---
   kibana:
     image: docker.elastic.co/kibana/kibana:8.12.2
@@ -105,25 +174,41 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
-      setup-users:
+      kibana-token-setup:
         condition: service_completed_successfully
+    restart: on-failure:5
+    volumes:
+      - kibana-token:/tmp/tokens:ro
     environment:
       - SERVERNAME=kibana
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      # Use service token if available, otherwise fall back to username/password
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=pass
-      - xpack.security.enabled=true
-      - xpack.encryptedSavedObjects.encryptionKey=fhjskloppd678ehkdfdlliverpoolfcr
-      - xpack.reporting.encryptionKey=gesjdfjl678ehkdfdlliverpoolfcr
-      - xpack.security.encryptionKey=fhjskloppd678ehkdfdlliverpoolfcr
-      - xpack.fleet.agents.elasticsearch.hosts=["http://elasticsearch:9200"]
-      - xpack.fleet.agents.fleet_server.hosts=["http://fleet-server:8220"]
+      - xpack.encryptedSavedObjects.encryptionKey=a7a6311933d3503b89bc2dbc36572c33a6c10925682e591bffcab6911c06786d
+      - xpack.reporting.encryptionKey=a7a6311933d3503b89bc2dbc36572c33a6c10925682e591bffcab6911c06786d
+      - xpack.security.encryptionKey=a7a6311933d3503b89bc2dbc36572c33a6c10925682e591bffcab6911c06786d
+    command: >
+      bash -c '
+        # Check if service token exists and use it, otherwise use username/password
+        if [ -f /tmp/tokens/kibana_token ] && [ -s /tmp/tokens/kibana_token ]; then
+          echo "Using service account token for authentication";
+          export ELASTICSEARCH_SERVICE_ACCOUNT_TOKEN=$(cat /tmp/tokens/kibana_token);
+          unset ELASTICSEARCH_USERNAME;
+          unset ELASTICSEARCH_PASSWORD;
+        else
+          echo "Using kibana_system user for authentication";
+        fi;
+        
+        /usr/local/bin/kibana-docker;
+      '
     healthcheck:
-      test: ["CMD-SHELL", "curl -s -f http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"'"]
-      interval: 10s
+      test: ["CMD-SHELL", "curl -s -f http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"' || exit 1"]
+      interval: 30s
       timeout: 10s
-      retries: 120
-
+      retries: 50
+      start_period: 90s
+      
   # --- Fleet Setup Container ---
   fleet-setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
@@ -133,14 +218,19 @@ services:
     depends_on:
       kibana:
         condition: service_healthy
+    restart: "no"
     command: >
       bash -c '
         echo "Setting up Fleet...";
         
         # Wait for Kibana to be fully ready
-        until curl -s -f -u "fleet_user:pass" "http://kibana:5601/api/status" | grep -q "available"; do 
-          echo "Waiting for Kibana..."; 
-          sleep 10; 
+        for i in {1..30}; do
+          if curl -s -f -u "fleet_user:pass" "http://kibana:5601/api/status" | grep -q "available"; then
+            echo "Kibana is ready";
+            break;
+          fi;
+          echo "Waiting for Kibana... attempt $i/30";
+          sleep 10;
         done;
         
         # Setup Fleet
@@ -269,14 +359,25 @@ services:
     command: >
       bash -c '
         # Get enrollment token for APM policy
-        until ENROLLMENT_TOKEN=$$(curl -s -X GET -u "fleet_user:pass" -H "kbn-xsrf: true" \
-          "http://kibana:5601/api/fleet/enrollment_api_keys" | \
-          grep -o "\"api_key\":\"[^\"]*\"" | head -1 | cut -d"\"" -f4); do
-          echo "Waiting for enrollment token...";
+        echo "Getting enrollment token...";
+        for i in {1..20}; do
+          ENROLLMENT_TOKEN=$$(curl -s -X GET -u "fleet_user:pass" -H "kbn-xsrf: true" \
+            "http://kibana:5601/api/fleet/enrollment_api_keys" | \
+            grep -o "\"api_key\":\"[^\"]*\"" | head -1 | cut -d"\"" -f4);
+          
+          if [ ! -z "$ENROLLMENT_TOKEN" ]; then
+            echo "Got enrollment token: $${ENROLLMENT_TOKEN:0:20}...";
+            break;
+          fi;
+          
+          echo "Waiting for enrollment token... attempt $i/20";
           sleep 10;
         done;
         
-        echo "Got enrollment token: $$ENROLLMENT_TOKEN";
+        if [ -z "$ENROLLMENT_TOKEN" ]; then
+          echo "Failed to get enrollment token";
+          exit 1;
+        fi;
         
         # Enroll and start agent
         elastic-agent enroll \
@@ -382,4 +483,6 @@ volumes:
   es-data:
     driver: local
   es-certs:
+    driver: local
+  kibana-token:
     driver: local
