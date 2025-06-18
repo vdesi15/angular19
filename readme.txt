@@ -1,197 +1,289 @@
-We will go back to the two-script approach. This is the correct pattern.
-File: setup/setup-es-user.ps1 (Script 1 - For Elasticsearch)
-# SCRIPT 1: Creates the dedicated user for Kibana in Elasticsearch.
-$ErrorActionPreference = "Stop"
-Write-Host "--- ES User Setup Script Initializing ---"
+Excellent. These are the final, critical polishing steps that will transform your data grid from functional to professional. We will address every single one of these UI/UX and logic issues.
+The Strategy
+Table Sizing: We'll use PrimeNG's [scrollable]="true" and scrollHeight="flex" properties, combined with specific CSS on the parent containers, to make the table fill the available vertical space.
+Compact Density: PrimeNG tables have a size property. We'll set it to "small" to reduce padding everywhere.
+Accordion Sizing: We will use CSS to override the default padding on the accordion header and content to make it more compact.
+Global Filter: We will simply remove the pTemplate="caption" from the LogViewerComponent's HTML to get rid of the global filter input.
+Column Filter Bug: This is a classic bug when using [(ngModel)] inside a loop. The solution is to use PrimeNG's built-in p-columnFilter filtering mechanism, which manages its own state correctly.
+Advanced Skeleton: We will refactor the skeleton logic. The SearchResultComponent will render the table header immediately and will only show the row skeleton inside the table's body while loading.
+Dynamic Accordion Header: We'll create a new computed signal in the SearchResultComponent to generate the dynamic record count text and display it in the accordion header.
+Part 1: LogViewerComponent - The Power Grid
+This component will see the most significant changes to implement the advanced table features.
+log-viewer.component.ts
+Generated typescript
+import { Component, computed, EventEmitter, inject, Input, Output, Signal, ViewChild, OnChanges, SimpleChanges } from '@angular/core';
+import { CommonModule, JsonPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { get } from 'lodash-es';
 
-$ElasticUrl = "http://elasticsearch:9200"
-$AuthHeader = @{ "Authorization" = "Basic $([System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes('elastic:changeme')))" }
-$JsonHeader = @{ "Content-Type" = "application/json" }
+// PrimeNG Modules
+import { Table, TableModule } from 'primeng/table';
+import { InputTextModule } from 'primeng/inputtext';
+import { ColumnFilterModule } from 'primeng/columnfilter';
+import { TooltipModule } from 'primeng/tooltip';
+import { BadgeModule } from 'primeng/badge'; // For styling
 
-# Wait for Elasticsearch to be healthy
-$retries = 24
-while ($retries -gt 0) {
-    try {
-        Invoke-WebRequest -Uri "$ElasticUrl/_cluster/health?wait_for_status=yellow" -Headers $AuthHeader -UseBasicParsing | Out-Null
-        Write-Host "✅ Elasticsearch is healthy."
-        break
-    } catch {
-        $retries--
-        Write-Warning "ES not ready. Retries left: $retries. Waiting 5s..."
-        Start-Sleep -Seconds 5
-        if ($retries -eq 0) { throw "FATAL: Elasticsearch did not start." }
+// App Components & Services
+import { ActiveSearch, ElkHit } from '../../models/search.model';
+import { ColumnDefinition } from 'src/app/core/models/column-definition.model';
+import { TransformPipe } from 'src/app/core/pipes/transform.pipe';
+import { ViewDefinitionService } from 'src/app/core/services/view-definition.service';
+
+@Component({
+  selector: 'app-log-viewer',
+  standalone: true,
+  imports: [
+    CommonModule, FormsModule, JsonPipe, TableModule, InputTextModule, 
+    ColumnFilterModule, TooltipModule, BadgeModule, TransformPipe
+  ],
+  templateUrl: './log-viewer.component.html',
+  styleUrls: ['./log-viewer.component.scss']
+})
+export class LogViewerComponent implements OnChanges {
+  @Input({ required: true }) searchInstance!: ActiveSearch;
+  @Input({ required: true }) allColumnsForViewType: ColumnDefinition[] = [];
+  @Input({ required:true }) viewId!: string;
+  @Output() rowDrilldown = new EventEmitter<any>();
+
+  @ViewChild('logTable') logTable!: Table;
+  private viewDefService = inject(ViewDefinitionService);
+  
+  // --- No longer need global filter signal ---
+
+  // `visibleColumns` state management is removed from here and managed in the parent.
+  @Input() visibleColumns: ColumnDefinition[] = [];
+
+  // This computed signal flattens the raw ELK data. The table will handle filtering.
+  public tableData: Signal<any[]> = computed(() => {
+    const columns = this.visibleColumns;
+    const hits = this.searchInstance.data as ElkHit[] ?? [];
+    return hits.map(hit => {
+      const row: any = { _id: hit._id, _original: hit._source };
+      columns.forEach(col => {
+        row[col.name] = get(hit._source, col.field, 'N/A');
+      });
+      return row;
+    });
+  });
+
+  // No ngOnChanges needed for this simplified version
+  ngOnChanges(changes: SimpleChanges) {}
+  
+  handleRowClick(rowData: any) {
+    const drilldownQuery = rowData._original?.user?.id;
+    if (drilldownQuery) {
+      this.rowDrilldown.emit(drilldownQuery);
     }
+  }
+}
+Use code with caution.
+TypeScript
+log-viewer.component.html (The Advanced Table)
+This template now uses p-columnFilter for per-column filtering and removes the global caption filter.
+Generated html
+<!-- 
+  ✨ FIX 1 & 2: `scrollHeight="flex"` and `size="small"` for a compact, flexible table.
+-->
+<p-table #logTable 
+  [value]="tableData()" 
+  [columns]="visibleColumns" 
+  dataKey="_id"
+  [paginator]="true" 
+  [rows]="50" 
+  [rowsPerPageOptions]="[25, 50, 100, 250]"
+  [scrollable]="true" 
+  scrollHeight="flex"
+  [resizableColumns]="true" 
+  columnResizeMode="expand"
+  [tableStyle]="{'min-width': '50rem'}"
+  styleClass="p-datatable-striped p-datatable-sm"> <!-- p-datatable-sm for small size -->
+
+  <!-- ✨ FIX 4: The entire `pTemplate="caption"` is removed. -->
+
+  <ng-template pTemplate="header" let-columns>
+    <!-- Row 1: Column Display Names -->
+    <tr>
+      @for(col of columns; track col.id) {
+        <th pResizableColumn [style.width]="col.width">
+          {{ col.displayName }}
+        </th>
+      }
+    </tr>
+    <!-- Row 2: Per-Column Filter Inputs -->
+    <tr>
+      @for(col of columns; track col.id) {
+        <th>
+          <!-- ✨ FIX 5: Use p-columnFilter for robust, isolated filtering -->
+          @if(col.enableFiltering) {
+            <p-columnFilter [field]="col.name" matchMode="contains" [showMenu]="false">
+              <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+                <!-- Each filter has its own ngModel, preventing the bug -->
+                <input type="text" pInputText [ngModel]="value" (ngModelChange)="filter($event)" class="p-inputtext-sm">
+              </ng-template>
+            </p-columnFilter>
+          }
+        </th>
+      }
+    </tr>
+  </ng-template>
+
+  <ng-template pTemplate="body" let-rowData let-columns="columns">
+    <tr (click)="handleRowClick(rowData)" class="p-selectable-row">
+      @for(col of columns; track col.id) {
+        <td>
+          <span class="p-column-title">{{ col.displayName }}</span>
+          {{ rowData[col.name] | transform:col.transform:rowData._original }}
+        </td>
+      }
+    </tr>
+  </ng-template>
+  
+  <ng-template pTemplate="emptymessage" let-columns>
+    <tr><td [attr.colspan]="columns.length" class="text-center p-4">No records found.</td></tr>
+  </ng-template>
+</p-table>
+Use code with caution.
+Html
+log-viewer.component.scss
+This ensures the host container can flex correctly.
+Generated scss
+:host {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 0;
 }
 
-# Create the user WITH the correct role. We use PUT to make this idempotent (safe to run multiple times).
-Write-Host "Creating/updating user 'kibana_user' with 'kibana_admin' role..."
-try {
-    $UserUrl = "$ElasticUrl/_security/user/kibana_user"
-    $UserBody = @{
-        "password" = "kibanapass"
-        "roles" = [ "kibana_admin" ] # This is the key permission
-        "full_name" = "Kibana Service User"
-    } | ConvertTo-Json
+// Ensure the table component itself fills the host
+::ng-deep .p-datatable {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  .p-datatable-wrapper {
+    flex-grow: 1;
+  }
+}
+Use code with caution.
+Scss
+Part 2: SearchResultComponent - The Smart Host
+This component now handles the advanced skeleton loading and the dynamic accordion header.
+search-result.component.ts
+Generated typescript
+// ... imports
+import { Table } from 'primeng/table'; // Import Table for ViewChild type
+
+@Component({
+  selector: 'app-search-result',
+  // ...
+})
+export class SearchResultComponent {
+  @Input({ required: true }) search!: ActiveSearch;
+  
+  // Keep the reference to the LogViewer to access its state
+  @ViewChild(LogViewerComponent) private logViewer?: LogViewerComponent;
+  
+  // ... other injections and computed signals (allColumnsForViewType, availableViews) ...
+  
+  public selectedViewId: WritableSignal<string> = signal('');
+  public visibleColumns: WritableSignal<ColumnDefinition[]> = signal([]);
+
+  // ✨ FIX 7: Computed signal for the dynamic accordion header text ✨
+  public recordsSummary = computed(() => {
+    const total = this.search.totalRecords;
+    // Get the filtered count from the table's state, if it exists
+    const filteredCount = this.logViewer?.logTable.totalRecords ?? total;
     
-    Invoke-RestMethod -Uri $UserUrl -Method Put -Headers ($AuthHeader + $JsonHeader) -Body $UserBody
-    Write-Host "✅ User 'kibana_user' created/updated successfully."
-} catch {
-    Write-Error "FATAL: Failed to create Kibana user. Error: $($_.Exception.Message)"
-    exit 1
-}
-
-exit 0
-Use code with caution.
-Powershell
-File: setup/setup-apm-integration.ps1 (Script 2 - For Kibana)
-# SCRIPT 2: Installs the APM integration via the Kibana API.
-$ErrorActionPreference = "Stop"
-Write-Host "--- Kibana APM Integration Setup Script Initializing ---"
-
-$KibanaUrl = "http://kibana:5601"
-
-# Wait for Kibana to be healthy
-Write-Host "Waiting for Kibana to become healthy..."
-$retries = 24
-while ($retries -gt 0) {
-    try {
-        $response = Invoke-WebRequest -Uri "$KibanaUrl/api/status" -Method Get -TimeoutSec 5 -UseBasicParsing
-        if ($response.StatusCode -eq 200) {
-            $statusObject = $response.Content | ConvertFrom-Json
-            if ($statusObject.status.overall.state -eq "green") {
-                Write-Host "✅ Kibana is healthy."
-                break
-            }
-        }
-    } catch {}
-    $retries--
-    Write-Warning "Kibana not ready. Retries left: $retries. Waiting 5s..."
-    Start-Sleep -Seconds 5
-    if ($retries -eq 0) { throw "FATAL: Kibana did not start." }
-}
-
-# Install the integration
-Write-Host "Installing APM integration..."
-try {
-    $InstallUrl = "$KibanaUrl/api/fleet/epm/packages/apm"
-    $Headers = @{ "kbn-xsrf" = "true"; "Content-Type" = "application/json" }
-    $Body = "{}" # A simple empty body is often sufficient
-    Invoke-RestMethod -Uri $InstallUrl -Method Post -Headers $Headers -Body $Body
-    Write-Host "✅ APM integration installed or already present."
-} catch {
-    if ($_.Exception.Response.StatusCode -eq 409) { # 409 Conflict is OK
-        Write-Host "APM integration was already installed."
-    } else {
-        $errorResponse = $_.Exception.Response.GetResponseStream() | ForEach-Object { (New-Object System.IO.StreamReader($_)).ReadToEnd() }
-        throw "FATAL: Failed to install APM integration. Status: $($_.Exception.Response.StatusCode). Response: $errorResponse"
+    if (total === 0) return '';
+    if (filteredCount < total) {
+      return `(Filtered: ${filteredCount} / Total: ${total})`;
     }
+    return `(Total Records: ${total})`;
+  });
+
+  constructor() {
+    effect(() => {
+      const available = this.availableViews();
+      if (available.length > 0) {
+        const defaultView = available.find(v => v.default) ?? available[0];
+        this.selectedViewId.set(defaultView.viewId);
+      }
+    });
+
+    effect(() => {
+      this.resetColumnsToDefault();
+    });
+  }
+
+  resetColumnsToDefault(): void {
+    const available = this.availableColumnsForViewType();
+    const defaultVisible = available.filter(c => c.visible);
+    this.visibleColumns.set(defaultVisible);
+  }
+
+  // ... other methods (onDrilldown, closePanel, etc.)
+}
+Use code with caution.
+TypeScript
+search-result.component.html
+This template now implements the advanced skeleton loading pattern.
+Generated html
+<p-accordion [multiple]="true" [activeIndex]="search.isExpanded ? 0 : -1" styleClass="result-accordion compact">
+  <p-accordion-panel>
+    <p-accordion-header>
+      <div class="accordion-header">
+        <div class="header-left">
+          <span class="font-bold text-lg mr-3">{{ search.title }}</span>
+          <!-- ✨ FIX 7: Use the new computed signal for the summary ✨ -->
+          <span class="text-sm text-color-secondary ml-2">{{ recordsSummary() }}</span>
+        </div>
+        <div class="header-right">
+          @if(search.isStreaming) {
+            <!-- ... stop button ... -->
+          }
+          <!-- ... close button ... -->
+        </div>
+      </div>
+    </p-accordion-header>
+    <p-accordion-content>
+      <!-- ... Toolbars ... -->
+      
+      <!-- ✨ FIX 6: Advanced Skeleton Logic ✨ -->
+      <div class="result-content-wrapper">
+        @if (search.isLoading && search.data.length === 0) {
+          <!-- Pass the resolved columns to the skeleton -->
+          <app-table-skeleton [columns]="allColumnsForViewType()"></app-table-skeleton>
+        } @else {
+          <app-log-viewer 
+            [searchInstance]="search"
+            [allColumnsForViewType]="allColumnsForViewType()" 
+            [viewId]="selectedViewId()"
+            [visibleColumns]="visibleColumns()"
+            (rowDrilldown)="onDrilldown($event)">
+          </app-log-viewer>
+        }
+      </div>
+    </p-accordion-content>
+  </p-accordion-panel>
+</p-accordion>
+Use code with caution.
+Html
+search-result.component.scss
+We add a class for compact styling.
+Generated scss
+// ✨ FIX 3: Compact accordion styles ✨
+:host ::ng-deep .result-accordion.compact {
+  .p-accordion-header-link {
+    padding: 0.5rem 1rem !important; // Reduce header padding
+  }
+  .p-accordion-content {
+    padding: 0; // Remove content padding so the table/toolbar can be edge-to-edge
+  }
 }
 
-exit 0
-Use code with caution.
-Powershell
-Step 2: The Two Dockerfiles
-You will have two Dockerfiles in your setup folder.
-File: setup/Dockerfile.es
-FROM mcr.microsoft.com/powershell:lts-alpine-3.18
-WORKDIR /setup
-COPY setup-es-user.ps1 .
-CMD ["pwsh", "-File", "./setup-es-user.ps1"]
-Use code with caution.
-Dockerfile
-File: setup/Dockerfile.apm
-FROM mcr.microsoft.com/powershell:lts-alpine-3.18
-WORKDIR /setup
-COPY setup-apm-integration.ps1 .
-CMD ["pwsh", "-File", "./setup-apm-integration.ps1"]
-Use code with caution.
-Dockerfile
-Step 3: The Final, Correct docker-compose.yml
-This version has the correct, linear dependency chain.
-version: '3.9'
-
-services:
-  # ... (seal-ui, e2e-runner)
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
-    container_name: elasticsearch
-    ports: ['9200:9200']
-    volumes: ['es-data:/usr/share/elasticsearch/data']
-    networks: ['monitoring-net']
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=true
-      - ELASTIC_PASSWORD=changeme
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s -f -u elastic:changeme http://localhost:9200/_cluster/health?wait_for_status=yellow"]
-      interval: 10s
-      timeout: 10s
-      retries: 24
-
-  # Container 1: Sets up the user in ES
-  es-user-setup:
-    container_name: es-user-setup
-    build:
-      context: ./setup
-      dockerfile: Dockerfile.es
-    networks:
-      - monitoring-net
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.12.2
-    container_name: kibana
-    ports: ['5601:5601']
-    networks:
-      - monitoring-net
-    # Kibana waits for the user to be created before it starts.
-    depends_on:
-      es-user-setup:
-        condition: service_completed_successfully
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=kibana_user # The new user we created
-      - ELASTICSEARCH_PASSWORD=kibanapass
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s -f http://localhost:5601/api/status | grep -q '\"state\":\"green\"'"]
-      interval: 10s
-      timeout: 10s
-      retries: 24
-
-  # Container 2: Installs the APM package in Kibana
-  kibana-apm-setup:
-    container_name: kibana-apm-setup
-    build:
-      context: ./setup
-      dockerfile: Dockerfile.apm
-    networks:
-      - monitoring-net
-    # It waits for Kibana to be fully healthy before it runs.
-    depends_on:
-      kibana:
-        condition: service_healthy
-
-  apm-server:
-    image: docker.elastic.co/apm/apm-server:8.12.2
-    container_name: apm-server
-    ports: ['8200:8200']
-    networks:
-      - monitoring-net
-    # APM Server waits for the APM integration to be installed before it starts.
-    depends_on:
-      kibana-apm-setup:
-        condition: service_completed_successfully
-    environment:
-      - OUTPUT_ELASTICSEARCH_USERNAME=elastic
-      - OUTPUT_ELASTICSEARCH_PASSWORD=changeme
-      - APM_SERVER_HOST=0.0.0.0:8200
-      - OUTPUT_ELASTICSEARCH_HOSTS=["elasticsearch:9200"]
-      - APM_SERVER_RUM_ENABLED=true
-      - KIBANA_HOST=kibana:5601
-      
-volumes:
-  es-data:
-    driver: local
+// ... other styles
+.result-content-wrapper {
+  height: 65vh;
+  display: flex;
+  flex-direction: column;
+}
