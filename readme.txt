@@ -1,57 +1,74 @@
-import { Injectable, inject, signal, WritableSignal } from '@angular/core';
-// ... other imports
+// Alternative approach: Track the last processed data length
+export class LogViewerComponent implements OnChanges {
+  // ... existing code ...
+  
+  private lastProcessedLength = 0;
 
-export interface ActiveSearch extends SearchRequest {
-  // ... other properties
-  data: ElkHit[];
-  version: number; // ✨ Add a version number to the state object
-}
+  constructor() {
+    effect(() => {
+      const currentSearch = this.searchState();
+      const columns = this.visibleColumnsState();
 
-@Injectable({ providedIn: 'root' })
-export class SearchOrchestratorService {
-  public activeSearches: WritableSignal<ActiveSearch[]> = signal([]);
-  // ...
+      if (!currentSearch) return;
+      
+      const hits = currentSearch.data ?? [];
+      console.log(`[LogViewer Effect] Running. Processing ${hits.length} hits with ${columns.length} visible columns.`);
 
-  public performSearch(request: SearchRequest): void {
-    // ...
-    const newSearch: ActiveSearch = {
-      // ...
-      data: [],
-      version: 0, // ✨ Initialize version to 0
-    };
-    // ...
-  }
-
-  private processSseEvent(id: string, event: SseEvent): void {
-    this.activeSearches.update(searches => 
-      searches.map(s => {
-        if (s.id !== id) return s;
+      // Only process new hits to avoid recreating the entire table
+      if (hits.length > this.lastProcessedLength) {
+        const newHits = hits.slice(this.lastProcessedLength);
+        console.log(`[LogViewer Effect] Processing ${newHits.length} new hits.`);
         
-        switch(event.type) {
-          case 'OPEN':
-            return { ...s, isLoading: true, isStreaming: true, data: [], version: s.version + 1 };
-          case 'DATA':
-            if (!event.data?.hits) return s;
-            const newHits = event.data.hits;
-            const updatedData = [...s.data, ...newHits];
-            
-            // ✨ THE KEY: Increment the version number with every data update!
-            return { 
-              ...s, 
-              isLoading: false,
-              data: updatedData,
-              totalRecords: event.data.total ?? s.totalRecords,
-              version: s.version + 1 
-            };
-          case 'END':
-          case 'ERROR':
-            return { ...s, isLoading: false, isStreaming: false, error: event.error?.message, version: s.version + 1 };
-          default:
-            return s;
-        }
-      })
-    );
+        const newRows = newHits.map(hit => {
+          const row: any = { _id: hit._id, _original: hit._source };
+          columns.forEach(col => {
+            row[col.name] = get(hit._source, col.field, 'N/A');
+          });
+          return row;
+        });
+        
+        // Append new rows instead of replacing all data
+        this.tableData.update(currentData => [...currentData, ...newRows]);
+        this.lastProcessedLength = hits.length;
+      } else if (hits.length < this.lastProcessedLength) {
+        // Handle case where search was reset
+        const newTableData = hits.map(hit => {
+          const row: any = { _id: hit._id, _original: hit._source };
+          columns.forEach(col => {
+            row[col.name] = get(hit._source, col.field, 'N/A');
+          });
+          return row;
+        });
+        
+        this.tableData.set(newTableData);
+        this.lastProcessedLength = hits.length;
+      }
+    });
   }
 
-  // ... rest of service
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['searchInstance']) {
+      const newSearchInstance = changes['searchInstance'].currentValue as ActiveSearch;
+      
+      // Check if this is a new search (different ID) - reset processed length
+      const currentSearch = this.searchState();
+      if (!currentSearch || currentSearch.id !== newSearchInstance.id) {
+        this.lastProcessedLength = 0;
+        this.tableData.set([]); // Clear existing data for new search
+      }
+      
+      console.log(`[LogViewer ngOnChanges] Input 'searchInstance' changed. Received ${newSearchInstance.data.length} records.`);
+      this.searchState.set(newSearchInstance);
+    }
+
+    if (changes['visibleColumns']) {
+      const newVisibleColumns = changes['visibleColumns'].currentValue as ColumnDefinition[];
+      console.log(`[LogViewer ngOnChanges] Input 'visibleColumns' changed. Now showing ${newVisibleColumns.length} columns.`);
+      this.visibleColumnsState.set(newVisibleColumns);
+      // Reset processed length when columns change to reprocess all data
+      this.lastProcessedLength = 0;
+    }
+  }
+
+  // ... rest of existing methods ...
 }
