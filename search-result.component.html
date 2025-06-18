@@ -1,95 +1,56 @@
-<!-- 
-  The main accordion component. 
-  We use [activeIndex] to programmatically control its expanded/collapsed state
-  based on the `isExpanded` property from our SearchOrchestratorService.
-  - If isExpanded is true, activeIndex is 0 (the first and only panel is open).
-  - If isExpanded is false, activeIndex is -1 (no panels are open).
--->
-<p-accordion [multiple]="true" [activeIndex]="search.isExpanded ? 0 : -1" styleClass="result-accordion">
-
-    <!-- We use p-accordion-panel, the new component for modern PrimeNG -->
-    <p-accordion-panel>
-  
-      <!-- 
-        HEADER TEMPLATE: This allows us to build a completely custom header
-        with a title, status indicators, and action buttons.
-      -->
-      <ng-template pTemplate="header">
-        <div class="accordion-header" (click)="toggleExpansion()">
-          <!-- Left side of the header -->
-          <div class="header-left">
-            <span class="font-bold text-lg mr-3">{{ search.title }}</span>
-            
-            <!-- Show a streaming indicator only for 'browse' or 'error' search types -->
-            @if(search.isStreaming) {
-              <span class="text-sm text-color-secondary">
-                <i class="pi pi-spin pi-spinner mr-2"></i>
-                Streaming... ({{ search.data.length }} records)
-              </span>
-            }
-          </div>
-          
-          <!-- Right side of the header -->
-          <div class="header-right">
-            <!-- Show the "Stop" button only while actively streaming -->
-            @if(search.isStreaming) {
-              <button pButton type="button" icon="pi pi-stop-circle" label="Stop" 
-                      class="p-button-sm p-button-danger mr-2" 
-                      pTooltip="Stop the live stream"
-                      (click)="orchestrator.stopSseStream(search.id); $event.stopPropagation()"></button>
-            }
-            <!-- The "Close" button is always available -->
-            <button pButton type="button" icon="pi pi-times" class="p-button-text p-button-rounded p-button-danger" 
-                    pTooltip="Close Panel" 
-                    (click)="closePanel(); $event.stopPropagation()"></button>
-          </div>
+<p-accordion [multiple]="true" [activeIndex]="search.isExpanded ? 0 : -1" styleClass="result-accordion compact">
+  <p-accordion-panel>
+    <p-accordion-header>
+      <div class="accordion-header" (click)="toggleExpansion()">
+        <div class="header-left">
+          <span class="font-bold text-lg mr-3">{{ search.title }}</span>
+          <span class="text-sm text-color-secondary ml-2">{{ recordsSummary() }}</span>
         </div>
-      </ng-template>
-  
-      <!--
-        CONTENT TEMPLATE: This holds the main content of the accordion panel,
-        including the toolbar and the data viewer.
-      -->
-      <ng-template pTemplate="content">
-        
-        <!-- Render the correct toolbar based on the search type -->
-        @if(search.type === 'transaction') {
-          <app-transaction-toolbar 
-            [views]="availableViews()" 
-            [selectedView]="selectedViewId()"
-            (viewChange)="selectedViewId.set($event)">
-          </app-transaction-toolbar>
-        } @else { <!-- For 'browse' and 'error' types -->
-          <app-streaming-toolbar
-            [allColumns]="allColumnsForViewType()"
-            [visibleColumns]="logViewer?.visibleColumns() || []"
-            (columnsChange)="logViewer?.visibleColumns.set($event)"
-            (reset)="resetColumns()">
-          </app-streaming-toolbar>
-        }
-        
-        <!-- This wrapper div is crucial for making the table's flexible height work -->
-        <div class="result-content-wrapper">
-          
-          <!-- Show a skeleton loader ONLY on the initial load (when data is empty) -->
-          @if (search.isLoading && search.data.length === 0) {
-            <app-table-skeleton [columns]="allColumnsForViewType()"></app-table-skeleton>
-          
-          } @else if (search.error) {
-            <!-- Show an error message if the search failed -->
-            <p class="p-3 text-red-500 font-bold"><i class="pi pi-exclamation-circle mr-2"></i>{{ search.error }}</p>
-          
-          } @else {
-            <!-- Otherwise, render the powerful LogViewer component -->
-            <app-log-viewer #logViewer
-              [searchInstance]="search"
-              [allColumnsForViewType]="allColumnsForViewType()" 
-              [viewId]="selectedViewId()"
-              (rowDrilldown)="onDrilldown($event)">
-            </app-log-viewer>
+        <div class="header-right">
+          @if(search.isStreaming) {
+            <span class="streaming-indicator text-sm text-color-secondary">
+              <i class="pi pi-spin pi-spinner mr-2"></i>
+              Streaming...
+            </span>
+            <button pButton type="button" icon="pi pi-stop-circle" label="Stop" class="p-button-sm p-button-danger mr-2" 
+                    pTooltip="Stop the live data stream"
+                    (click)="orchestrator.stopSseStream(search.id); $event.stopPropagation()"></button>
           }
+          <button pButton type="button" icon="pi pi-times" class="p-button-text p-button-rounded p-button-danger" 
+                  pTooltip="Close Panel" 
+                  (click)="orchestrator.closeSearch(search.id); $event.stopPropagation()"></button>
         </div>
-      </ng-template>
-  
-    </p-accordion-panel>
-  </p-accordion>
+      </div>
+    </p-accordion-header>
+    <p-accordion-content>
+      @if(search.type === 'transaction') {
+        <app-transaction-toolbar 
+          [availableViews]="availableViews()" 
+          [selectedViewId]="selectedViewId()"
+          (viewChange)="selectedViewId.set($event)">
+        </app-transaction-toolbar>
+      } @else {
+        <app-streaming-toolbar
+          [allAvailableColumns]="allColumnsForViewType()"
+          [currentlyVisibleColumns]="visibleColumns()"
+          (visibleColumnsChange)="onStreamingColumnsChange($event)"
+          (reset)="resetStreamingColumns()">
+        </app-streaming-toolbar>
+      }
+      
+      <div class="result-content-wrapper">
+        @if (search.isLoading && search.data.length === 0) {
+          <app-table-skeleton [columns]="allColumnsForViewType()"></app-table-skeleton>
+        } @else if (search.error) {
+          <p class="p-3 text-red-500 font-bold"><i class="pi pi-exclamation-circle mr-2"></i>{{ search.error }}</p>
+        } @else {
+          <app-log-viewer
+            [searchInstance]="search"
+            [visibleColumns]="visibleColumns()"
+            (rowDrilldown)="onDrilldown($event)">
+          </app-log-viewer>
+        }
+      </div>
+    </p-accordion-content>
+  </p-accordion-panel>
+</p-accordion>

@@ -1,50 +1,45 @@
-// Apply styles directly to this component's host element
 :host {
-    display: block;
-    // Add some space below each accordion panel
-    margin-bottom: 1rem;
-  }
-  
-  // Override PrimeNG accordion styles using ::ng-deep
-  :host ::ng-deep .result-accordion {
-    // Remove the default box shadow from the accordion panel
-    .p-accordion-content {
-      border: none;
-    }
-    
-    .p-accordion-header-link {
-      // Take up the full width to allow our custom header content
-      width: 100%;
-      // Remove default padding so our custom header fits edge-to-edge
-      padding: 0 !important;
-    }
-    
-    // Remove the default expand/collapse icon, as we handle it ourselves
-    .p-accordion-toggle-icon {
-      display: none;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+// Compact accordion styles
+:host ::ng-deep .result-accordion.compact {
+  .p-accordion-header-link {
+    padding: 0.5rem 1rem !important;
+    min-height: auto;
+    transition: background-color 0.2s;
+    &:hover {
+      background-color: var(--surface-c);
     }
   }
   
-  // Custom styles for our header content
-  .accordion-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding: 0.75rem 1.25rem; // Consistent padding
+  .p-accordion-content {
+    padding: 0;
   }
-  
-  .header-left, .header-right {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  
-  // Styles for the container that holds the table
-  .result-content-wrapper {
-    // This is the key to making the table's `scrollHeight="flex"` work.
-    // We define a height and make it a flex container.
-    height: 65vh; // Example: 65% of the viewport height
-    display: flex;
-    flex-direction: column;
-  }
+}
+
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.header-left, .header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.streaming-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.result-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 70vh;
+  max-height: 800px;
+}
