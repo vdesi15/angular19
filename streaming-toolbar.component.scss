@@ -1,0 +1,41 @@
+:host ::ng-deep {
+  // Ensure the toolbar has no bottom border and compact height
+  .p-toolbar {
+    border: none;
+    padding: 0.25rem 0; // Reduced from 0.5rem
+    min-height: auto;
+    
+    .p-toolbar-group-left,
+    .p-toolbar-group-right {
+      gap: 0.5rem; // Reduce gap between items
+    }
+    
+    // Make multiselect more compact
+    .p-multiselect.p-multiselect-sm {
+      .p-multiselect-label {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+      }
+      
+      .p-multiselect-trigger {
+        width: 2rem;
+      }
+    }
+    
+    // Compact buttons
+    .p-button {
+      padding: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+      
+      &.p-button-text {
+        padding: 0.25rem 0.5rem;
+      }
+    }
+    
+    // Compact outlined button
+    .p-button-outlined.p-button-sm {
+      padding: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+    }
+  }
+}

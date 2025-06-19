@@ -1,0 +1,58 @@
+:host ::ng-deep {
+  // Ensure the toolbar has no bottom border and compact height
+  .p-toolbar {
+    border: none;
+    padding: 0.25rem 0; // Reduced from 0.5rem
+    min-height: auto;
+    
+    .p-toolbar-group-left,
+    .p-toolbar-group-right {
+      gap: 0.5rem; // Reduce gap between items
+    }
+    
+    // Make dropdown more compact
+    .p-dropdown {
+      .p-dropdown-label,
+      .p-dropdown-trigger {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+      }
+      
+      .p-dropdown-trigger {
+        width: 2rem;
+      }
+      
+      &.p-inputtext-sm {
+        .p-inputtext {
+          padding: 0.25rem 0.5rem;
+          font-size: 0.875rem;
+        }
+      }
+    }
+    
+    // Compact icon buttons
+    .p-button.p-button-text {
+      width: 2rem;
+      height: 2rem;
+      padding: 0;
+      
+      .p-button-icon {
+        font-size: 0.875rem;
+      }
+    }
+    
+    // Adjust icon positioning in dropdown
+    .p-input-icon-left {
+      > i {
+        left: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.875rem;
+      }
+      
+      .p-dropdown {
+        padding-left: 2rem;
+      }
+    }
+  }
+}
