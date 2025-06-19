@@ -77,7 +77,7 @@ export class SseService {
       
       // Listen for 'pushData' events, which contain our data chunks.
       const data$ = fromEvent<MessageEvent>(eventSource, 'pushData').pipe(
-        map(event => ({ type: 'DATA', data: JSON.parse(event.data) as SseDataPayload } as SseEvent))
+        map(event => ({ type: 'DATA', data: { hits: JSON.parse(event.data), total: event.data.length } as SseDataPayload } as SseEvent))
       );
 
       // Listen for the 'endData' event, signaling the end of the stream.

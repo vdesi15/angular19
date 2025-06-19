@@ -30,6 +30,11 @@
           (viewChange)="selectedViewId.set($event)">
         </app-transaction-toolbar>
       } @else {
+        <app-streaming-filter 
+          [fullDataset]="search.data" 
+          [appliedFilters]="streamFilters()"
+          (filtersChange)="onStreamFiltersChange($event)">
+        </app-streaming-filter>
         <app-streaming-toolbar
           [allAvailableColumns]="allColumnsForViewType()"
           [currentlyVisibleColumns]="visibleColumns()"
@@ -45,6 +50,7 @@
           <p class="p-3 text-red-500 font-bold"><i class="pi pi-exclamation-circle mr-2"></i>{{ search.error }}</p>
         } @else {
           <app-log-viewer
+            [appliedStreamFilters]="streamFilters()"
             [searchInstance]="search"
             [visibleColumns]="visibleColumns()"
             (rowDrilldown)="onDrilldown($event)">

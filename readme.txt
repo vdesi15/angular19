@@ -1,150 +1,131 @@
-import { Component, computed, EventEmitter, inject, Input, Output, Signal, ViewChild, OnChanges, SimpleChanges, effect, WritableSignal, signal, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule, JsonPipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { get } from 'lodash-es';
+Part 3: Final LogViewerComponent and SearchResultComponent
+These are updated to integrate the new features.
+log-viewer.component.ts (Updated)
+This component now receives the list of applied stream filters and uses them in its tableData calculation.
+Generated typescript
+// in LogViewerComponent...
+@Input() appliedStreamFilters: StreamFilter[] = [];
 
-// --- PrimeNG Modules ---
-import { Table, TableModule } from 'primeng/table';
-import { InputTextModule } from 'primeng/inputtext';
-import { ColumnFilterModule } from 'primeng/columnfilter';
-import { TooltipModule } from 'primeng/tooltip';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
+public tableData: Signal<any[]> = computed(() => {
+  const allHits = this.searchInstance.data as ElkHit[] ?? [];
+  const filters = this.appliedStreamFilters;
 
-// --- App Models & Pipes ---
-import { ActiveSearch, ElkHit } from '../../models/search.model';
-import { ColumnDefinition } from 'src/app/core/models/column-definition.model';
-import { TransformPipe } from 'src/app/core/pipes/transform.pipe';
+  // 1. Apply stream filters first
+  const streamFilteredHits = (filters.length > 0)
+    ? allHits.filter(hit => {
+        return filters.every(filter => {
+          const rowValue = get(hit._source, filter.field);
+          return String(rowValue) === filter.value;
+        });
+      })
+    : allHits;
 
+  // 2. Then flatten the remaining data for display
+  const columns = this.visibleColumns;
+  return streamFilteredHits.map(hit => {
+    // ... mapping logic
+  });
+});
+
+// Update the totalRecords for the paginator to reflect the filtered count
+public totalRecords: Signal<number> = computed(() => this.tableData().length);
+Use code with caution.
+TypeScript
+search-result.component.ts (Updated)
+This component now manages the state for the new StreamingFilterComponent.
+Generated typescript
+// in SearchResultComponent...
 @Component({
-  selector: 'app-log-viewer',
-  standalone: true,
-  imports: [
-    CommonModule, FormsModule, JsonPipe, TableModule, InputTextModule, 
-    ColumnFilterModule, TooltipModule, IconFieldModule, InputIconModule, TransformPipe
-  ],
-  templateUrl: './log-viewer.component.html',
-  styleUrls: ['./log-viewer.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush // Important for manual control
+  imports: [ /* ..., */ StreamingFilterComponent ],
 })
-export class LogViewerComponent implements OnChanges {
-  // --- Inputs & Outputs ---
-  @Input({ required: true }) searchInstance!: ActiveSearch;
-  @Input({ required: true }) visibleColumns: ColumnDefinition[] = [];
-  @Output() rowDrilldown = new EventEmitter<any>();
+export class SearchResultComponent {
+  // ...
+  // ✨ State for the new stream filters ✨
+  public streamFilters: WritableSignal<StreamFilter[]> = signal([]);
 
-  // --- Child Reference ---
-  @ViewChild('logTable') logTable!: Table;
+  // This will be passed down to the LogViewer
+  public filteredData = computed(() => {
+    const filters = this.streamFilters();
+    if (filters.length === 0) return this.search.data;
+    // ... filtering logic ...
+    return this.search.data.filter(hit => { /* ... */ });
+  });
   
-  // --- MANUAL DATA MANAGEMENT (No reactive signals for table data) ---
-  public tableData: any[] = []; // Regular array, not signal
-  private lastProcessedLength = 0;
-  private currentSearchId = '';
-  private currentColumns: ColumnDefinition[] = [];
-
-  constructor(private cdr: ChangeDetectorRef) {
-    // Remove the effect - we'll handle updates manually
-  }
+  // ✨ Updated records summary ✨
+  public recordsSummary = computed(() => {
+    const totalLoaded = this.search.data.length;
+    const filteredCount = this.logViewer?.table.totalRecords ?? 0; // Get filtered count from p-table
+    
+    if (this.search.isStreaming) {
+      let summary = `(Loaded: ${totalLoaded}`;
+      if (filteredCount < totalLoaded) {
+        summary += ` / Filtered: ${filteredCount}`;
+      }
+      return summary + ')';
+    }
+    // ...
+  });
   
-  /**
-   * This is the official Angular lifecycle hook for detecting changes to @Input properties.
-   */
-  ngOnChanges(changes: SimpleChanges): void {
-    let shouldUpdateTable = false;
+  onStreamFiltersChange(filters: StreamFilter[]) {
+    this.streamFilters.set(filters);
+    // You could optionally re-trigger the SSE stream here with the new filters
+    // by calling the orchestrator.
+  }
+}
+Use code with caution.
+TypeScript
+search-result.component.html
+Generated html
+<!-- in p-accordion-content -->
+@if(search.type !== 'transaction') {
+  <app-streaming-filter 
+    [fullDataset]="search.data" 
+    [appliedFilters]="streamFilters()"
+    (filtersChange)="onStreamFiltersChange($event)">
+  </app-streaming-filter>
+}
 
-    // Check if the `searchInstance` input has changed
-    if (changes['searchInstance']) {
-      const newSearchInstance = changes['searchInstance'].currentValue as ActiveSearch;
-      
-      // Check if this is a completely new search
-      if (this.currentSearchId !== newSearchInstance.id) {
-        console.log(`[LogViewer] New search detected. Resetting table data.`);
-        this.currentSearchId = newSearchInstance.id;
-        this.lastProcessedLength = 0;
-        this.tableData = []; // Clear existing data
-        shouldUpdateTable = true;
+<!-- ... wrapper ... -->
+  @if (search.isLoading && search.data.length === 0) {
+    <!-- ✨ Show skeleton WITH headers ✨ -->
+    <app-table-skeleton [columns]="allColumnsForViewType()"></app-table-skeleton>
+  } @else {
+    <app-log-viewer 
+      [appliedStreamFilters]="streamFilters()"
+      ...>
+    </app-log-viewer>
+  }
+Use code with caution.
+Html
+log-viewer.component.scss (Final CSS Fix)
+Generated scss
+// ...
+::ng-deep .p-datatable-thead > tr > th {
+  padding: 0.5rem; 
+  .p-column-filter {
+    width: 100%; // Make the container fill the cell
+  }
+  input.p-inputtext {
+    width: 100%; // Make the input fill the container
+  }
+}
+Use code with caution.
+Scss
+Final Orchestrator Change for Filter Re-triggering
+Generated typescript
+// in SearchOrchestratorService...
+constructor() {
+  const filtersService = inject(FiltersService);
+  // ✨ Re-trigger streaming searches when global filters change ✨
+  effect(() => {
+    const filters = filtersService.filters();
+    if (!filters) return;
+
+    this.activeSearches().forEach(search => {
+      if (search.isStreaming) {
+        console.log(`Global filters changed. Re-triggering stream for: ${search.title}`);
+        this.fetchDataFor(search); // Re-fetch data for this active stream
       }
-      
-      // Process new data incrementally
-      this.updateTableData(newSearchInstance);
-    }
-
-    // Check if the `visibleColumns` input has changed
-    if (changes['visibleColumns']) {
-      const newVisibleColumns = changes['visibleColumns'].currentValue as ColumnDefinition[];
-      console.log(`[LogViewer] Columns changed. Rebuilding table data.`);
-      this.currentColumns = [...newVisibleColumns];
-      
-      // Rebuild all data with new columns
-      if (this.searchInstance?.data) {
-        this.rebuildTableData();
-      }
-      shouldUpdateTable = true;
-    }
-
-    // Trigger change detection only when needed
-    if (shouldUpdateTable) {
-      this.cdr.detectChanges();
-    }
-  }
-
-  private updateTableData(searchInstance: ActiveSearch): void {
-    const hits = searchInstance.data ?? [];
-    
-    // Only process new hits
-    if (hits.length > this.lastProcessedLength) {
-      const newHits = hits.slice(this.lastProcessedLength);
-      console.log(`[LogViewer] Processing ${newHits.length} new records. Total: ${hits.length}`);
-      
-      const newRows = this.transformHitsToRows(newHits);
-      
-      // Append new rows without affecting pagination
-      this.tableData = [...this.tableData, ...newRows];
-      this.lastProcessedLength = hits.length;
-      
-      // Manual change detection - this preserves table state
-      this.cdr.detectChanges();
-    }
-  }
-
-  private rebuildTableData(): void {
-    if (!this.searchInstance?.data) return;
-    
-    console.log(`[LogViewer] Rebuilding entire table with ${this.searchInstance.data.length} records.`);
-    const allRows = this.transformHitsToRows(this.searchInstance.data);
-    this.tableData = allRows;
-    this.lastProcessedLength = this.searchInstance.data.length;
-  }
-
-  private transformHitsToRows(hits: ElkHit[]): any[] {
-    return hits.map(hit => {
-      const row: any = { _id: hit._id, _original: hit._source };
-      this.currentColumns.forEach(col => {
-        row[col.name] = get(hit._source, col.field, 'N/A');
-      });
-      return row;
     });
-  }
-
-  // Computed property for filter fields (using getter instead of signal)
-  get globalFilterFields(): string[] {
-    return this.currentColumns.map(c => c.field);
-  }
-
-  // Computed property for visible columns (using getter instead of signal)
-  get visibleColumnsForTemplate(): ColumnDefinition[] {
-    return this.currentColumns;
-  }
-
-  applyGlobalFilter(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.logTable.filterGlobal(value, 'contains');
-  }
-  
-  handleRowClick(rowData: any): void {
-    const drilldownQuery = rowData._original?.user?.id;
-    if (drilldownQuery) {
-      this.rowDrilldown.emit(drilldownQuery);
-    }
-  }
+  });
 }

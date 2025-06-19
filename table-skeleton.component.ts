@@ -1,29 +1,64 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TableModule } from 'primeng/table';
 import { ColumnDefinition } from 'src/app/core/models/column-definition.model';
 
 @Component({
   selector: 'app-table-skeleton',
   standalone: true,
-  imports: [CommonModule, SkeletonModule],
+  imports: [CommonModule, SkeletonModule, TableModule],
   template: `
-    <div class="skeleton-table p-3">
-      <div class="skeleton-row header">
-        @for(col of columns; track col.id) {
-          <div class="skeleton-cell" [style.width]="col.width || '150px'"><p-skeleton width="80%" height="1.5rem"></p-skeleton></div>
-        }
-      </div>
-      @for(i of [1,2,3,4,5]; track i) {
-        <div class="skeleton-row">
+    <p-table 
+      [value]="skeletonRows" 
+      [columns]="columns"
+      [scrollable]="true" 
+      scrollHeight="flex"
+      styleClass="p-datatable-striped p-datatable-sm p-datatable-gridlines">
+      
+      <ng-template pTemplate="header" let-columns>
+        <tr>
           @for(col of columns; track col.id) {
-            <div class="skeleton-cell" [style.width]="col.width || '150px'"><p-skeleton width="90%" height="1rem"></p-skeleton></div>
+            <th [style.width]="col.width">
+              {{ col.displayName }}
+            </th>
           }
-        </div>
-      }
-    </div>
-  `
+        </tr>
+        <tr>
+          @for(col of columns; track col.id) {
+            <th>
+              @if(col.enableFiltering !== false) {
+                <p-skeleton width="100%" height="1.75rem" styleClass="mb-0"></p-skeleton>
+              }
+            </th>
+          }
+        </tr>
+      </ng-template>
+      
+      <ng-template pTemplate="body" let-rowData let-columns="columns">
+        <tr>
+          @for(col of columns; track col.id) {
+            <td>
+              <p-skeleton width="90%" height="1rem"></p-skeleton>
+            </td>
+          }
+        </tr>
+      </ng-template>
+    </p-table>
+  `,
+  styles: [`
+    :host {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  `]
 })
 export class TableSkeletonComponent {
-  @Input({ required: true }) columns: ColumnDefinition[] = [];
+  @Input() columns: ColumnDefinition[] = [];
+  @Input() rowCount: number = 15; // Default to 15 rows
+  
+  get skeletonRows(): any[] {
+    return Array(this.rowCount).fill({});
+  }
 }

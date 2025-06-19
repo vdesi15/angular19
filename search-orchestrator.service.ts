@@ -16,6 +16,20 @@ export class SearchOrchestratorService {
     this.strategies['browse'] = inject(SseStrategy);
     this.strategies['error'] = inject(SseStrategy);
     this.strategies['transaction'] = inject(GuidSearchStrategy);
+
+     const filtersService = inject(FiltersService);
+  // ✨ Re-trigger streaming searches when global filters change ✨
+    effect(() => {
+      const filters = filtersService.filters();
+      if (!filters) return;
+
+      this.activeSearches().forEach(search => {
+        if (search.isStreaming) {
+          console.log(`Global filters changed. Re-triggering stream for: ${search.title}`);
+          this.fetchDataFor(search); // Re-fetch data for this active stream
+        }
+      });
+    });
   }
 
   public performSearch(request: SearchRequest): void {
@@ -55,19 +69,11 @@ export class SearchOrchestratorService {
         switch(event.type) {
           case 'OPEN': return { ...s, isLoading: true, data: [] };
           case 'DATA':
-            // ✨ THE FIX: Check if event.data exists before using it.
-            if (!event.data) return s;
-  
-            // `event.data` is the payload of type SseDataPayload, which has `hits` and `total`.
+            if (!event.data) return s;  
             const payload = event.data as SseDataPayload;
-            
-            // Ensure payload.hits is an array before spreading.
             const newHits = payload.hits ?? [];
-            
-            // ✨ FIX 2: Ensure s.data is not undefined before spreading.
             const currentData = s.data ?? [];
             const updatedData = [...currentData, ...newHits];
-            
             return { ...s, data: updatedData, totalRecords: payload.total ?? s.totalRecords };
           case 'END':
           case 'ERROR': return { ...s, isLoading: false, isStreaming: false, error: event.error?.message };

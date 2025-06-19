@@ -1,0 +1,27 @@
+<div class="streaming-filter-container">
+  <!-- Display applied filters as removable chips -->
+  @for(filter of appliedFilters; track filter) {
+    <p-chip [label]="filter.field + ' = ' + filter.value" [removable]="true" (onRemove)="removeFilter(filter, addFilterPopover)"></p-chip>
+  }
+
+  <!-- The "Add Filter" button that triggers the popover -->
+  <button pButton type="button" label="Add Filter" icon="pi pi-filter-plus" class="p-button-outlined p-button-sm" (click)="addFilterPopover.toggle($event)"></button>
+</div>
+
+<!-- The Popover for adding a new filter -->
+<p-popover #addFilterPopover (onHide)="resetPopover()">
+  <div class="filter-popover-content">
+    <h3>Add a New Filter</h3>
+    <div class="filter-controls">
+      <p-dropdown [options]="filterableFields()" [(ngModel)]="selectedField" optionLabel="displayName" placeholder="Select a field..." (onChange)="selectedValue.set(null)"></p-dropdown>
+      <span>=</span>
+      <p-dropdown [options]="availableValues()" [(ngModel)]="selectedValue" placeholder="Select a value..." [disabled]="!selectedField()"></p-dropdown>
+    </div>
+    @if(showCustomInput()) {
+      <input type="text" pInputText [(ngModel)]="customValue" placeholder="Enter custom value..." class="mt-2 w-full">
+    }
+    <div class="popover-footer">
+      <button pButton label="Apply" icon="pi pi-check" (click)="applyFilter(); addFilterPopover.hide()" [disabled]="!selectedValue || selectedValue === CUSTOM_VALUE_TOKEN && !customValue()"></button>
+    </div>
+  </div>
+</p-popover>

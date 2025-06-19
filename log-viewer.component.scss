@@ -77,3 +77,13 @@
     }
   }
 }
+
+::ng-deep .p-datatable-thead > tr > th {
+  padding: 0.5rem; 
+  .p-column-filter {
+    width: 100%; // Make the container fill the cell
+  }
+  input.p-inputtext {
+    width: 100%; // Make the input fill the container
+  }
+}

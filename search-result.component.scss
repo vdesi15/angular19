@@ -40,6 +40,7 @@
 .result-content-wrapper {
   display: flex;
   flex-direction: column;
-  height: 70vh;
+  height: calc(100vh - 280px); // Adjust based on your header/toolbar heights
+  min-height: 400px;
   max-height: 800px;
 }
