@@ -22,4 +22,10 @@ export class ColumnDefinitionService {
     const allDefs = this.definitions();
     return allDefs ? (allDefs[key] ?? []) : [];
   }
+
+  getFilterableColsFor(appName: string): ColumnDefinition[] {
+    const key = `${appName}.FilterCols`; // The new key from your API response
+    const allDefs = this.definitions();
+    return allDefs ? (allDefs[key] ?? []) : [];
+  }
 }
