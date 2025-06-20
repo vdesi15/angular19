@@ -42,6 +42,16 @@ export class SearchResultComponent {
   public selectedViewId: WritableSignal<string> = signal('');
   public visibleColumns: WritableSignal<ColumnDefinition[]> = signal([]);
 
+  public streamFilters: WritableSignal<StreamFilter[]> = signal([]);
+
+  // This will be passed down to the LogViewer
+  public filteredData = computed(() => {
+    const filters = this.streamFilters();
+    if (filters.length === 0) return this.search.data;
+    return this.search.data.filter(hit => { /* ... */ });
+  });
+
+
   // --- DERIVED SIGNALS that get data from services ---
   public allColumnsForViewType: Signal<ColumnDefinition[]> = computed(() => {
     const app = this.search.appName;

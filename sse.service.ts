@@ -46,19 +46,37 @@ export class SseService {
       return this.createMockStream(type);
     }
     
+    // --- Real Connection Logic with GET ---
     const apiEndpoints = this.configService.get('api');
-    const url = type === 'browse' ? apiEndpoints.browseSSE : apiEndpoints.errorSSE;
+    const baseUrl = type === 'browse' ? apiEndpoints.browseSSE : apiEndpoints.errorSSE;
 
-    if (!url) {
-      return of({ type: 'ERROR', error: { message: `Real SSE URL for '${type}' is not configured in env.js.` } });
+    if (!baseUrl) {
+      return of({ type: 'ERROR', error: { message: `Real SSE URL for '${type}' not configured.` } });
     }
-    
-    // In a real application, you would append the `filters` object to the URL as query parameters.
-    // const fullUrl = new URL(url);
-    // Object.keys(filters).forEach(key => fullUrl.searchParams.append(key, filters[key]));
-    // return this.createRealStream(fullUrl.toString());
 
-    return this.createRealStream(url);
+    // ✨ THE KEY: Build the URL with query parameters ✨
+    
+    // 1. Create the payload object from the stream filters
+    const requestPayload: Record<string, string> = {};
+    streamFilters.forEach(filter => {
+      // Join multiple values with a pipe '|' as requested
+      requestPayload[filter.field] = filter.values.join('|');
+    });
+
+    // 2. Convert the payload object into a query string (e.g., "service.name=api|frontend&status=404")
+    const queryParams = new URLSearchParams(requestPayload).toString();
+    
+    // 3. Construct the final URL
+    // This is a simplified version. You would also add the global filters here.
+    const fullUrl = `${baseUrl}?${queryParams}`;
+    
+    // You could also add global filters like this:
+    // const allParams = new URLSearchParams(requestPayload);
+    // allParams.append('application', globalFilters.application.join('&'));
+    // allParams.append('environment', globalFilters.environment);
+    // const finalUrl = `${baseUrl}?${allParams.toString()}`;
+
+    return this.createRealStream(fullUrl);
   }
 
   /**
