@@ -47,7 +47,7 @@ export class StreamingFilterComponent {
 
   // --- Options for the dropdowns ---
   public filterableFields: Signal<ColumnDefinition[]> = computed(() => {
-    const appName = this.filtersService.filters()?.application[0] ?? '';
+    const appName = this.filtersService.filters()?.applications[0] ?? '';
     return this.colDefService.getFilterableColsFor(appName);
   });
 
@@ -74,6 +74,25 @@ export class StreamingFilterComponent {
         this.selectedValues.set([...existingFilter.values]);
       }
     }
+  }
+
+  /**
+   * ✨ THE FIX: A dedicated method to handle editing a filter. ✨
+   * This is called when a user clicks on an existing filter chip.
+   * @param filter The filter object associated with the clicked chip.
+   * @param popover The popover instance from the template.
+   * @param event The browser click event.
+   */
+  editFilter(filter: StreamFilter, popover: Popover, event: Event): void {
+    console.log("Editing filter:", filter);
+    // 1. Set the state of the popover controls to match the filter being edited.
+    // We need to find the full ColumnDefinition object for the `selectedField`.
+    const fieldDef = this.filterableFields().find(f => f.field === filter.field);
+    this.selectedField.set(fieldDef || null);
+    this.selectedValues.set([...filter.values]);
+    
+    // 2. Open the popover.
+    popover.toggle(event);
   }
 
   // Called when the user clicks "Apply" in the custom value dialog

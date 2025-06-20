@@ -18,30 +18,42 @@ export class SearchOrchestratorService {
     this.strategies['error'] = inject(SseStrategy);
     this.strategies['transaction'] = inject(GuidSearchStrategy);
 
-     const filtersService = inject(FiltersService);
-     effect(() => {
-      // 1. Create a signal of just the global filters that matter for streaming.
-      const streamingFilters = toSignal(
-        this.searchFilterService.filters$.pipe(
-          map(f => ({ app: f?.application[0], env: f?.environment, loc: f?.location, date: f?.dateRange })),
-          // `isEqual` from lodash provides a deep object comparison.
-          // This ensures the stream only re-triggers when a value *actually* changes.
-          distinctUntilChanged(isEqual)
-        )
+     // Convert the service's filter signal into an observable for advanced operations.
+    const globalFilters$ = toObservable(this.searchFilterService.filters);
+
+    // This effect now intelligently re-triggers streaming searches.
+    effect(() => {
+      // 1. Create a derived observable of just the parts we care about.
+      const streamingTriggers$ = globalFilters$.pipe(
+        // ✨ FIX 2: Safely access application[0] ✨
+        map(f => ({ 
+          app: f?.application?.[0], // Use optional chaining
+          env: f?.environment, 
+          loc: f?.location, 
+          date: f?.dateRange 
+        })),
+        // Add a small debounce to prevent rapid-fire re-triggers
+        debounceTime(50), 
+        // Use deep object comparison to only fire when a value truly changes.
+        distinctUntilChanged(isEqual)
       );
 
-      // 2. Read the signal to establish dependency.
-      const filters = streamingFilters();
+      // 2. Convert this derived observable back to a signal to use in the effect.
+      const triggers = toSignal(streamingTriggers$);
 
-      // 3. We are outside the initial creation, so we can untrack to prevent loops.
+      // 3. Reading the signal establishes the dependency for this effect.
+      const currentTriggers = triggers();
+
+      // 4. Use `untracked` to prevent a loop. This code runs only when `triggers` changes.
       untracked(() => {
-        if (!filters || !filters.app) return; // Don't do anything if filters aren't ready
+        // The first run will have undefined triggers, so we guard against it.
+        if (!currentTriggers || !currentTriggers.app) return;
 
-        console.log("[Orchestrator Effect] Global filters changed. Re-triggering active streams.");
+        console.log("[Orchestrator Effect] Global filters changed. Re-triggering active streams.", currentTriggers);
         
-        // Re-fetch data for any active streaming search
         this.activeSearches().forEach(search => {
           if (search.isStreaming) {
+            // Re-fetch data for this active stream
             this.fetchDataFor(search);
           }
         });
