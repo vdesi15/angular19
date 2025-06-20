@@ -1,10 +1,11 @@
-import { Component, Input, computed, inject, WritableSignal, signal, Signal, effect, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, Input, computed, inject, WritableSignal, signal, Signal, effect, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 // --- Models ---
 import { ActiveSearch } from '../../models/search.model';
 import { ColumnDefinition } from 'src/app/core/models/column-definition.model';
 import { ViewDefinition } from 'src/app/core/models/view-definition.model';
+import { StreamFilter } from 'src/app/core/models/stream-filter.model';
 
 // --- Services ---
 import { ColumnDefinitionService } from 'src/app/core/services/column-definition.service';
@@ -15,9 +16,9 @@ import { SearchOrchestratorService } from '../../services/search-orchestrator.se
 import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
-import { TransactionToolbarComponent } from '../transaction-toolbar/transaction-toolbar.component';
-import { StreamingToolbarComponent } from '../streaming-toolbar/streaming-toolbar.component';
-import { LogViewerComponent } from '../log-viewer/log-viewer.component';
+import { TransactionToolbarComponent } from './transaction-toolbar/transaction-toolbar.component';
+import { StreamingToolbarComponent } from './streaming-toolbar/streaming-toolbar.component';
+import { LogViewerComponent } from './log-viewer/log-viewer.component';
 import { TableSkeletonComponent } from 'src/app/shared/components/table-skeleton/table-skeleton.component';
 
 @Component({
@@ -33,24 +34,20 @@ import { TableSkeletonComponent } from 'src/app/shared/components/table-skeleton
 export class SearchResultComponent {
   @Input({ required: true }) search!: ActiveSearch;
 
-  // Make the orchestrator public so the template can call its methods
+  // Get a reference to the child LogViewerComponent to access its state if needed
+  @ViewChild(LogViewerComponent) public logViewer?: LogViewerComponent;
+
+  public isStopButtonHovered = signal(false);
+
+  // --- Injected Services ---
   public orchestrator = inject(SearchOrchestratorService);
   private colDefService = inject(ColumnDefinitionService);
   private viewDefService = inject(ViewDefinitionService);
   
   // --- STATE SIGNALS managed by this component ---
   public selectedViewId: WritableSignal<string> = signal('');
-  public visibleColumns: WritableSignal<ColumnDefinition[]> = signal([]);
-
+  public streamingVisibleColumns: WritableSignal<ColumnDefinition[]> = signal([]);
   public streamFilters: WritableSignal<StreamFilter[]> = signal([]);
-
-  // This will be passed down to the LogViewer
-  public filteredData = computed(() => {
-    const filters = this.streamFilters();
-    if (filters.length === 0) return this.search.data;
-    return this.search.data.filter(hit => { /* ... */ });
-  });
-
 
   // --- DERIVED SIGNALS that get data from services ---
   public allColumnsForViewType: Signal<ColumnDefinition[]> = computed(() => {
@@ -63,33 +60,56 @@ export class SearchResultComponent {
     return this.viewDefService.getViewsForApp(this.search.appName);
   });
 
-  // This computed signal generates the dynamic text for the accordion header.
-  public recordsSummary = computed(() => {
-    const total = this.search.totalRecords;
-    if (total === 0 && !this.search.isStreaming) return '';
-
-    // In a real table, you might get a filtered count. For now, we use total.
-    const displayedCount = this.search.data.length;
-
-    if (this.search.isStreaming) {
-      return `(Loaded: ${displayedCount})`;
+  // This computed signal determines the final list of columns to pass to the LogViewer
+  public finalVisibleColumns: Signal<ColumnDefinition[]> = computed(() => {
+    if (this.search.type === 'transaction') {
+      const selectedViewId = this.selectedViewId();
+      if (!selectedViewId) return [];
+      
+      return this.allColumnsForViewType().filter(col => {
+        if (!col.views) return true;
+        return col.views.split(',').map(v => v.trim()).includes(selectedViewId);
+      });
     }
-    return `(Total Records: ${total})`;
+    // For browse/error, use the state managed by the streaming toolbar
+    return this.streamingVisibleColumns();
+  });
+
+  // This computed signal generates the dynamic text for the accordion header
+  public recordsSummary = computed(() => {
+    const totalLoaded = this.search.data.length;
+    // Check if the LogViewer and its internal table filter state exist
+    const filteredCount = this.logViewer?.logTable?.filteredValue?.length ?? totalLoaded;
+    
+    let summary = '';
+    if (this.search.isStreaming) {
+      summary = `(Loaded: ${totalLoaded}`;
+    } else {
+      if (this.search.totalRecords > 0) {
+        summary = `(Total: ${this.search.totalRecords}`;
+      } else {
+        return '';
+      }
+    }
+
+    if (filteredCount < totalLoaded) {
+      summary += ` / Filtered: ${filteredCount}`;
+    }
+
+    return summary + ')';
   });
 
   constructor() {
-    // This effect correctly sets the initial state for columns and views.
-    // It runs whenever the component is created or when `allColumnsForViewType` changes.
+    // This effect sets the initial state when the component loads
     effect(() => {
+      // It depends on the full column list being ready
       const allColumns = this.allColumnsForViewType();
       if (allColumns.length > 0) {
-        // This sets the default columns for the streaming toolbar's multiselect
         this.resetStreamingColumns();
       }
 
       const available = this.availableViews();
       if (available.length > 0) {
-        // This sets the default view for the transaction toolbar's dropdown
         const defaultView = available.find(v => v.default) ?? available[0];
         if (defaultView) {
           this.selectedViewId.set(defaultView.viewId);
@@ -98,29 +118,25 @@ export class SearchResultComponent {
     });
   }
 
-  /**
-   * This is the single source of truth for resetting column visibility.
-   * It's called by the effect above and by the toolbar's reset button.
-   */
+  // --- Event Handlers ---
+
   resetStreamingColumns(): void {
     const defaultVisible = this.allColumnsForViewType().filter(c => c.visible);
-    this.visibleColumns.set(defaultVisible);
+    this.streamingVisibleColumns.set(defaultVisible);
   }
 
-  /**
-   * This method handles changes from the StreamingToolbar's multiselect
-   * and preserves the original column order.
-   */
   onStreamingColumnsChange(selectedColumns: ColumnDefinition[]): void {
     const masterList = this.allColumnsForViewType();
     const selectedIds = new Set(selectedColumns.map(c => c.id));
     const orderedSelection = masterList.filter(col => selectedIds.has(col.id));
-    this.visibleColumns.set(orderedSelection);
+    this.streamingVisibleColumns.set(orderedSelection);
+  }
+  
+  onStreamFiltersChange(filters: StreamFilter[]): void {
+    this.streamFilters.set(filters);
+    this.orchestrator.applyStreamFilters(this.search.id, filters);
   }
 
-  /**
-    * Called when a row is clicked in the LogViewerComponent for drill-down.
-    */
   onDrilldown(query: any): void {
     this.orchestrator.performSearch({
       type: 'transaction',
@@ -130,12 +146,14 @@ export class SearchResultComponent {
     });
   }
 
-  /**
-   * Toggles the expanded/collapsed state of this accordion panel.
-   */
-  toggleExpansion(): void {
-    this.orchestrator.updateSearchState(this.search.id, {
-      isExpanded: !this.search.isExpanded
-    });
+  stopStreaming(event: MouseEvent): void {
+    // Stop the event from propagating to the accordion header, which would toggle it.
+    event.stopPropagation();
+    this.orchestrator.stopSseStream(this.search.id);
+  }
+
+  closePanel(event: MouseEvent): void {
+    event.stopPropagation();
+    this.orchestrator.closeSearch(this.search.id);
   }
 }
