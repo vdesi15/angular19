@@ -7,5 +7,10 @@ export interface SearchDataResponse {
 
 export interface SearchStrategy {
   canHandle(query: string): boolean;
-  execute(query: any, preFilter?: string): Observable<SearchDataResponse | any>;
+  execute(
+    query: any, 
+    globalFilters: SearchFilterModel,
+    streamFilters: StreamFilter[],
+    preFilter?: string
+  ): Observable<any>; // Returns SseEvent stream or SearchDataResponse
 }

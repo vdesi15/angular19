@@ -1,41 +1,20 @@
-:host ::ng-deep {
-  // Ensure the toolbar has no bottom border and compact height
-  .p-toolbar {
-    border: none;
-    padding: 0.25rem 0; // Reduced from 0.5rem
-    min-height: auto;
-    
-    .p-toolbar-group-left,
-    .p-toolbar-group-right {
-      gap: 0.5rem; // Reduce gap between items
-    }
-    
-    // Make multiselect more compact
-    .p-multiselect.p-multiselect-sm {
-      .p-multiselect-label {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-      }
-      
-      .p-multiselect-trigger {
-        width: 2rem;
-      }
-    }
-    
-    // Compact buttons
-    .p-button {
-      padding: 0.25rem 0.75rem;
-      font-size: 0.875rem;
-      
-      &.p-button-text {
-        padding: 0.25rem 0.5rem;
-      }
-    }
-    
-    // Compact outlined button
-    .p-button-outlined.p-button-sm {
-      padding: 0.25rem 0.75rem;
-      font-size: 0.875rem;
-    }
-  }
+// This ensures the toolbar itself has a clean, borderless look inside the accordion.
+:host ::ng-deep .p-toolbar.streaming-toolbar {
+  border: none;
+  padding: 0.5rem 0;
+  // Use flexbox to align items and allow wrapping on small screens
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+// Ensure groups align correctly
+.p-toolbar-group-left, .p-toolbar-group-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.p-toolbar-group-right {
+  margin-left: auto; // Push the right group all the way to the right
 }

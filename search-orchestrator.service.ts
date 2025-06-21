@@ -107,11 +107,10 @@ export class SearchOrchestratorService {
 
   private startSseStream(search: ActiveSearch): void {
     this.stopSseStream(search.id);
+    
     const globalFilters = this.filtersService.filters();
-    if (!globalFilters) {
-      this.updateSearchState(search.id, { isLoading: false, error: 'Global filters not available.' });
-      return;
-    }
+    if (!globalFilters) { /* ... */ return; }
+
     // The strategy is a passthrough now. The real work is in the SseService.
     // The 'query' for an SSE stream is just its type.
     const sseObservable: Observable<SseEvent> = this.strategies[search.type]!.execute(

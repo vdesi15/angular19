@@ -58,17 +58,11 @@
           [allAvailableColumns]="allColumnsForViewType()"
           [currentlyVisibleColumns]="streamingVisibleColumns()"
           (visibleColumnsChange)="onStreamingColumnsChange($event)"
-          (reset)="resetStreamingColumns()">
+          (reset)="resetStreamingColumns()"
+          [availableFilterValues]="search.aggregatedFilterValues"
+          [appliedFilters]="search.streamFilters ?? []"
+          (filtersChange)="onStreamFiltersChange($event)">
         </app-streaming-toolbar>
-        
-        <!-- The new streaming filter component -->
-        <app-streaming-filter
-        [availableFilterValues]="search.aggregatedFilterValues"
-        <!-- It reads the filters directly from the search object -->
-        [appliedFilters]="search.streamFilters"
-        <!-- It calls the new handler method -->
-        (filtersChange)="onStreamFiltersChange($event)">
-        </app-streaming-filter>
       }
       
       <div class="result-content-wrapper">

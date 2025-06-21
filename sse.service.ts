@@ -38,7 +38,12 @@ export class SseService {
    * @param filters An object containing filter parameters to be sent to the real API.
    * @returns An Observable that emits SseEvent objects.
    */
-  public connect(type: 'browse' | 'error', filters: any): Observable<SseEvent> {
+  public connect(
+    type: 'browse' | 'error',
+    globalFilters: SearchFilterModel,
+    streamFilters: StreamFilter[],
+    preFilter?: string
+   ): Observable<SseEvent> {
     const useMocks = this.configService.get('useMocks');
 
     if (useMocks) {
@@ -54,18 +59,11 @@ export class SseService {
       return of({ type: 'ERROR', error: { message: `Real SSE URL for '${type}' not configured.` } });
     }
 
-    // ✨ THE KEY: Build the URL with query parameters ✨
-    
-    // 1. Create the payload object from the stream filters
-    const requestPayload: Record<string, string> = {};
-    streamFilters.forEach(filter => {
-      // Join multiple values with a pipe '|' as requested
-      requestPayload[filter.field] = filter.values.join('|');
-    });
-
-    // 2. Convert the payload object into a query string (e.g., "service.name=api|frontend&status=404")
-    const queryParams = new URLSearchParams(requestPayload).toString();
-    
+    const queryParams = new URLSearchParams();
+    streamFilters.forEach(f => queryParams.append(f.field, f.values.join('|')));
+    if (preFilter) {
+      queryParams.append('preFilter', preFilter);
+    }
     // 3. Construct the final URL
     // This is a simplified version. You would also add the global filters here.
     const fullUrl = `${baseUrl}?${queryParams}`;
