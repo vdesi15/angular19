@@ -132,8 +132,7 @@ export class SearchResultComponent {
     this.streamingVisibleColumns.set(orderedSelection);
   }
   
-  onStreamFiltersChange(filters: StreamFilter[]): void {
-    this.streamFilters.set(filters);
+   onStreamFiltersChange(filters: StreamFilter[]): void {
     this.orchestrator.applyStreamFilters(this.search.id, filters);
   }
 

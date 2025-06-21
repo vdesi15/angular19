@@ -62,9 +62,29 @@ export class SearchOrchestratorService {
   }
 
   public performSearch(request: SearchRequest): void {
+    // If a streaming search of the same type already exists, close it before starting a new one.
+    if (request.type === 'browse' || request.type === 'error') {
+        const existingStream = this.activeSearches().find(s => s.type === request.type);
+        if (existingStream) {
+            this.closeSearch(existingStream.id);
+        }
+    }
+    // Collapse others
     this.activeSearches.update(searches => searches.map(s => ({ ...s, isExpanded: false })));
-    const initialStreamFilters = this.deserializeFilters(this.filtersService.filters()?.streamFilters,request.appName);
-    const newSearch: ActiveSearch = { ...request, streamFilters: initialStreamFilters, id: Date.now().toString(), isLoading: true, isStreaming: request.type === 'browse' || request.type === 'error', isExpanded: true, data: [], totalRecords: 0 };
+
+    // Initialize the state for the new search
+    const newSearch: ActiveSearch = {
+      ...request,
+      id: Date.now().toString(),
+      isLoading: true,
+      isStreaming: request.type === 'browse' || request.type === 'error',
+      isExpanded: true,
+      data: [],
+      totalRecords: 0,
+      streamFilters: [], // Always start with no filters
+      aggregatedFilterValues: new Map<string, Set<any>>(),
+    };
+    
     this.activeSearches.update(searches => [newSearch, ...searches]);
     this.fetchDataFor(newSearch);
   }
@@ -92,13 +112,15 @@ export class SearchOrchestratorService {
       this.updateSearchState(search.id, { isLoading: false, error: 'Global filters not available.' });
       return;
     }
-
-    const sseObservable: Observable<SseEvent> = this.sseService.connect(
-      search.type as 'browse' | 'error', 
+    // The strategy is a passthrough now. The real work is in the SseService.
+    // The 'query' for an SSE stream is just its type.
+    const sseObservable: Observable<SseEvent> = this.strategies[search.type]!.execute(
+      { type: search.type as 'browse' | 'error' },
       globalFilters,
-      search.streamFilters
+      search.streamFilters,
+      search.preFilter // ✨ The preFilter is now correctly passed
     );
-    const sseObservable: Observable<SseEvent> = this.strategies[search.type]!.execute({ type: search.type }, search.preFilter);
+      
     const subscription = sseObservable.subscribe(event => this.processSseEvent(search.id, event));
     this.activeSseSubscriptions.set(search.id, subscription);
   }
@@ -141,19 +163,26 @@ export class SearchOrchestratorService {
     this.activeSearches.update(searches => searches.filter(s => s.id !== id));
   }
 
-  /**
-   * Called by the UI when the user applies new stream filters.
-   */
   public applyStreamFilters(searchId: string, newFilters: StreamFilter[]): void {
-    const serializedFilters = this.serializeFilters(newFilters);
-    this.updateSearchState(searchId, { streamFilters: newFilters });
-    this.searchFilterService.updateFilters({ streamFilters: serializedFilters });
-    
-    // Manually re-trigger the data fetch for this specific search.
     const currentSearch = this.activeSearches().find(s => s.id === searchId);
-    if (currentSearch) {
-      this.fetchDataFor(currentSearch);
-    }
+    if (!currentSearch) return;
+
+    console.log(`[Orchestrator] Applying new stream filters and re-fetching for search: ${currentSearch.title}`);
+
+    // Create an updated search object with the new filters.
+    // We also reset the data and set isLoading to true.
+    const updatedSearchRequest: ActiveSearch = {
+      ...currentSearch,
+      streamFilters: newFilters,
+      data: [], // Clear existing data
+      isLoading: true,
+    };
+    
+    // We update the state first so the UI can immediately show the skeleton loader.
+    this.updateSearchState(searchId, updatedSearchRequest);
+
+    // Now, trigger the new data fetch with the updated search object.
+    this.fetchDataFor(updatedSearchRequest);
   }
 
   // --- SERIALIZATION LOGIC (Now Robust) ---

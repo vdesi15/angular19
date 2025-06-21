@@ -63,9 +63,11 @@
         
         <!-- The new streaming filter component -->
         <app-streaming-filter
-          [fullDataset]="search.data"
-          [appliedFilters]="streamFilters()"
-          (filtersChange)="onStreamFiltersChange($event)">
+        [availableFilterValues]="search.aggregatedFilterValues"
+        <!-- It reads the filters directly from the search object -->
+        [appliedFilters]="search.streamFilters"
+        <!-- It calls the new handler method -->
+        (filtersChange)="onStreamFiltersChange($event)">
         </app-streaming-filter>
       }
       
@@ -78,7 +80,6 @@
           <app-log-viewer #logViewer
             [searchInstance]="search"
             [visibleColumns]="finalVisibleColumns()"
-            [appliedStreamFilters]="streamFilters()"
             (rowDrilldown)="onDrilldown($event)">
           </app-log-viewer>
         }
