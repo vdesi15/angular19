@@ -1,9 +1,15 @@
-import { Injectable, inject, signal, WritableSignal } from '@angular/core';
+import { Injectable, inject, signal, WritableSignal, effect, untracked, computed } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { ActiveSearch, ElkHit, SearchRequest, SearchType, SseDataPayload } from '../models/search.model';
 import { SseStrategy } from '../search-strategies/sse-strategy';
 import { GuidSearchStrategy } from '../search-strategies/guid-search.strategy';
 import { SseService, SseEvent } from 'src/app/core/services/sse.service';
+import { FiltersService } from 'src/app/core/services/filters.service';
+import { ColumnDefinitionService } from 'src/app/core/services/column-definition.service';
+import { StreamFilter } from 'src/app/core/models/stream-filter.model';
+import { SearchFilterModel } from 'src/app/core/models/search-filter.model';
 import { Subscription, Observable } from 'rxjs';
+import { get } from 'lodash-es';
 
 @Injectable({ providedIn: 'root' })
 export class SearchOrchestratorService {
@@ -12,50 +18,68 @@ export class SearchOrchestratorService {
   private activeSseSubscriptions: Map<string, Subscription> = new Map();
   private sseService = inject(SseService);
   private filtersService = inject(FiltersService);
+  private colDefService = inject(ColumnDefinitionService);
+
+  // Track the previous global filters to detect changes
+  private previousGlobalFilters: SearchFilterModel | null = null;
 
   constructor() {
     this.strategies['browse'] = inject(SseStrategy);
     this.strategies['error'] = inject(SseStrategy);
     this.strategies['transaction'] = inject(GuidSearchStrategy);
 
-     // Convert the service's filter signal into an observable for advanced operations.
-    const globalFilters$ = toObservable(this.searchFilterService.filters);
-
-     effect(() => {
-      // 1. Depend directly on the global filters signal.
-      const currentGlobalFilters = this.searchFilterService.filters();
+    // Effect to handle global filter changes
+    effect(() => {
+      const currentGlobalFilters = this.filtersService.filters();
       
-      // 2. Guard against running during initial setup.
       if (!currentGlobalFilters) return;
 
-      // 3. Use `untracked` to prevent this effect from re-running when we update streamFilters later.
-      untracked(() => {
-        console.log("[Orchestrator Effect] Global filters changed. Checking active streams for re-trigger.");
+      // Check if this is a real change (not initial setup)
+      const hasChanged = this.previousGlobalFilters && 
+        JSON.stringify(this.previousGlobalFilters) !== JSON.stringify(currentGlobalFilters);
+
+      if (hasChanged) {
+        console.log("[Orchestrator] Global filters changed. Re-triggering active streams.");
         
-        // 4. For any currently active streaming search, re-trigger its data fetch.
-        this.activeSearches().forEach(search => {
-          if (search.isStreaming) {
-            // We call fetchDataFor, which will restart the stream with the new global filters.
+        untracked(() => {
+          // Get all active streaming searches
+          const streamingSearches = this.activeSearches().filter(s => s.isStreaming);
+          
+          streamingSearches.forEach(search => {
+            console.log(`[Orchestrator] Re-triggering stream for: ${search.title}`);
+            
+            // Clear existing data and show loading state
+            this.updateSearchState(search.id, { 
+              data: [], 
+              isLoading: true,
+              aggregatedFilterValues: new Map()
+            });
+            
+            // Re-fetch data with new global filters
             this.fetchDataFor(search);
-          }
+          });
         });
-      });
-    }, { allowSignalWrites: true }); // This is needed because fetchDataFor will update the activeSearches signal.
-    
+      }
+
+      this.previousGlobalFilters = { ...currentGlobalFilters };
+    }, { allowSignalWrites: true });
   }
 
   public performSearch(request: SearchRequest): void {
-    // If a streaming search of the same type already exists, close it before starting a new one.
+    // If a streaming search of the same type already exists, close it
     if (request.type === 'browse' || request.type === 'error') {
-        const existingStream = this.activeSearches().find(s => s.type === request.type);
-        if (existingStream) {
-            this.closeSearch(existingStream.id);
-        }
+      const existingStream = this.activeSearches().find(s => s.type === request.type);
+      if (existingStream) {
+        this.closeSearch(existingStream.id);
+      }
     }
-    // Collapse others
-    this.activeSearches.update(searches => searches.map(s => ({ ...s, isExpanded: false })));
 
-    // Initialize the state for the new search
+    // Collapse other searches
+    this.activeSearches.update(searches => 
+      searches.map(s => ({ ...s, isExpanded: false }))
+    );
+
+    // Initialize the new search
     const newSearch: ActiveSearch = {
       ...request,
       id: Date.now().toString(),
@@ -64,7 +88,7 @@ export class SearchOrchestratorService {
       isExpanded: true,
       data: [],
       totalRecords: 0,
-      streamFilters: [], // Always start with no filters
+      streamFilters: [],
       aggregatedFilterValues: new Map<string, Set<any>>(),
     };
     
@@ -73,38 +97,74 @@ export class SearchOrchestratorService {
   }
 
   public fetchDataFor(search: ActiveSearch): void {
-    this.updateSearchState(search.id, { isLoading: true, data: [], error: undefined });
     const strategy = this.strategies[search.type];
-    if (!strategy) { this.updateSearchState(search.id, { isLoading: false, error: 'No strategy found.' }); return; }
-    if (search.isStreaming) this.startSseStream(search);
-    else this.fetchHttpRequest(search, strategy);
+    if (!strategy) {
+      this.updateSearchState(search.id, { 
+        isLoading: false, 
+        error: 'No strategy found.' 
+      });
+      return;
+    }
+
+    if (search.isStreaming) {
+      this.startSseStream(search);
+    } else {
+      this.fetchHttpRequest(search, strategy);
+    }
   }
 
   private fetchHttpRequest(search: ActiveSearch, strategy: any): void {
     this.updateSearchState(search.id, { isLoading: true });
+    
     const httpRequest$: Observable<any> = strategy.execute(search.query);
+    
     httpRequest$.subscribe({
-      next: (response) => this.updateSearchState(search.id, { isLoading: false, data: response.hits, totalRecords: response.total }),
-      error: (err) => this.updateSearchState(search.id, { isLoading: false, error: 'API call failed.' })
+      next: (response) => {
+        this.updateSearchState(search.id, { 
+          isLoading: false, 
+          data: response.hits, 
+          totalRecords: response.total 
+        });
+      },
+      error: (err) => {
+        this.updateSearchState(search.id, { 
+          isLoading: false, 
+          error: 'API call failed.' 
+        });
+      }
     });
   }
 
   private startSseStream(search: ActiveSearch): void {
+    // Always stop existing stream first
     this.stopSseStream(search.id);
     
     const globalFilters = this.filtersService.filters();
-    if (!globalFilters) { /* ... */ return; }
+    if (!globalFilters) {
+      this.updateSearchState(search.id, { 
+        isLoading: false, 
+        error: 'No global filters available.' 
+      });
+      return;
+    }
 
-    // The strategy is a passthrough now. The real work is in the SseService.
-    // The 'query' for an SSE stream is just its type.
+    // Ensure streaming state is set
+    this.updateSearchState(search.id, { 
+      isStreaming: true,
+      isLoading: true
+    });
+
     const sseObservable: Observable<SseEvent> = this.strategies[search.type]!.execute(
       { type: search.type as 'browse' | 'error' },
       globalFilters,
       search.streamFilters,
-      search.preFilter // ✨ The preFilter is now correctly passed
+      search.preFilter
     );
       
-    const subscription = sseObservable.subscribe(event => this.processSseEvent(search.id, event));
+    const subscription = sseObservable.subscribe(
+      event => this.processSseEvent(search.id, event)
+    );
+    
     this.activeSseSubscriptions.set(search.id, subscription);
   }
 
@@ -112,131 +172,164 @@ export class SearchOrchestratorService {
     this.activeSearches.update(searches => 
       searches.map(s => {
         if (s.id !== id) return s;
+        
         switch(event.type) {
-          case 'OPEN': return { ...s, isLoading: true, data: [] };
+          case 'OPEN':
+            return { 
+              ...s, 
+              isLoading: true, 
+              isStreaming: true,
+              data: [], 
+              aggregatedFilterValues: new Map() 
+            };
+            
           case 'DATA':
-            if (!event.data) return s;  
+            if (!event.data) return s;
+            
             const payload = event.data as SseDataPayload;
             const newHits = payload.hits ?? [];
             const currentData = s.data ?? [];
             const updatedData = [...currentData, ...newHits];
-            const updatedAggregations = this.aggregateFilterValues(s.aggregatedFilterValues, newHits, s.appName);
-            return { ...s, data: updatedData, totalRecords: payload.total ?? s.totalRecords, updatedAggregations };
+            const updatedAggregations = this.aggregateFilterValues(
+              s.aggregatedFilterValues, 
+              newHits, 
+              s.appName
+            );
+            
+            return { 
+              ...s, 
+              data: updatedData, 
+              totalRecords: payload.total ?? s.totalRecords,
+              aggregatedFilterValues: updatedAggregations,
+              isLoading: false // Data is arriving, no longer loading
+            };
+            
           case 'END':
-          case 'ERROR': return { ...s, isLoading: false, isStreaming: false, error: event.error?.message };
-          default: return s;
+            return { 
+              ...s, 
+              isLoading: false, 
+              isStreaming: false 
+            };
+            
+          case 'ERROR':
+            return { 
+              ...s, 
+              isLoading: false, 
+              isStreaming: false, 
+              error: event.error?.message 
+            };
+            
+          default:
+            return s;
         }
       })
     );
   }
 
-  /**
-   * Processes a chunk of new hits and updates the aggregation map.
-   * @param currentAggregations The existing map of unique values.
-   * @param newHits The new chunk of data from the SSE event.
-   * @param appName The current application context to get the correct filterable fields.
-   * @returns The updated map.
-   */
-  private aggregateFilterValues(currentAggregations: Map<string, Set<any>>, newHits: ElkHit[], appName: string): Map<string, Set<any>> {
+  private aggregateFilterValues(
+    currentAggregations: Map<string, Set<any>>, 
+    newHits: ElkHit[], 
+    appName: string
+  ): Map<string, Set<any>> {
+    // Create a new map to ensure immutability
+    const newAggregations = new Map(currentAggregations);
+    
     const filterableFields = this.colDefService.getFilterableColsFor(appName);
     if (filterableFields.length === 0) {
-      return currentAggregations; // No filterable fields defined for this app
+      return newAggregations;
     }
 
-    newHits.forEach(hit => {      /
-      filterableFields.forEach(col => {        
-        const value = get(hit._source, col.field);       
+    newHits.forEach(hit => {
+      filterableFields.forEach(col => {
+        const value = get(hit._source, col.field);
         if (value !== undefined && value !== null) {
-          if (!currentAggregations.has(col.field)) {
-            currentAggregations.set(col.field, new Set());
+          if (!newAggregations.has(col.field)) {
+            newAggregations.set(col.field, new Set());
           }
-          currentAggregations.get(col.field)!.add(value);
+          newAggregations.get(col.field)!.add(value);
         }
       });
     });
     
-    return currentAggregations;
+    return newAggregations;
   }
   
   public stopSseStream(id: string): void {
-    if (this.activeSseSubscriptions.has(id)) {
-      this.activeSseSubscriptions.get(id)?.unsubscribe();
+    const subscription = this.activeSseSubscriptions.get(id);
+    if (subscription) {
+      subscription.unsubscribe();
       this.activeSseSubscriptions.delete(id);
-      this.updateSearchState(id, { isLoading: false, isStreaming: false });
+      this.updateSearchState(id, { 
+        isLoading: false, 
+        isStreaming: false 
+      });
     }
   }
 
   public updateSearchState(id: string, partialState: Partial<ActiveSearch>): void {
-    this.activeSearches.update(searches => searches.map(s => s.id === id ? { ...s, ...partialState } : s));
+    this.activeSearches.update(searches => 
+      searches.map(s => s.id === id ? { ...s, ...partialState } : s)
+    );
   }
 
   public closeSearch(id: string): void {
     this.stopSseStream(id);
-    this.activeSearches.update(searches => searches.filter(s => s.id !== id));
+    this.activeSearches.update(searches => 
+      searches.filter(s => s.id !== id)
+    );
   }
 
   public applyStreamFilters(searchId: string, newFilters: StreamFilter[]): void {
     const currentSearch = this.activeSearches().find(s => s.id === searchId);
     if (!currentSearch) return;
 
-    console.log(`[Orchestrator] Applying new stream filters and re-fetching for: ${currentSearch.title}`);
+    console.log(`[Orchestrator] Applying stream filters and re-fetching for: ${currentSearch.title}`);
     
-    // 1. Serialize the filters for the URL
+    // Serialize filters for URL
     const serializedFilters = this.serializeFilters(newFilters);
     
-    // 2. Tell the global filter service to update the URL
-    this.searchFilterService.updateFilters({ streamFilters: serializedFilters });
+    // Update global filters (URL)
+    this.filtersService.updateFilters({ streamFilters: serializedFilters });
 
-    // 3. Create the updated search state for our local signal
-    const updatedSearchRequest: ActiveSearch = {
+    // Create updated search with cleared data
+    const updatedSearch: ActiveSearch = {
       ...currentSearch,
       streamFilters: newFilters,
-      data: [], 
-      isLoading: true, // This will show the skeleton
-      isStreaming: true, // This will show the streaming button
+      data: [], // Clear existing data
+      aggregatedFilterValues: new Map(), // Clear aggregations
+      isLoading: true,
+      isStreaming: true,
     };
     
-    // 4. Update our local state so the UI shows the skeleton loader
-    this.updateSearchState(searchId, updatedSearchRequest);
+    // Update state to show skeleton
+    this.updateSearchState(searchId, updatedSearch);
 
-    // 5. Trigger the new data fetch with the updated search object
-    this.fetchDataFor(updatedSearchRequest);
+    // Re-fetch data with new filters
+    this.fetchDataFor(updatedSearch);
   }
-
-  // --- SERIALIZATION LOGIC (Now Robust) ---
 
   private serializeFilters(filters: StreamFilter[]): string {
     if (!filters || filters.length === 0) return '';
     return filters.map(f => `${f.field}:${f.values.join('|')}`).join(',');
   }
 
-  /**
-   * ✨ THE ROBUST DESERIALIZER ✨
-   * Deserializes the filter string from the URL and enriches it with the
-   * correct `displayName` from the ColumnDefinitionService.
-   */
   private deserializeFilters(filterString: string | undefined, appName: string): StreamFilter[] {
     if (!filterString || !appName) return [];
 
-    // Get all possible filterable columns for this app to use as a lookup table.
     const filterableCols = this.colDefService.getFilterableColsFor(appName);
     if (filterableCols.length === 0) return [];
     
     try {
       return filterString.split(',').map(s => {
         const [field, valuesStr] = s.split(':');
-        
-        // Find the corresponding column definition to get the displayName
         const colDef = filterableCols.find(c => c.field === field);
         
-        const filter: StreamFilter = { 
+        return {
           field: field,
-          // Use the found displayName, or fall back to the field name if not found.
           displayName: colDef?.displayName ?? field,
           values: valuesStr ? valuesStr.split('|') : []
         };
-        return filter;
-      }).filter(f => f.values.length > 0); // Ensure we don't create filters with no values
+      }).filter(f => f.values.length > 0);
     } catch (e) {
       console.error("Failed to parse stream filters from URL", e);
       return [];

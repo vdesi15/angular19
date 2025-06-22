@@ -1,52 +1,51 @@
-<p-accordion [multiple]="true" [activeIndex]="search.isExpanded ? 0 : -1" styleClass="result-accordion compact">
+<p-accordion [multiple]="true" [activeIndex]="[search.isExpanded ? 0 : -1]" styleClass="result-accordion compact">
   <p-accordion-panel>
     <p-accordion-header>
-      <div class="accordion-header" (click)="toggleExpansion()">
+      <div class="accordion-header">
         <div class="header-left">
           <span class="font-bold text-lg mr-3">{{ search.title }}</span>
           <span class="text-sm text-color-secondary ml-2">{{ recordsSummary() }}</span>
         </div>
         <div class="header-right">
-          @if(search.isStreaming) {
-          <button 
-            pButton 
-            type="button" 
-            class="p-button-sm"
-            [ngClass]="{
-              'p-button-success': !isStopButtonHovered(),
-              'p-button-danger': isStopButtonHovered()
-            }"
-            (mouseenter)="isStopButtonHovered.set(true)"
-            (mouseleave)="isStopButtonHovered.set(false)"
-            (click)="stopStreaming($event)"
-            pTooltip="Stop the live data stream"
-            tooltipPosition="top">
-            
-            <!-- Conditionally render the icon and text INSIDE the button -->
-            @if (isStopButtonHovered()) {
-              <span class="flex align-items-center gap-2">
-                <i class="pi pi-stop-circle"></i>
-                <span>Stop</span>
-              </span>
-            } @else {
-              <span class="flex align-items-center gap-2">
-                <i class="pi pi-spin pi-spinner"></i>
-                <span>Streaming...</span>
-              </span>
-            }
-          </button>
-        }
-        
-        <!-- The Close button remains the same -->
-        <button pButton type="button" icon="pi pi-times" 
-                class="p-button-text p-button-rounded p-button-danger" 
-                pTooltip="Close this result panel" 
-                (click)="closePanel($event)"></button>
+          @if(search.isStreaming || (search.isLoading && search.type !== 'transaction')) {
+            <button 
+              pButton 
+              type="button" 
+              class="p-button-sm"
+              [ngClass]="{
+                'p-button-success': !isStopButtonHovered(),
+                'p-button-danger': isStopButtonHovered()
+              }"
+              (mouseenter)="isStopButtonHovered.set(true)"
+              (mouseleave)="isStopButtonHovered.set(false)"
+              (click)="stopStreaming($event)"
+              pTooltip="Stop the live data stream"
+              tooltipPosition="top">
+              
+              @if (isStopButtonHovered()) {
+                <span class="flex align-items-center gap-2">
+                  <i class="pi pi-stop-circle"></i>
+                  <span>Stop</span>
+                </span>
+              } @else {
+                <span class="flex align-items-center gap-2">
+                  <i class="pi pi-spin pi-spinner"></i>
+                  <span>Streaming...</span>
+                </span>
+              }
+            </button>
+          }
+          
+          <button pButton type="button" icon="pi pi-times" 
+                  class="p-button-text p-button-rounded p-button-danger" 
+                  pTooltip="Close this result panel" 
+                  (click)="closePanel($event)"></button>
         </div>
       </div>
     </p-accordion-header>
+    
     <p-accordion-content>
-      <!-- Conditionally render the correct toolbar -->
+      <!-- Toolbar section -->
       @if(search.type === 'transaction') {
         <app-transaction-toolbar 
           [availableViews]="availableViews()" 
@@ -58,19 +57,28 @@
           [allAvailableColumns]="allColumnsForViewType()"
           [currentlyVisibleColumns]="streamingVisibleColumns()"
           (visibleColumnsChange)="onStreamingColumnsChange($event)"
-          (reset)="resetStreamingColumns()"
+          (resetColumns)="resetStreamingColumns()"
           [availableFilterValues]="search.aggregatedFilterValues"
           [appliedFilters]="search.streamFilters ?? []"
           (filtersChange)="onStreamFiltersChange($event)">
         </app-streaming-toolbar>
       }
       
+      <!-- Content section -->
       <div class="result-content-wrapper">
-        @if (search.isLoading && search.data.length === 0) {
-          <app-table-skeleton [columns]="allColumnsForViewType()" [rowCount]="10"></app-table-skeleton>
+        @if (showSkeleton()) {
+          <app-table-skeleton 
+            [columns]="finalVisibleColumns()" 
+            [rowCount]="10">
+          </app-table-skeleton>
         } @else if (search.error) {
-          <p class="p-3 text-red-500 font-bold"><i class="pi pi-exclamation-circle mr-2"></i>{{ search.error }}</p>
-        } @else {
+          <div class="error-container p-4">
+            <p class="text-red-500 font-bold">
+              <i class="pi pi-exclamation-circle mr-2"></i>
+              {{ search.error }}
+            </p>
+          </div>
+        } @else if (showTable()) {
           <app-log-viewer #logViewer
             [searchInstance]="search"
             [visibleColumns]="finalVisibleColumns()"
