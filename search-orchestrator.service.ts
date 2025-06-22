@@ -136,13 +136,42 @@ export class SearchOrchestratorService {
             const newHits = payload.hits ?? [];
             const currentData = s.data ?? [];
             const updatedData = [...currentData, ...newHits];
-            return { ...s, data: updatedData, totalRecords: payload.total ?? s.totalRecords };
+            const updatedAggregations = this.aggregateFilterValues(s.aggregatedFilterValues, newHits, s.appName);
+            return { ...s, data: updatedData, totalRecords: payload.total ?? s.totalRecords, updatedAggregations };
           case 'END':
           case 'ERROR': return { ...s, isLoading: false, isStreaming: false, error: event.error?.message };
           default: return s;
         }
       })
     );
+  }
+
+  /**
+   * Processes a chunk of new hits and updates the aggregation map.
+   * @param currentAggregations The existing map of unique values.
+   * @param newHits The new chunk of data from the SSE event.
+   * @param appName The current application context to get the correct filterable fields.
+   * @returns The updated map.
+   */
+  private aggregateFilterValues(currentAggregations: Map<string, Set<any>>, newHits: ElkHit[], appName: string): Map<string, Set<any>> {
+    const filterableFields = this.colDefService.getFilterableColsFor(appName);
+    if (filterableFields.length === 0) {
+      return currentAggregations; // No filterable fields defined for this app
+    }
+
+    newHits.forEach(hit => {      /
+      filterableFields.forEach(col => {        
+        const value = get(hit._source, col.field);       
+        if (value !== undefined && value !== null) {
+          if (!currentAggregations.has(col.field)) {
+            currentAggregations.set(col.field, new Set());
+          }
+          currentAggregations.get(col.field)!.add(value);
+        }
+      });
+    });
+    
+    return currentAggregations;
   }
   
   public stopSseStream(id: string): void {
