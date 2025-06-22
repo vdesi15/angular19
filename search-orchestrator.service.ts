@@ -28,17 +28,17 @@ export class SearchOrchestratorService {
     this.strategies['error'] = inject(SseStrategy);
     this.strategies['transaction'] = inject(GuidSearchStrategy);
 
-    // Effect to handle global filter changes
+    // Effect to handle global filter changes (but not stream filter changes)
     effect(() => {
       const currentGlobalFilters = this.filtersService.filters();
       
       if (!currentGlobalFilters) return;
 
-      // Check if this is a real change (not initial setup)
-      const hasChanged = this.previousGlobalFilters && 
-        JSON.stringify(this.previousGlobalFilters) !== JSON.stringify(currentGlobalFilters);
+      // Check if this is a real global filter change (not stream filters or initial setup)
+      const hasGlobalFilterChanged = this.previousGlobalFilters && 
+        this.hasGlobalFiltersChanged(this.previousGlobalFilters, currentGlobalFilters);
 
-      if (hasChanged) {
+      if (hasGlobalFilterChanged) {
         console.log("[Orchestrator] Global filters changed. Re-triggering active streams.");
         
         untracked(() => {
@@ -48,21 +48,34 @@ export class SearchOrchestratorService {
           streamingSearches.forEach(search => {
             console.log(`[Orchestrator] Re-triggering stream for: ${search.title}`);
             
-            // Clear existing data and show loading state
-            this.updateSearchState(search.id, { 
+            // Preserve stream filters but clear data
+            const updatedSearch: ActiveSearch = {
+              ...search,
               data: [], 
               isLoading: true,
               aggregatedFilterValues: new Map()
-            });
+            };
             
-            // Re-fetch data with new global filters
-            this.fetchDataFor(search);
+            // Update state and re-fetch
+            this.updateSearchState(search.id, updatedSearch);
+            this.fetchDataFor(updatedSearch);
           });
         });
       }
 
       this.previousGlobalFilters = { ...currentGlobalFilters };
     }, { allowSignalWrites: true });
+  }
+
+  // Helper method to check if global filters (not stream filters) have changed
+  private hasGlobalFiltersChanged(prev: SearchFilterModel, curr: SearchFilterModel): boolean {
+    // Check each global filter property (excluding streamFilters)
+    const applicationChanged = JSON.stringify(prev.application) !== JSON.stringify(curr.application);
+    const environmentChanged = prev.environment !== curr.environment;
+    const locationChanged = prev.location !== curr.location;
+    const dateRangeChanged = JSON.stringify(prev.dateRange) !== JSON.stringify(curr.dateRange);
+    
+    return applicationChanged || environmentChanged || locationChanged || dateRangeChanged;
   }
 
   public performSearch(request: SearchRequest): void {
@@ -79,7 +92,20 @@ export class SearchOrchestratorService {
       searches.map(s => ({ ...s, isExpanded: false }))
     );
 
-    // Initialize the new search
+    // Get initial stream filters from URL if available
+    let initialStreamFilters: StreamFilter[] = [];
+    if (request.type === 'browse' || request.type === 'error') {
+      const currentGlobalFilters = this.filtersService.filters();
+      if (currentGlobalFilters?.streamFilters) {
+        initialStreamFilters = this.deserializeFilters(
+          currentGlobalFilters.streamFilters, 
+          request.appName
+        );
+        console.log(`[Orchestrator] Found stream filters in URL:`, initialStreamFilters);
+      }
+    }
+
+    // Initialize the new search with URL filters if any
     const newSearch: ActiveSearch = {
       ...request,
       id: Date.now().toString(),
@@ -88,7 +114,7 @@ export class SearchOrchestratorService {
       isExpanded: true,
       data: [],
       totalRecords: 0,
-      streamFilters: [],
+      streamFilters: initialStreamFilters, // Apply URL filters
       aggregatedFilterValues: new Map<string, Set<any>>(),
     };
     
@@ -107,6 +133,7 @@ export class SearchOrchestratorService {
     }
 
     if (search.isStreaming) {
+      // Pass the search object directly to ensure stream filters are included
       this.startSseStream(search);
     } else {
       this.fetchHttpRequest(search, strategy);
@@ -285,11 +312,16 @@ export class SearchOrchestratorService {
 
     console.log(`[Orchestrator] Applying stream filters and re-fetching for: ${currentSearch.title}`);
     
-    // Serialize filters for URL
-    const serializedFilters = this.serializeFilters(newFilters);
+    // Only update URL if filters actually changed
+    const currentSerialized = this.serializeFilters(currentSearch.streamFilters);
+    const newSerialized = this.serializeFilters(newFilters);
     
-    // Update global filters (URL)
-    this.filtersService.updateFilters({ streamFilters: serializedFilters });
+    if (currentSerialized !== newSerialized) {
+      // Use untracked to prevent triggering our global filter effect
+      untracked(() => {
+        this.filtersService.updateFilters({ streamFilters: newSerialized });
+      });
+    }
 
     // Create updated search with cleared data
     const updatedSearch: ActiveSearch = {
