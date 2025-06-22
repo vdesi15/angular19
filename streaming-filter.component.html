@@ -24,7 +24,6 @@
     <div class="filter-controls">
       <!-- Field Selector Dropdown -->
       <p-floatLabel>
-        <!-- ✨ THE FIX: Add `optionLabel="displayName"` ✨ -->
         <p-dropdown 
           inputId="field-selector"
           [options]="filterableFields()" 
@@ -54,12 +53,6 @@
         <label for="value-selector">Value(s)</label>
       </p-floatLabel>
     </div>
-
-    @if(showCustomInput()) {
-      <div class="p-fluid mt-3">
-        <input type="text" pInputText [(ngModel)]="customValue" placeholder="Enter custom value..." class="w-full">
-      </div>
-    }
   </div>
 
   <div class="filter-popover-footer">
@@ -69,7 +62,6 @@
   </div>
 </p-popover>
 
-<!-- ✨ DIALOG FOR CUSTOM VALUE INPUT ✨ -->
 <p-dialog 
   header="Enter a custom value (case-sensitive)" 
   [(visible)]="isCustomValueDialogVisible" 
@@ -78,11 +70,13 @@
     
     <div class="flex align-items-center gap-3 mb-3">
         <label for="custom-value" class="font-semibold w-6rem">Value</label>
+        <!-- It binds its input to the `customValueInput` signal -->
         <input pInputText id="custom-value" class="flex-auto" autocomplete="off" [(ngModel)]="customValueInput" (keydown.enter)="applyCustomValue()" autofocus />
     </div>
 
     <ng-template pTemplate="footer">
-        <p-button label="Cancel" severity="secondary" (click)="isCustomValueDialogVisible.set(false)"></p-button>
+        <p-button label="Cancel" severity="secondary" (click)="closeCustomValueDialog()"></p-button>
+        <!-- The button calls the `applyCustomValue` method -->
         <p-button label="Apply" (click)="applyCustomValue()" [disabled]="!customValueInput()"></p-button>
     </ng-template>
 </p-dialog>

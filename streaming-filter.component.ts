@@ -83,19 +83,17 @@ export class StreamingFilterComponent {
     }
   }
 
-  /**
-   * Called when the user selects value(s) in the multiselect.
-   * If they choose the "custom" option, it opens the dialog.
-   */
   onValueChange(values: string[]): void {
+    // Check if the user clicked our special "Enter a custom value..." option.
     if (values.includes(CUSTOM_VALUE_TOKEN)) {
-      // User clicked the "custom" option.
-      // 1. Immediately remove the token from the selection so it doesn't appear as a chip.
-      this.selectedValues.update(v => v.filter(val => val !== CUSTOM_VALUE_TOKEN));
-      // 2. Open the dialog.
+      // 1. Immediately open the dialog for the user to type.
       this.isCustomValueDialogVisible.set(true);
+      
+      // 2. Immediately remove the token from the selection array,
+      // so it doesn't appear as a selected chip in the background.
+      this.selectedValues.set(values.filter(val => val !== CUSTOM_VALUE_TOKEN));
     } else {
-      // User selected regular values. Just update the state.
+      // If the user just selected regular values, update the state normally.
       this.selectedValues.set(values);
     }
   }
