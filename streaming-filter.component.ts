@@ -98,6 +98,11 @@ export class StreamingFilterComponent {
     }
   }
 
+  closeCustomValueDialog(): void {
+    this.isCustomValueDialogVisible.set(false);
+    this.customValueInput.set(''); // Reset for the next time
+  }
+
   /**
    * Called when the user clicks "Apply" in the custom value dialog.
    */
