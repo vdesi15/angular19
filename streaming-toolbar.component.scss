@@ -1,20 +1,41 @@
-// This ensures the toolbar itself has a clean, borderless look inside the accordion.
-:host ::ng-deep .p-toolbar.streaming-toolbar {
-  border: none;
-  padding: 0.5rem 0;
-  // Use flexbox to align items and allow wrapping on small screens
+// This class will be applied to all interactive elements for consistent height.
+.toolbar-item {
+  height: 2.5rem; // A standard small component height in PrimeNG
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+  align-items: center;
 }
 
-// Ensure groups align correctly
-.p-toolbar-group-left, .p-toolbar-group-right {
+:host ::ng-deep {
+  .p-toolbar.streaming-toolbar {
+    border: none;
+    padding: 0.5rem 0;
+    display: flex;
+    flex-wrap: wrap; // Allow wrapping on small screens
+    gap: 1rem;
+  }
+  
+  .p-toolbar-group-left, .p-toolbar-group-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  // Target the components inside our toolbar to apply the consistent height
+  .p-toolbar-group-right {
+    .p-multiselect, .p-button {
+      @extend .toolbar-item;
+    }
+  }
+}
+
+// In `streaming-filter.component.scss`, we apply the same class
+.streaming-filter-container {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
 
-.p-toolbar-group-right {
-  margin-left: auto; // Push the right group all the way to the right
+  // Apply the consistent height to the button and chips
+  .p-button, .p-chip {
+    @extend .toolbar-item;
+  }
 }

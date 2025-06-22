@@ -143,8 +143,9 @@ export class StreamingFilterComponent {
   }
 
   removeFilter(filterToRemove: StreamFilter): void {
-    this.filtersChange.emit(this.appliedFilters.filter(f => f.field !== filterToRemove.field));
-  }
+  const newFilters = this.appliedFilters.filter(f => f.field !== filterToRemove.field);
+  this.filtersChange.emit(newFilters);
+}
   
   /**
    * Called when a user clicks an existing chip to edit it.

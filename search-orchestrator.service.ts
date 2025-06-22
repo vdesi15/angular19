@@ -195,21 +195,26 @@ export class SearchOrchestratorService {
     const currentSearch = this.activeSearches().find(s => s.id === searchId);
     if (!currentSearch) return;
 
-    console.log(`[Orchestrator] Applying new stream filters and re-fetching for search: ${currentSearch.title}`);
+    console.log(`[Orchestrator] Applying new stream filters and re-fetching for: ${currentSearch.title}`);
+    
+    // 1. Serialize the filters for the URL
+    const serializedFilters = this.serializeFilters(newFilters);
+    
+    // 2. Tell the global filter service to update the URL
+    this.searchFilterService.updateFilters({ streamFilters: serializedFilters });
 
-    // Create an updated search object with the new filters.
-    // We also reset the data and set isLoading to true.
+    // 3. Create the updated search state for our local signal
     const updatedSearchRequest: ActiveSearch = {
       ...currentSearch,
       streamFilters: newFilters,
-      data: [], // Clear existing data
+      data: [], // Clear existing data for the new stream
       isLoading: true,
     };
     
-    // We update the state first so the UI can immediately show the skeleton loader.
+    // 4. Update our local state so the UI shows the skeleton loader
     this.updateSearchState(searchId, updatedSearchRequest);
 
-    // Now, trigger the new data fetch with the updated search object.
+    // 5. Trigger the new data fetch with the updated search object
     this.fetchDataFor(updatedSearchRequest);
   }
 

@@ -1,16 +1,16 @@
 <div class="streaming-filter-container">
-  <!-- ... Applied filter chips ... -->
+  <button pButton type="button" label="Add Filter" icon="pi pi-filter-plus" class="p-button-outlined p-button-sm" (click)="resetPopover(); addFilterPopover.toggle($event)"></button>
+  
   @for(filter of appliedFilters; track filter.field) {
     <p-chip 
       [label]="filter.displayName + ' = (' + filter.values.join(' OR ') + ')'" 
       [removable]="true" 
-      (onRemove)="removeFilter(filter)"
       (click)="editFilter(filter, addFilterPopover, $event)"
-      class="p-clickable"
+      (onRemove)="removeFilter(filter); $event.stopPropagation()"
+      class="p-clickable filter-chip"
       pTooltip="Edit this filter">
     </p-chip>
   }
-  <button pButton type="button" label="Add Filter" icon="pi pi-filter-plus" class="p-button-outlined p-button-sm" (click)="resetPopover(); addFilterPopover.toggle($event)"></button>
 </div>
 
 <!-- The Popover, now styled like a card -->

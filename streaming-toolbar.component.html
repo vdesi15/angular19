@@ -1,6 +1,13 @@
 <p-toolbar styleClass="streaming-toolbar">
-  <!-- Left Side: Column Visibility Controls -->
   <div class="p-toolbar-group-left">
+    <app-streaming-filter
+      [availableFilterValues]="availableFilterValues"
+      [appliedFilters]="appliedFilters"
+      (filtersChange)="filtersChange.emit($event)">
+    </app-streaming-filter>
+  </div>
+
+  <div class="p-toolbar-group-right">
     <p-multiSelect 
       [options]="allAvailableColumns" 
       [ngModel]="currentlyVisibleColumns"
@@ -17,20 +24,9 @@
       type="button" 
       label="Reset" 
       icon="pi pi-replay" 
-      class="p-button-text ml-2" 
+      class="p-button-text" 
       (click)="resetColumns.emit()"
-      pTooltip="Reset columns to default"
-      tooltipPosition="top">
+      pTooltip="Reset columns to default">
     </button>
-  </div>
-
-  <!-- Right Side: Stream Filtering Controls -->
-  <div class="p-toolbar-group-right">
-    <!-- ✨ The StreamingFilterComponent is now embedded here ✨ -->
-    <app-streaming-filter
-      [availableFilterValues]="availableFilterValues"
-      [appliedFilters]="appliedFilters"
-      (filtersChange)="filtersChange.emit($event)">
-    </app-streaming-filter>
   </div>
 </p-toolbar>
