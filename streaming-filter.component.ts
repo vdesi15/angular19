@@ -47,8 +47,12 @@ export class StreamingFilterComponent {
 
   // --- Options for the dropdowns ---
   public filterableFields: Signal<ColumnDefinition[]> = computed(() => {
-    const appName = this.filtersService.filters()?.applications[0] ?? '';
-    return this.colDefService.getFilterableColsFor(appName);
+    const appName = this.filtersService.filters()?.application[0] ?? '';
+    if (!appName) return [];
+    
+    // Get the columns and then filter them to only include those marked as visible.
+    return this.colDefService.getFilterableColsFor(appName)
+      .filter(col => col.visible === true);
   });
 
   public valueOptions = computed(() => {

@@ -13,23 +13,59 @@
   <button pButton type="button" label="Add Filter" icon="pi pi-filter-plus" class="p-button-outlined p-button-sm" (click)="resetPopover(); addFilterPopover.toggle($event)"></button>
 </div>
 
-<!-- Popover for adding/editing a filter -->
-<p-popover #addFilterPopover (onShow)="onPopoverShow()">
+<!-- The Popover, now styled like a card -->
+<p-popover #addFilterPopover (onShow)="onPopoverShow()" styleClass="filter-popover">
+  <div class="filter-popover-header">
+    <i class="pi pi-info-circle mr-2"></i>
+    <span>Pick a field and value(s) to filter the stream.</span>
+  </div>
+
   <div class="filter-popover-content">
-    <h3>Add/Edit Filter</h3>
     <div class="filter-controls">
+      <!-- Field Selector Dropdown -->
       <p-floatLabel>
-        <p-dropdown [options]="filterableFields()" [(ngModel)]="selectedField" ...></p-dropdown>
-        <label>Select Field</label>
+        <!-- ✨ THE FIX: Add `optionLabel="displayName"` ✨ -->
+        <p-dropdown 
+          inputId="field-selector"
+          [options]="filterableFields()" 
+          [(ngModel)]="selectedField" 
+          optionLabel="displayName" 
+          placeholder="Select a field"
+          [filter]="true"
+          styleClass="w-full"
+          (onChange)="selectedValues.set([])">
+        </p-dropdown>
+        <label for="field-selector">Field</label>
       </p-floatLabel>
+
+      <!-- Value Selector Multiselect -->
       <p-floatLabel>
-        <p-multiSelect [options]="valueOptions()" [ngModel]="selectedValues()" (ngModelChange)="onValueChange($event)" ...></p-multiSelect>
-        <label>Select One or More Values</label>
+        <p-multiSelect 
+          inputId="value-selector"
+          [options]="valueOptions()" 
+          [ngModel]="selectedValues()"
+          (ngModelChange)="onValueChange($event)"
+          placeholder="Select value(s)"
+          [disabled]="!selectedField()"
+          [filter]="true"
+          display="chip"
+          styleClass="w-full">
+        </p-multiSelect>
+        <label for="value-selector">Value(s)</label>
       </p-floatLabel>
     </div>
-    <div class="popover-footer">
-      <button pButton label="Apply" icon="pi pi-check" (click)="applyFilter(); addFilterPopover.hide()" ...></button>
-    </div>
+
+    @if(showCustomInput()) {
+      <div class="p-fluid mt-3">
+        <input type="text" pInputText [(ngModel)]="customValue" placeholder="Enter custom value..." class="w-full">
+      </div>
+    }
+  </div>
+
+  <div class="filter-popover-footer">
+      <button pButton label="Apply Filter" icon="pi pi-check" class="p-button-sm"
+              (click)="applyFilter(); addFilterPopover.hide()" 
+              [disabled]="!selectedField() || selectedValues().length === 0"></button>
   </div>
 </p-popover>
 
