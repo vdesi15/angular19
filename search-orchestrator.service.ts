@@ -21,44 +21,27 @@ export class SearchOrchestratorService {
      // Convert the service's filter signal into an observable for advanced operations.
     const globalFilters$ = toObservable(this.searchFilterService.filters);
 
-    // This effect now intelligently re-triggers streaming searches.
-    effect(() => {
-      // 1. Create a derived observable of just the parts we care about.
-      const streamingTriggers$ = globalFilters$.pipe(
-        // ✨ FIX 2: Safely access application[0] ✨
-        map(f => ({ 
-          app: f?.application?.[0], // Use optional chaining
-          env: f?.environment, 
-          loc: f?.location, 
-          date: f?.dateRange 
-        })),
-        // Add a small debounce to prevent rapid-fire re-triggers
-        debounceTime(50), 
-        // Use deep object comparison to only fire when a value truly changes.
-        distinctUntilChanged(isEqual)
-      );
+     effect(() => {
+      // 1. Depend directly on the global filters signal.
+      const currentGlobalFilters = this.searchFilterService.filters();
+      
+      // 2. Guard against running during initial setup.
+      if (!currentGlobalFilters) return;
 
-      // 2. Convert this derived observable back to a signal to use in the effect.
-      const triggers = toSignal(streamingTriggers$);
-
-      // 3. Reading the signal establishes the dependency for this effect.
-      const currentTriggers = triggers();
-
-      // 4. Use `untracked` to prevent a loop. This code runs only when `triggers` changes.
+      // 3. Use `untracked` to prevent this effect from re-running when we update streamFilters later.
       untracked(() => {
-        // The first run will have undefined triggers, so we guard against it.
-        if (!currentTriggers || !currentTriggers.app) return;
-
-        console.log("[Orchestrator Effect] Global filters changed. Re-triggering active streams.", currentTriggers);
+        console.log("[Orchestrator Effect] Global filters changed. Checking active streams for re-trigger.");
         
+        // 4. For any currently active streaming search, re-trigger its data fetch.
         this.activeSearches().forEach(search => {
           if (search.isStreaming) {
-            // Re-fetch data for this active stream
+            // We call fetchDataFor, which will restart the stream with the new global filters.
             this.fetchDataFor(search);
           }
         });
       });
-    });
+    }, { allowSignalWrites: true }); // This is needed because fetchDataFor will update the activeSearches signal.
+    
   }
 
   public performSearch(request: SearchRequest): void {
@@ -90,6 +73,7 @@ export class SearchOrchestratorService {
   }
 
   public fetchDataFor(search: ActiveSearch): void {
+    this.updateSearchState(search.id, { isLoading: true, data: [], error: undefined });
     const strategy = this.strategies[search.type];
     if (!strategy) { this.updateSearchState(search.id, { isLoading: false, error: 'No strategy found.' }); return; }
     if (search.isStreaming) this.startSseStream(search);
@@ -207,8 +191,9 @@ export class SearchOrchestratorService {
     const updatedSearchRequest: ActiveSearch = {
       ...currentSearch,
       streamFilters: newFilters,
-      data: [], // Clear existing data for the new stream
-      isLoading: true,
+      data: [], 
+      isLoading: true, // This will show the skeleton
+      isStreaming: true, // This will show the streaming button
     };
     
     // 4. Update our local state so the UI shows the skeleton loader
