@@ -48,13 +48,13 @@
               <p-columnFilter 
                 [type]="'text'" 
                 [field]="col.name" 
-                [placeholder]="'Filter ' + col.displayName">
+                [placeholder]="">
                 <ng-template pTemplate="filter" let-value let-filter="filterCallback">
                   <input 
                     pInputText 
                     [ngModel]="value" 
                     (ngModelChange)="filter($event)"
-                    [placeholder]="'Filter ' + col.displayName"
+                    [placeholder]=""
                     class="filter-input">
                 </ng-template>
               </p-columnFilter>

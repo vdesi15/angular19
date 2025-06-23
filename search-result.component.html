@@ -11,7 +11,7 @@
       <div class="accordion-header">
         <div class="header-left">
           <span class="font-bold text-lg mr-3">{{ search.title }}</span>
-                        <span class="text-sm text-color-secondary ml-2">{{ loadingSummary() }}</span>
+                        <span class="text-sm text-color-secondary ml-2">{{ recordsSummary() }}</span>
         </div>
         <div class="header-right">
           <!-- Favorite Toggle Button -->
@@ -109,7 +109,8 @@
           <app-log-viewer #logViewer
             [searchInstance]="search"
             [visibleColumns]="finalVisibleColumns()"
-            (rowDrilldown)="onDrilldown($event)">
+            (rowDrilldown)="onDrilldown($event)" 
+            (filteredCountChange)="updateFilteredCount($event)">
           </app-log-viewer>
         }
       </div>

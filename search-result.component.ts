@@ -37,6 +37,8 @@ export class SearchResultComponent {
   @ViewChild(LogViewerComponent) public logViewer?: LogViewerComponent;
 
   public isStopButtonHovered = signal(false);
+  public totalLoadedCount = signal<number>(0);
+  public filteredCount = signal<number>(0);
 
   // Injected Services
   public orchestrator = inject(SearchOrchestratorService);
@@ -76,57 +78,25 @@ export class SearchResultComponent {
   });
 
   public recordsSummary = computed(() => {
-    const totalLoaded = this.search.data.length;
-    
-    // ✨ Get the filtered count from the LogViewer's table if available
-    let filteredCount = totalLoaded;
-    
-    // Check if LogViewer and its table exist and have filtered data
-    if (this.logViewer?.logTable) {
-      const table = this.logViewer.logTable;
-      // Use filteredValue if table filtering is active, otherwise use total
-      filteredCount = table.filteredValue ? table.filteredValue.length : table.totalRecords;
-    }
-    
-    let summary = '';
+    const loaded = this.totalLoadedCount();
+    const filtered = this.filteredCount();
     
     if (this.search.isStreaming) {
-      summary = `Loaded: ${totalLoaded}`;
-      
-      // ✨ Only show filtered count if it's different from loaded and filters are applied
-      if (filteredCount < totalLoaded) {
-        summary += ` / Filtered: ${filteredCount}`;
+      let summary = `Loaded: ${loaded}`;
+      if (filtered < loaded) {
+        summary += ` / Filtered: ${filtered}`;
       }
-      
       return `(${summary})`;
     } else {
-      // For non-streaming searches
       if (this.search.totalRecords > 0) {
-        summary = `Total: ${this.search.totalRecords}`;
-        
-        // Show filtered count if different
-        if (filteredCount < this.search.totalRecords) {
-          summary += ` / Filtered: ${filteredCount}`;
+        let summary = `Total: ${this.search.totalRecords}`;
+        if (filtered < this.search.totalRecords) {
+          summary += ` / Filtered: ${filtered}`;
         }
-        
         return `(${summary})`;
       }
     }
-    
     return '';
-  });
-
-  public loadingSummary = computed(() => {
-    const isLoading = this.search.isLoading;
-    const isStreaming = this.search.isStreaming;
-    
-    if (isLoading && isStreaming) {
-      return '(Loading live data...)';
-    } else if (isLoading) {
-      return '(Loading...)';
-    }
-    
-    return this.recordsSummary();
   });
 
   public isFavorite = computed(() => {
@@ -164,6 +134,20 @@ export class SearchResultComponent {
         }
       }
     });
+
+    effect(() => {
+      const dataLength = this.search.data?.length ?? 0;
+      this.totalLoadedCount.set(dataLength);
+      
+      // If no filtering is active, filtered count equals loaded count
+      if (!this.logViewer?.logTable?.filteredValue) {
+        this.filteredCount.set(dataLength);
+      }
+    });
+  }
+
+  public updateFilteredCount(count: number): void {
+    this.filteredCount.set(count);
   }
 
   // Event Handlers

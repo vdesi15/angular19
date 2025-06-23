@@ -34,7 +34,7 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
   @Input({ required: true }) searchInstance!: ActiveSearch;
   @Input({ required: true }) visibleColumns: ColumnDefinition[] = [];
   @Output() rowDrilldown = new EventEmitter<any>();
-
+  @Output() filteredCountChange = new EventEmitter<number>();
   @ViewChild('logTable') logTable!: Table;
   @ViewChild('tableContainer', { static: true }) tableContainer!: ElementRef;
   
@@ -124,6 +124,7 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
         console.log("[LogViewer] New search detected. Resetting table.");
         this.tableData.set([]);
         this.totalRecords.set(0);
+        this.notifyFilteredCount(0);
         
         // Reset paginator to the first page
         if (this.logTable) {
@@ -138,7 +139,7 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
         
         this.tableData.update(current => [...current, ...processedNewRows]);
         this.totalRecords.set(this.tableData().length);
-        
+        this.notifyFilteredCount(this.tableData().length);
         this.cdr.detectChanges();
         
         console.log(`[LogViewer] Appended ${processedNewRows.length} rows. Total now: ${this.tableData().length}`);
@@ -154,6 +155,10 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
     if (changes['visibleColumns']) {
       console.log("[LogViewer] Visible columns updated:", this.visibleColumns.length);
     }
+  }
+
+  private notifyFilteredCount(count: number): void {
+    this.filteredCountChange.emit(count);
   }
 
   private getNewHits(current: ActiveSearch, previous: ActiveSearch | undefined): ElkHit[] {
@@ -196,6 +201,19 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
     if (this.logTable) {
       this.logTable.filterGlobal(target.value, 'contains');
     }
+    setTimeout(() => {
+        const filteredCount = this.logTable.filteredValue?.length ?? this.tableData().length;
+        this.notifyFilteredCount(filteredCount);
+    }, 100);
+  }
+
+  public onFilter(): void {
+    // This gets called by PrimeNG whenever any filtering occurs
+    setTimeout(() => {
+      const filteredCount = this.logTable?.filteredValue?.length ?? this.tableData().length;
+      console.log(`[LogViewer] Filter applied, new count: ${filteredCount}`);
+      this.notifyFilteredCount(filteredCount);
+    }, 50);
   }
 
   /**
