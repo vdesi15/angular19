@@ -123,8 +123,22 @@ export class SearchResultComponent {
 
   // Event Handlers
   resetStreamingColumns(): void {
-    const defaultVisible = this.allColumnsForViewType().filter(c => c.visible);
+    console.log('[SearchResult] resetStreamingColumns called');
+    
+    // Get all available columns
+    const allColumns = this.allColumnsForViewType();
+    console.log('[SearchResult] All columns available:', allColumns.length);
+    
+    // Filter to only visible ones (the default set)
+    const defaultVisible = allColumns.filter(c => c.visible === true);
+    console.log('[SearchResult] Default visible columns:', defaultVisible.length);
+    
+    // Update the signal
     this.streamingVisibleColumns.set(defaultVisible);
+    
+    this.cdr.markForCheck();
+    
+    console.log('[SearchResult] Columns reset to:', defaultVisible.map(c => c.displayName));
   }
 
   onStreamingColumnsChange(selectedColumns: ColumnDefinition[]): void {

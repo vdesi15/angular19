@@ -1,4 +1,4 @@
-// log-viewer.component.scss
+// log-viewer.component.scss - Fix column filter width
 :host {
   display: flex;
   flex-direction: column;
@@ -7,7 +7,6 @@
   margin-top: 20px;
 }
 
-// ✨ Container for the table with proper height management
 .table-container {
   display: flex;
   flex-direction: column;
@@ -24,29 +23,35 @@
   .p-datatable-wrapper {
     flex-grow: 1;
     overflow: auto;
-    min-height: 0; // ✨ Critical for proper scrolling
+    min-height: 0;
   }
   
-  // ✨ Compact filter headers with professional styling
+  //  Fix column filter width to match column width
   &.compact-filters {
     .p-datatable-thead {
       tr.filter-row {
         th.filter-header {
           padding: 0.1rem;
+          position: relative; //  Ensure positioning context
           
           .p-column-filter {
             width: 100%;
+            display: block; //  Ensure block display
             
             .p-column-filter-element {
               width: 100%;
+              display: block; //  Ensure block display
               
               .filter-input {
-                width: 100%;
+                width: 100% !important; //  Force full width
+                max-width: 100%; //  Prevent overflow
+                min-width: 0; //  Allow shrinking
                 padding: 0.25rem 0.5rem;
                 font-size: 0.75rem;
                 height: 1.75rem;
                 border-radius: 4px;
                 border: 1px solid var(--surface-d);
+                box-sizing: border-box; //  Include padding in width
                 
                 &:focus {
                   border-color: var(--primary-color);
@@ -58,17 +63,17 @@
         }
       }
       
-      // Regular header cells
+      //  Ensure header cells maintain their width
       tr:first-child th {
         padding: 0.5rem;
         font-size: 0.875rem;
         font-weight: 600;
         background: var(--surface-b);
         border-bottom: 2px solid var(--surface-d);
+        position: relative; //  Positioning context
       }
     }
     
-    // ✨ Body cells with improved styling
     .p-datatable-tbody {
       td {
         padding: 0.25rem 0.5rem;
@@ -89,7 +94,6 @@
         }
       }
       
-      // ✨ Row hover effects
       tr:hover {
         background-color: var(--surface-c);
       }
@@ -101,7 +105,7 @@
     }
   }
   
-  // ✨ Enhanced paginator styling
+  //  Fix paginator positioning and dropdown direction
   .p-paginator {
     padding: 0.5rem;
     border-top: 1px solid var(--surface-d);
@@ -109,7 +113,7 @@
     flex-shrink: 0;
     position: sticky;
     bottom: 0;
-    z-index: 10;
+    z-index: 1000; //  Ensure it's above other content
     
     .p-paginator-element {
       min-width: 2rem;
@@ -117,6 +121,7 @@
       font-size: 0.875rem;
     }
     
+    //  Fix dropdown to open upward
     .p-dropdown {
       height: 2rem;
       
@@ -124,11 +129,24 @@
         padding: 0.25rem 0.5rem;
         font-size: 0.875rem;
       }
+      
+      //  Force dropdown panel to open upward
+      .p-dropdown-panel {
+        transform-origin: bottom;
+        top: auto !important;
+        bottom: 100% !important;
+        margin-bottom: 2px;
+      }
     }
   }
 }
 
-// ✨ Loading overlay styling
+//  Global fix for pagination dropdown in accordions
+:host ::ng-deep .p-dropdown-panel {
+  z-index: 1100 !important; //  Above accordion content
+}
+
+// Loading overlay styling
 ::ng-deep .loading-overlay {
   display: flex;
   flex-direction: column;
@@ -143,20 +161,7 @@
   }
 }
 
-// ✨ Caption (global filter) styling
-::ng-deep .p-datatable-thead > tr > th {
-  padding: 0.5rem;
-  
-  .p-column-filter {
-    width: 100%;
-  }
-  
-  input.p-inputtext {
-    width: 100%;
-  }
-}
-
-// ✨ Global filter in caption
+// Global filter in caption
 ::ng-deep .p-datatable-header {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--surface-d);
@@ -174,7 +179,7 @@
   }
 }
 
-// ✨ Responsive adjustments
+//  Responsive adjustments
 @media (max-width: 768px) {
   ::ng-deep .p-datatable.compact-filters {
     .p-datatable-thead tr:first-child th,
@@ -188,10 +193,16 @@
       height: 1.5rem !important;
       padding: 0.2rem 0.4rem !important;
     }
+    
+    //  Hide pagination text on mobile
+    .p-paginator {
+      .p-paginator-current {
+        display: none;
+      }
+    }
   }
 }
 
-// ✨ Print styles
 @media print {
   :host {
     .table-container {

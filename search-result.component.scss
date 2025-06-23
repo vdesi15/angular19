@@ -1,10 +1,10 @@
-// search-result.component.scss - Dynamic height management
+// search-result.component.scss - Fix accordion overflow and scrolling
 :host {
   display: block;
   margin-bottom: 1rem;
 }
 
-// ✨ Dynamic height calculation based on viewport
+// Fix accordion overflow and ensure proper scrolling
 :host ::ng-deep .result-accordion.compact {
   .p-accordion-header-link {
     padding: 0.5rem 1rem !important;
@@ -17,11 +17,12 @@
   
   .p-accordion-content {
     padding: 0;
+    overflow: visible; // Don't clip content
     
-    // ✨ Ensure content doesn't overflow viewport
     .p-accordion-content-wrapper {
-      max-height: calc(100vh - 200px); // ✨ Leave room for header, filters, and pagination
-      overflow: hidden;
+      // Remove max-height constraint that was causing issues
+      // max-height: calc(100vh - 200px); // REMOVED
+      overflow: visible; // Allow content to flow naturally
       display: flex;
       flex-direction: column;
     }
@@ -65,27 +66,31 @@
   }
 }
 
-// ✨ Dynamic result content wrapper with proper height management
+// Better result content wrapper with flexible height
 .result-content-wrapper {
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 0; // ✨ Critical for flexbox overflow management
+  min-height: 400px; // Minimum height to ensure usability
   
-  // ✨ Calculate height dynamically based on viewport
-  height: calc(100vh - 280px); // ✨ Account for header, toolbar, and pagination
-  max-height: 800px; // ✨ Maximum height limit
-  min-height: 400px; // ✨ Minimum usable height
+  // Use flexible height that adapts to content
+  height: auto; // Let content determine height
+  max-height: 80vh; // But don't exceed 80% of viewport
   
-  // ✨ Ensure table container manages its own scrolling
+  // Ensure table container manages its own scrolling
   app-log-viewer {
     flex: 1;
-    min-height: 0;
+    min-height: 400px; // Ensure minimum usable height
     display: flex;
     flex-direction: column;
+    
+    // Let the log viewer handle its own height
+    .table-container {
+      height: 100%;
+      min-height: 400px;
+    }
   }
   
-  // ✨ Skeleton and error states with proper height
   app-table-skeleton {
     flex: 1;
     min-height: 400px;
@@ -103,7 +108,7 @@
   }
 }
 
-// ✨ Enhanced animations for buttons
+// Enhanced animations for buttons
 .header-right button {
   transition: all 0.2s ease;
   
@@ -113,28 +118,37 @@
   }
 }
 
-// ✨ Responsive height adjustments
+// Responsive height adjustments - more flexible
 @media (max-height: 768px) {
   .result-content-wrapper {
-    height: calc(100vh - 240px);
+    max-height: 70vh; // Reduce max height on smaller screens
     min-height: 300px;
+    
+    app-log-viewer .table-container {
+      min-height: 300px;
+    }
   }
 }
 
 @media (max-height: 600px) {
   .result-content-wrapper {
-    height: calc(100vh - 200px);
+    max-height: 60vh; // Further reduce on very small screens
     min-height: 250px;
+    
+    app-log-viewer .table-container {
+      min-height: 250px;
+    }
   }
 }
 
-// ✨ Ensure pagination is always visible
+// Ensure pagination is always visible and accessible
 :host ::ng-deep {
   .result-content-wrapper {
     .p-datatable {
       display: flex;
       flex-direction: column;
       height: 100%;
+      min-height: 400px; // Ensure minimum height
       
       .p-datatable-wrapper {
         flex: 1;
@@ -143,13 +157,33 @@
       }
       
       .p-paginator {
-        flex-shrink: 0; // ✨ Prevent pagination from being compressed
+        flex-shrink: 0;
         border-top: 1px solid var(--surface-d);
         background: var(--surface-a);
-        position: sticky;
-        bottom: 0;
+        position: relative; // Changed from sticky to relative
+        bottom: auto; // Remove bottom positioning
         z-index: 10;
+        
+        // Ensure pagination is always visible
+        visibility: visible !important;
+        display: flex !important;
+        
+        // Make sure dropdown opens upward
+        .p-dropdown {
+          .p-dropdown-panel {
+            bottom: 100% !important;
+            top: auto !important;
+            transform-origin: bottom;
+            margin-bottom: 2px;
+          }
+        }
       }
     }
   }
+}
+
+// Global fix for dropdowns in constrained spaces
+:host ::ng-deep .p-dropdown-panel {
+  z-index: 1200 !important;
+  position: fixed !important; // Use fixed positioning
 }

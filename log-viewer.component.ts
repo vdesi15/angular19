@@ -30,7 +30,7 @@ import { TransformPipe } from 'src/app/core/pipes/transform.pipe';
   templateUrl: './log-viewer.component.html',
   styleUrls: ['./log-viewer.component.scss']
 })
-export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
+export class LogViewerComponent implements AfterViewInit, OnChanges, OnInit, OnDestroy  {
   @Input({ required: true }) searchInstance!: ActiveSearch;
   @Input({ required: true }) visibleColumns: ColumnDefinition[] = [];
   @Output() rowDrilldown = new EventEmitter<any>();
@@ -54,6 +54,11 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
   
   constructor() {
     console.log("[LogViewerComponent] Initialized");
+  }
+
+  ngAfterViewInit(): void {
+    // Fix pagination dropdown direction after view init
+    this.fixPaginationDropdownDirection();
   }
 
   ngOnInit(): void {
@@ -106,6 +111,39 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
     }
   }
 
+  private fixPaginationDropdownDirection(): void {
+    setTimeout(() => {
+      if (this.logTable) {
+        // Find the pagination dropdown
+        const tableElement = this.logTable.el.nativeElement;
+        const paginatorDropdowns = tableElement.querySelectorAll('.p-paginator .p-dropdown');
+        
+        paginatorDropdowns.forEach((dropdown: Element) => {
+          // Add a class to force upward opening
+          dropdown.classList.add('dropdown-up');
+          
+          // Listen for dropdown show events
+          const dropdownElement = dropdown as HTMLElement;
+          dropdownElement.addEventListener('click', () => {
+            setTimeout(() => {
+              const panel = document.querySelector('.p-dropdown-panel:last-of-type') as HTMLElement;
+              if (panel) {
+                // Force the panel to open upward
+                const rect = dropdownElement.getBoundingClientRect();
+                panel.style.position = 'fixed';
+                panel.style.top = 'auto';
+                panel.style.bottom = `${window.innerHeight - rect.top + 2}px`;
+                panel.style.left = `${rect.left}px`;
+                panel.style.minWidth = `${rect.width}px`;
+                panel.style.zIndex = '1300';
+              }
+            }, 50);
+          });
+        });
+      }
+    }, 100);
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['searchInstance']) {
       const currentSearch = changes['searchInstance'].currentValue as ActiveSearch;
@@ -152,6 +190,12 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
     // Update loading state when visibleColumns change
     if (changes['visibleColumns']) {
       console.log("[LogViewer] Visible columns updated:", this.visibleColumns.length);
+    }
+
+    if (changes['searchInstance'] || changes['visibleColumns']) {
+      setTimeout(() => {
+        this.fixPaginationDropdownDirection();
+      }, 200);
     }
   }
 

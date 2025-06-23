@@ -1,0 +1,46 @@
+// global-styles.scss - Add these global fixes
+
+// Global fix for pagination dropdowns in constrained spaces
+.p-paginator .p-dropdown.dropdown-up {
+  .p-dropdown-panel {
+    bottom: 100% !important;
+    top: auto !important;
+    transform-origin: bottom !important;
+    margin-bottom: 2px !important;
+    position: fixed !important;
+    z-index: 1300 !important;
+  }
+}
+
+// Global fix for accordion overflow issues
+.p-accordion .p-accordion-content {
+  overflow: visible !important;
+  
+  .p-accordion-content-wrapper {
+    overflow: visible !important;
+  }
+}
+
+// Global fix for table pagination visibility
+.p-datatable .p-paginator {
+  visibility: visible !important;
+  display: flex !important;
+  flex-shrink: 0 !important;
+}
+
+// Global fix for dropdown panels in tables
+.p-datatable .p-dropdown-panel {
+  z-index: 1200 !important;
+  position: fixed !important;
+}
+
+// Global fix for column filters
+.p-datatable .p-column-filter .p-column-filter-element {
+  width: 100% !important;
+  
+  .p-inputtext {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
