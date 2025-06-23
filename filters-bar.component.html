@@ -1,0 +1,51 @@
+@if (searchFilterMetadata(); as meta) {
+  <div class="filters-bar-container">
+    
+    <!-- Application Dropdown -->
+    <div class="filter-item">
+      <p-floatLabel>
+        <p-multiSelect inputId="ms-apps" [options]="applicationOptions()" [(ngModel)]="selectedApplications" (onChange)="onApplicationChange($event.value)" optionLabel="label" optionValue="value" placeholder="Select Applications" styleClass="w-full"></p-multiSelect>
+        <label for="ms-apps">Application</label>
+      </p-floatLabel>
+    </div>
+
+    <!-- Environment Dropdown -->
+    <div class="filter-item">
+      <p-floatLabel>
+        <p-multiSelect inputId="ms-env" [options]="environmentOptions()" [(ngModel)]="selectedEnvironment" (onChange)="onEnvironmentChange($event.value)" [selectionLimit]="1" optionLabel="label" optionValue="value" placeholder="Select Environment" styleClass="w-full" [showClear]="true"></p-multiSelect>
+        <label for="ms-env">Environment</label>
+      </p-floatLabel>
+    </div>
+
+    <!-- Location Dropdown -->
+    <div class="filter-item">
+      <p-floatLabel>
+        <p-multiSelect inputId="ms-loc" [options]="locationOptions()" [(ngModel)]="selectedLocation" (onChange)="onLocationChange($event.value)" [selectionLimit]="1" [disabled]="selectedEnvironment().length === 0" optionLabel="label" optionValue="value" placeholder="Select Location" styleClass="w-full" [showClear]="true"></p-multiSelect>
+        <label for="ms-loc">Location</label>
+      </p-floatLabel>
+    </div>
+
+    <!-- Date Range Picker (conditionally shown) -->
+    @if(showDatePicker()) {
+      <div class="filter-item">
+        <p-floatLabel>
+          <span class="p-input-icon-left w-full">
+              <i class="pi pi-calendar"></i>
+              <input #dateRangeTrigger type="text" pInputText [ngModel]="dateRangeInputText()" (click)="datePickerPopover.toggle($event, dateRangeTrigger)" readonly class="date-range-input"/>
+          </span>
+          <label>Time Range</label>
+        </p-floatLabel>
+        <p-popover #datePickerPopover [showCloseIcon]="true">
+          <app-date-range-picker (rangeSelected)="onRangeSelected($event, datePickerPopover)"></app-date-range-picker>
+        </p-popover>
+      </div>
+    }
+  </div>
+} @else {
+  <!-- Skeleton loading state -->
+  <div class="filters-bar-container loading-state">
+    <div class="filter-item"><p-skeleton height="3rem" styleClass="w-full"></p-skeleton></div>
+    <div class="filter-item"><p-skeleton height="3rem" styleClass="w-full"></p-skeleton></div>
+    <div class="filter-item"><p-skeleton height="3rem" styleClass="w-full"></p-skeleton></div>
+  </div>
+}

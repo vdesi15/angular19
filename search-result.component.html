@@ -1,91 +1,111 @@
-<p-accordion [multiple]="true" [activeIndex]="[search.isExpanded ? 0 : -1]" styleClass="result-accordion compact">
-  <p-accordion-panel>
-    <p-accordion-header>
-      <div class="accordion-header">
-        <div class="header-left">
-          <span class="font-bold text-lg mr-3">{{ search.title }}</span>
-          <span class="text-sm text-color-secondary ml-2">{{ recordsSummary() }}</span>
-        </div>
-        <div class="header-right">
-          @if(search.isStreaming || (search.isLoading && search.type !== 'transaction')) {
-            <button 
-              pButton 
-              type="button" 
-              class="p-button-sm"
-              [ngClass]="{
-                'p-button-success': !isStopButtonHovered(),
-                'p-button-danger': isStopButtonHovered()
-              }"
-              (mouseenter)="isStopButtonHovered.set(true)"
-              (mouseleave)="isStopButtonHovered.set(false)"
-              (click)="stopStreaming($event)"
-              pTooltip="Stop the live data stream"
-              tooltipPosition="top">
-              
-              @if (isStopButtonHovered()) {
-                <span class="flex align-items-center gap-2">
-                  <i class="pi pi-stop-circle"></i>
-                  <span>Stop</span>
-                </span>
-              } @else {
-                <span class="flex align-items-center gap-2">
-                  <i class="pi pi-spin pi-spinner"></i>
-                  <span>Streaming...</span>
-                </span>
+<p-accordion [multiple]="true" [activeIndex]="search.isExpanded ? 0 : -1" styleClass="result-accordion compact">
+      <p-accordion-panel>
+        <p-accordion-header>
+          <div class="accordion-header" (click)="toggleExpansion()">
+            <div class="header-left">
+              <span class="font-bold text-lg mr-3">{{ search.title }}</span>
+              <span class="text-sm text-color-secondary ml-2">{{ recordsSummary() }}</span>
+            </div>
+            <div class="header-right">
+              <!-- Favorite Toggle Button -->
+              <button 
+                pButton 
+                type="button" 
+                [icon]="isFavorite() ? 'pi pi-heart-fill' : 'pi pi-heart'"
+                [class]="'p-button-sm p-button-rounded p-button-text favorite-toggle ' + (isFavorite() ? 'favorited' : '')"
+                (click)="toggleFavorite($event)"
+                [pTooltip]="isFavorite() ? 'Remove from favorites' : 'Add to favorites'"
+                tooltipPosition="top">
+              </button>
+
+              <!-- Streaming Control Button -->
+              @if(search.isStreaming) {
+                <button 
+                  pButton 
+                  type="button" 
+                  class="p-button-sm streaming-control-btn"
+                  [ngClass]="{
+                    'p-button-success': !isStopButtonHovered(),
+                    'p-button-danger': isStopButtonHovered()
+                  }"
+                  (mouseenter)="isStopButtonHovered.set(true)"
+                  (mouseleave)="isStopButtonHovered.set(false)"
+                  (click)="stopStreaming($event)"
+                  pTooltip="Stop the live data stream"
+                  tooltipPosition="top">
+                  
+                  @if (isStopButtonHovered()) {
+                    <span class="flex align-items-center gap-2">
+                      <i class="pi pi-stop-circle"></i>
+                      <span>Stop</span>
+                    </span>
+                  } @else {
+                    <span class="flex align-items-center gap-2">
+                      <i class="pi pi-spin pi-spinner"></i>
+                      <span>Streaming...</span>
+                    </span>
+                  }
+                </button>
               }
-            </button>
+              
+              <!-- Close Panel Button -->
+              <button 
+                pButton 
+                type="button" 
+                icon="pi pi-times" 
+                class="p-button-text p-button-rounded p-button-danger p-button-sm" 
+                pTooltip="Close this result panel" 
+                (click)="closePanel($event)">
+              </button>
+            </div>
+          </div>
+        </p-accordion-header>
+        
+        <p-accordion-content>
+          <!-- Conditionally render the correct toolbar -->
+          @if(search.type === 'transaction') {
+            <app-transaction-toolbar 
+              [availableViews]="availableViews()" 
+              [selectedViewId]="selectedViewId()"
+              (viewChange)="selectedViewId.set($event)">
+            </app-transaction-toolbar>
+          } @else {
+            <app-streaming-toolbar
+              [allAvailableColumns]="allColumnsForViewType()"
+              [currentlyVisibleColumns]="streamingVisibleColumns()"
+              (visibleColumnsChange)="onStreamingColumnsChange($event)"
+              (resetColumns)="resetStreamingColumns()"
+              [availableFilterValues]="search.aggregatedFilterValues"
+              [appliedFilters]="search.streamFilters ?? []"
+              (filtersChange)="onStreamFiltersChange($event)">
+            </app-streaming-toolbar>
           }
           
-          <button pButton type="button" icon="pi pi-times" 
-                  class="p-button-text p-button-rounded p-button-danger" 
-                  pTooltip="Close this result panel" 
-                  (click)="closePanel($event)"></button>
-        </div>
-      </div>
-    </p-accordion-header>
-    
-    <p-accordion-content>
-      <!-- Toolbar section -->
-      @if(search.type === 'transaction') {
-        <app-transaction-toolbar 
-          [availableViews]="availableViews()" 
-          [selectedViewId]="selectedViewId()"
-          (viewChange)="selectedViewId.set($event)">
-        </app-transaction-toolbar>
-      } @else {
-        <app-streaming-toolbar
-          [allAvailableColumns]="allColumnsForViewType()"
-          [currentlyVisibleColumns]="streamingVisibleColumns()"
-          (visibleColumnsChange)="onStreamingColumnsChange($event)"
-          (resetColumns)="resetStreamingColumns()"
-          [availableFilterValues]="search.aggregatedFilterValues"
-          [appliedFilters]="search.streamFilters ?? []"
-          (filtersChange)="onStreamFiltersChange($event)">
-        </app-streaming-toolbar>
-      }
-      
-      <!-- Content section -->
-      <div class="result-content-wrapper">
-        @if (showSkeleton()) {
-          <app-table-skeleton 
-            [columns]="finalVisibleColumns()" 
-            [rowCount]="10">
-          </app-table-skeleton>
-        } @else if (search.error) {
-          <div class="error-container p-4">
-            <p class="text-red-500 font-bold">
-              <i class="pi pi-exclamation-circle mr-2"></i>
-              {{ search.error }}
-            </p>
+          <div class="result-content-wrapper">
+            @if (search.isLoading && search.data.length === 0) {
+              <app-table-skeleton [columns]="allColumnsForViewType()" [rowCount]="10"></app-table-skeleton>
+            } @else if (search.error) {
+              <div class="error-container">
+                <p class="p-3 text-red-500 font-bold">
+                  <i class="pi pi-exclamation-circle mr-2"></i>{{ search.error }}
+                </p>
+                <button 
+                  pButton 
+                  type="button" 
+                  label="Retry" 
+                  icon="pi pi-refresh" 
+                  class="p-button-sm p-button-outlined"
+                  (click)="retrySearch()">
+                </button>
+              </div>
+            } @else {
+              <app-log-viewer #logViewer
+                [searchInstance]="search"
+                [visibleColumns]="finalVisibleColumns()"
+                (rowDrilldown)="onDrilldown($event)">
+              </app-log-viewer>
+            }
           </div>
-        } @else if (showTable()) {
-          <app-log-viewer #logViewer
-            [searchInstance]="search"
-            [visibleColumns]="finalVisibleColumns()"
-            (rowDrilldown)="onDrilldown($event)">
-          </app-log-viewer>
-        }
-      </div>
-    </p-accordion-content>
-  </p-accordion-panel>
-</p-accordion>
+        </p-accordion-content>
+      </p-accordion-panel>
+    </p-accordion>

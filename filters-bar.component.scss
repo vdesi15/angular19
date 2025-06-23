@@ -1,0 +1,61 @@
+:host {
+  --filter-height: 3rem;
+  --filter-width: 280px;
+  --filter-gap: 1.5rem;
+}
+
+.filters-bar-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--filter-gap);
+  padding: 1rem;
+  background-color: var(--surface-card); // Use card background for a slight lift
+  border-bottom: 1px solid var(--surface-d);
+}
+
+.filter-item {
+  width: var(--filter-width);
+  
+  // These styles ensure the icon-inside-input pattern works correctly
+  .p-input-icon-left {
+    width: 100%;
+    height: var(--filter-height);
+    .p-inputtext {
+      width: 100%;
+      height: 100%;
+    }
+  }
+  
+  .date-range-input {
+    cursor: pointer;
+  }
+  
+  // This targets the multiselect components to enforce a consistent height
+  ::ng-deep .p-multiselect {
+    height: var(--filter-height);
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+}
+
+// Loading state
+.loading-state .filter-item {
+  p-skeleton {
+    height: var(--filter-height);
+    width: 100%;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 960px) {
+  .filter-item {
+    flex-grow: 1; // Allow items to grow on smaller screens
+  }
+}
+@media (max-width: 600px) {
+  .filter-item {
+    width: 100%; // Stack vertically on mobile
+    flex-grow: unset;
+  }
+}

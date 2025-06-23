@@ -26,7 +26,6 @@ export class SearchOrchestratorService {
   private filtersService = inject(FiltersService);
   private colDefService = inject(ColumnDefinitionService);
   private searchHistoryService = inject(SearchHistoryService);
-  private transactionDetailsStrategy = inject(TransactionDetailsStrategy);
 
   constructor() {
     this.strategies['browse'] = inject(SseStrategy);
@@ -444,5 +443,70 @@ export class SearchOrchestratorService {
    */
   public retryTransactionDetails(id: string): void {
     this.fetchTransactionDetails(id);
+  }
+
+  // --- SEARCH HISTORY MANAGEMENT ---
+
+  private saveSearchToHistory(search: ActiveSearch): void {
+    const globalFilters = this.filtersService.filters();
+    if (!globalFilters) return;
+
+    this.searchHistoryService.addSearch({
+      type: search.type,
+      title: search.title,
+      appName: search.appName,
+      query: search.query,
+      preFilter: search.preFilter,
+      globalFilters: globalFilters,
+      streamFilters: search.streamFilters || [],
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  private updateSearchInHistory(search: ActiveSearch): void {
+    const globalFilters = this.filtersService.filters();
+    if (!globalFilters) return;
+
+    this.searchHistoryService.updateSearch({
+      type: search.type,
+      title: search.title,
+      appName: search.appName,
+      query: search.query,
+      preFilter: search.preFilter,
+      globalFilters: globalFilters,
+      streamFilters: search.streamFilters || [],
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // --- PUBLIC METHODS FOR FAVORITES ---
+
+  public executeSearchFromHistory(savedSearch: any): void {
+    // Restore global filters
+    this.filtersService.updateFilters(savedSearch.globalFilters);
+
+    // Create and execute the search request
+    const request: SearchRequest = {
+      type: savedSearch.type,
+      title: savedSearch.title,
+      appName: savedSearch.appName,
+      query: savedSearch.query,
+      preFilter: savedSearch.preFilter
+    };
+
+    // Wait a tick for global filters to update, then perform search
+    setTimeout(() => {
+      this.performSearch(request);
+      
+      // If there are stream filters, apply them after the search starts
+      if (savedSearch.streamFilters && savedSearch.streamFilters.length > 0) {
+        setTimeout(() => {
+          const activeSearch = this.activeSearches().find(s => s.type === savedSearch.type);
+          if (activeSearch) {
+            this.applyStreamFilters(activeSearch.id, savedSearch.streamFilters);
+          }
+        }, 100);
+      }
+    }, 50);
   }
 }

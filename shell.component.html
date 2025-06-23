@@ -1,0 +1,24 @@
+<div class="shell-container">
+  <!-- The main application header -->
+  <app-header class="shell-header"></app-header>
+
+  <!-- This container holds the sidebar and the main content area -->
+  <div class="shell-body">
+    <!-- The collapsible sidebar for navigation -->
+    <app-sidebar class="shell-sidebar"></app-sidebar>
+
+    <!-- The main content wrapper -->
+    <main class="shell-main-content">
+      <!-- The global filter bar sits at the top of the content area -->
+      <app-filters-bar></app-filters-bar>
+
+      <!-- The router-outlet is where your pages (/logs/search, /logs/browse) will be rendered -->
+      <div class="content-outlet-wrapper">
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+  </div>
+  
+  <!-- A simple application footer (optional) -->
+  <!-- <app-footer class="shell-footer"></app-footer> -->
+</div>

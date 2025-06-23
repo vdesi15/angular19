@@ -1,0 +1,47 @@
+// Use :host to style the component's host element itself.
+:host {
+  display: flex; // Make the shell a flex container
+  height: 100vh; // Force it to take up the full viewport height
+  overflow: hidden; // Prevent the entire page from scrolling
+}
+
+.shell-container {
+  display: flex;
+  flex-direction: column; // Stack header and body vertically
+  width: 100%;
+}
+
+.shell-header {
+  flex-shrink: 0; // Prevent the header from shrinking
+}
+
+.shell-body {
+  display: flex;
+  flex-direction: row; // Place sidebar and main content side-by-side
+  flex-grow: 1; // Allow this section to fill all remaining vertical space
+  min-height: 0; // A critical fix for flexbox overflow issues in some browsers
+}
+
+.shell-sidebar {
+  flex-shrink: 0; // Prevent the sidebar from shrinking
+}
+
+.shell-main-content {
+  display: flex;
+  flex-direction: column; // Stack filter bar and router outlet vertically
+  flex-grow: 1; // Allow the main content area to fill all remaining horizontal space
+  overflow: hidden; // Prevent this container from scrolling
+}
+
+// This is the final container that will actually scroll if its content is too long.
+.content-outlet-wrapper {
+  flex-grow: 1; // It grows to fill the space left by the filter bar
+  overflow-y: auto; // Add a vertical scrollbar ONLY when needed
+  // You might add padding here to give your content some breathing room
+  // padding: 1rem;
+}
+
+// Optional footer styling
+.shell-footer {
+  flex-shrink: 0; // Prevent footer from shrinking
+}

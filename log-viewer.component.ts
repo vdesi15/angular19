@@ -38,31 +38,16 @@ export class LogViewerComponent implements OnChanges {
   @ViewChild('logTable') logTable!: Table;
   
   // Local state for table data
-  private tableDataSignal: WritableSignal<any[]> = signal([]);
-  
-  // Computed signal for filtered data based on stream filters
-  public tableData: Signal<any[]> = computed(() => {
-    const allData = this.tableDataSignal();
-    const streamFilters = this.searchInstance?.streamFilters ?? [];
-    
-    if (streamFilters.length === 0) {
-      return allData;
-    }
-    
-    // Apply stream filters
-    return allData.filter(row => {
-      return streamFilters.every(filter => {
-        const value = get(row._original, filter.field);
-        return filter.values.includes(String(value));
-      });
-    });
-  });
-  
-  public totalRecords: Signal<number> = computed(() => this.tableData().length);
+  public tableData = signal<any[]>([]);
+  public totalRecords = signal<number>(0);
+  public isLoading = signal<boolean>(false);
+
+  public globalFilterFields = computed(() => 
+    this.visibleColumns.map(c => c.name)
+  );
 
   private cdr = inject(ChangeDetectorRef);
-  private previousSearchId: string | null = null;
-
+  
   constructor() {
     console.log("[LogViewerComponent] Initialized");
   }
@@ -72,72 +57,166 @@ export class LogViewerComponent implements OnChanges {
       const currentSearch = changes['searchInstance'].currentValue as ActiveSearch;
       const previousSearch = changes['searchInstance'].previousValue as ActiveSearch | undefined;
 
-      // Check if this is a completely different search or if data was cleared
-      const isDifferentSearch = !previousSearch || currentSearch.id !== previousSearch.id;
-      const wasDataCleared = previousSearch && 
-        currentSearch.id === previousSearch.id && 
-        currentSearch.data.length === 0 && 
-        previousSearch.data.length > 0;
+      // Update loading state signal
+      this.isLoading.set(currentSearch.isLoading);
 
-      if (isDifferentSearch || wasDataCleared) {
-        console.log("[LogViewer] New search or data cleared. Resetting table.");
+      // If this is a completely different search result, clear everything.
+      if (!previousSearch || currentSearch.id !== previousSearch.id) {
+        console.log("[LogViewer] New search detected. Resetting table.");
+        this.tableData.set([]);
+        this.totalRecords.set(0);
         
-        // Clear table data
-        this.tableDataSignal.set([]);
-        
-        // Reset paginator
+        // Reset paginator to the first page
         if (this.logTable) {
           this.logTable.first = 0;
-          this.logTable.reset();
         }
       }
 
-      // Process new data if available
-      if (currentSearch.data.length > 0) {
-        const processedData = this.processAllData(currentSearch.data);
-        this.tableDataSignal.set(processedData);
+      const newHits = this.getNewHits(currentSearch, previousSearch);
+
+      if (newHits.length > 0) {
+        const processedNewRows = this.processHits(newHits);
+        
+        // ✨ Update signals with new data
+        this.tableData.update(current => [...current, ...processedNewRows]);
+        this.totalRecords.set(this.tableData().length);
+
+        // ✨ Manually tell Angular to detect these changes
         this.cdr.detectChanges();
+        
+        console.log(`[LogViewer] Appended ${processedNewRows.length} rows. Total now: ${this.tableData().length}`);
+      }
+
+      // Handle error states
+      if (currentSearch.error) {
+        console.error(`[LogViewer] Search error: ${currentSearch.error}`);
       }
     }
 
+    // Update loading state when visibleColumns change
     if (changes['visibleColumns']) {
-      // Force table update when columns change
-      this.cdr.detectChanges();
+      console.log("[LogViewer] Visible columns updated:", this.visibleColumns.length);
     }
   }
 
-  private processAllData(hits: ElkHit[]): any[] {
+  private getNewHits(current: ActiveSearch, previous: ActiveSearch | undefined): ElkHit[] {
+    const currentData = current?.data ?? [];
+    if (!previous) { 
+      return currentData; 
+    }
+    
+    const previousLength = previous.data?.length ?? 0;
+    if (currentData.length <= previousLength) { 
+      return []; 
+    }
+    
+    return currentData.slice(previousLength);
+  }
+
+  private processHits(hits: ElkHit[]): any[] {
     const columns = this.visibleColumns;
     return hits.map(hit => {
       const row: any = { 
         _id: hit._id, 
-        _original: hit._source 
+        _original: hit._source,
+        _timestamp: new Date() // Add timestamp for sorting/filtering
       };
       
       columns.forEach(col => {
-        row[col.name] = get(hit._source, col.field, 'N/A');
+        const rawValue = get(hit._source, col.field, null);
+        row[col.name] = rawValue;
       });
       
       return row;
     });
   }
 
-  applyGlobalFilter(event: Event): void {
+  /**
+   * Handle global filter input for the table
+   */
+  public applyGlobalFilter(event: Event): void {
     const target = event.target as HTMLInputElement;
     if (this.logTable) {
       this.logTable.filterGlobal(target.value, 'contains');
     }
   }
 
-  handleRowClick(rowData: any): void {
-    // Emit drilldown event for transaction searches
-    if (this.searchInstance.type === 'transaction' && rowData._original?.trace?.id) {
-      this.rowDrilldown.emit(rowData._original.trace.id);
+  /**
+   * Handle row click for drilldown
+   */
+  public handleRowClick(rowData: any): void {
+    // Extract a meaningful identifier for drilldown
+    const identifier = this.extractIdentifierFromRow(rowData);
+    if (identifier) {
+      console.log(`[LogViewer] Row clicked, drilling down with: ${identifier}`);
+      this.rowDrilldown.emit(identifier);
     }
   }
 
-  // Public method to get filtered count for parent component
-  public getFilteredCount(): number {
-    return this.logTable?.filteredValue?.length ?? this.tableData().length;
+  /**
+   * Extract identifier from row data for drilldown
+   */
+  private extractIdentifierFromRow(rowData: any): string | null {
+    // Try common identifier fields
+    const identifierFields = [
+      'trace.id', 'traceId', 'transaction.id', 'transactionId', 
+      'span.id', 'spanId', 'correlation.id', 'correlationId',
+      'request.id', 'requestId', '_id'
+    ];
+
+    for (const field of identifierFields) {
+      const value = get(rowData._original, field) || rowData[field];
+      if (value && typeof value === 'string' && value.length > 0) {
+        return value;
+      }
+    }
+
+    // Fallback to the document ID
+    return rowData._id || null;
+  }
+
+  /**
+   * Check if a cell should be clickable (contains identifier)
+   */
+  public isCellClickable(column: ColumnDefinition, rowData: any): boolean {
+    // Make certain fields clickable for drilldown
+    const clickableFields = [
+      'trace.id', 'traceId', 'transaction.id', 'transactionId',
+      'span.id', 'spanId', 'correlation.id', 'correlationId'
+    ];
+    
+    return clickableFields.includes(column.field);
+  }
+
+  /**
+   * Handle cell-specific clicks
+   */
+  public handleCellClick(column: ColumnDefinition, rowData: any, event: Event): void {
+    if (this.isCellClickable(column, rowData)) {
+      event.stopPropagation();
+      const value = get(rowData._original, column.field) || rowData[column.name];
+      if (value) {
+        console.log(`[LogViewer] Cell clicked, drilling down with: ${value}`);
+        this.rowDrilldown.emit(value);
+      }
+    }
+  }
+
+  /**
+   * Export current table data (for future enhancement)
+   */
+  public exportData(): void {
+    const data = this.tableData();
+    console.log(`[LogViewer] Export requested for ${data.length} rows`);
+    // Implementation for data export can be added here
+  }
+
+  /**
+   * Refresh the current view
+   */
+  public refresh(): void {
+    console.log("[LogViewer] Manual refresh requested");
+    // This could trigger a refresh of the current search
+    // Implementation depends on parent component needs
   }
 }

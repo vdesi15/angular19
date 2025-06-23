@@ -42,10 +42,14 @@ export class SearchResultComponent {
   public orchestrator = inject(SearchOrchestratorService);
   private colDefService = inject(ColumnDefinitionService);
   private viewDefService = inject(ViewDefinitionService);
+  private searchHistoryService = inject(SearchHistoryService);
+  private filtersService = inject(FiltersService);
   
   // State Signals
   public selectedViewId: WritableSignal<string> = signal('');
   public streamingVisibleColumns: WritableSignal<ColumnDefinition[]> = signal([]);
+  public streamFilters: WritableSignal<StreamFilter[]> = signal([]);
+
 
   // Derived Signals
   public allColumnsForViewType: Signal<ColumnDefinition[]> = computed(() => {
@@ -73,13 +77,12 @@ export class SearchResultComponent {
 
   public recordsSummary = computed(() => {
     const totalLoaded = this.search.data.length;
-    const filteredCount = this.logViewer?.getFilteredCount() ?? totalLoaded;
+    // Check if the LogViewer and its internal table filter state exist
+    const filteredCount = this.logViewer?.logTable?.filteredValue?.length ?? totalLoaded;
     
     let summary = '';
     if (this.search.isStreaming) {
-      summary = `(Streaming: ${totalLoaded}`;
-    } else if (this.search.isLoading) {
-      summary = `(Loading...`;
+      summary = `(Loaded: ${totalLoaded}`;
     } else {
       if (this.search.totalRecords > 0) {
         summary = `(Total: ${this.search.totalRecords}`;
@@ -88,11 +91,20 @@ export class SearchResultComponent {
       }
     }
 
-    if (filteredCount < totalLoaded && !this.search.isLoading) {
-      summary += ` / Displayed: ${filteredCount}`;
+    if (filteredCount < totalLoaded) {
+      summary += ` / Filtered: ${filteredCount}`;
     }
 
     return summary + ')';
+  });
+
+  public isFavorite = computed(() => {
+    const currentGlobalFilters = this.filtersService.filters();
+    if (!currentGlobalFilters) return false;
+
+    // Create a search signature to check against favorites
+    const searchSignature = this.createSearchSignature();
+    return this.searchHistoryService.isFavorite(searchSignature);
   });
 
   // Computed signal to determine if we should show skeleton
@@ -107,13 +119,14 @@ export class SearchResultComponent {
 
   constructor() {
     effect(() => {
+      // It depends on the full column list being ready
       const allColumns = this.allColumnsForViewType();
-      if (allColumns.length > 0 && this.streamingVisibleColumns().length === 0) {
+      if (allColumns.length > 0) {
         this.resetStreamingColumns();
       }
 
       const available = this.availableViews();
-      if (available.length > 0 && !this.selectedViewId()) {
+      if (available.length > 0) {
         const defaultView = available.find(v => v.default) ?? available[0];
         if (defaultView) {
           this.selectedViewId.set(defaultView.viewId);
@@ -162,5 +175,48 @@ export class SearchResultComponent {
     this.orchestrator.updateSearchState(this.search.id, { 
       isExpanded: !this.search.isExpanded 
     });
+  }
+
+  retrySearch(): void {
+    console.log(`[SearchResult] Retrying search: ${this.search.title}`);
+    this.orchestrator.fetchDataFor(this.search);
+  }
+
+  toggleFavorite(event: MouseEvent): void {
+    event.stopPropagation(); // Prevent accordion toggle
+    
+    const searchSignature = this.createSearchSignature();
+    this.searchHistoryService.toggleFavorite(searchSignature);
+  }
+
+  private createSearchSignature(): string {
+    const globalFilters = this.filtersService.filters();
+    if (!globalFilters) return '';
+
+    // Create a consistent signature for this search state
+    const signature = {
+      type: this.search.type,
+      appName: this.search.appName,
+      query: this.search.query,
+      preFilter: this.search.preFilter,
+      globalFilters: {
+        application: globalFilters.application,
+        environment: globalFilters.environment,
+        location: globalFilters.location,
+        dateRange: globalFilters.dateRange
+      },
+      streamFilters: this.search.streamFilters || []
+    };
+
+    // Simple hash function for consistent IDs
+    const signatureString = JSON.stringify(signature);
+    let hash = 0;
+    for (let i = 0; i < signatureString.length; i++) {
+      const char = signatureString.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    return Math.abs(hash).toString(36);
   }
 }
