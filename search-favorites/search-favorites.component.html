@@ -1,0 +1,138 @@
+<button 
+      #favButton
+      pButton 
+      type="button" 
+      icon="pi pi-heart" 
+      class="p-button-text p-button-rounded"
+      (click)="favPopover.toggle($event)"
+      pTooltip="Search Favorites & History"
+      tooltipPosition="bottom"
+      [class.has-favorites]="hasFavorites()">
+    </button>
+
+    <!-- Popover Content -->
+    <p-popover #favPopover styleClass="favorites-popover">
+      <div class="favorites-container">
+        
+        <!-- Header -->
+        <div class="popover-header">
+          <div class="header-title">
+            <i class="pi pi-heart mr-2"></i>
+            <span>Favorites & Recent Searches</span>
+          </div>
+          <button 
+            pButton 
+            type="button" 
+            icon="pi pi-info-circle" 
+            class="p-button-text p-button-sm info-button"
+            pTooltip="Managed through browser cookies"
+            tooltipPosition="left">
+          </button>
+        </div>
+
+        <!-- Favorites Section -->
+        <div class="favorites-section">
+          <div class="section-header">
+            <h4><i class="pi pi-heart-fill mr-2"></i>Favorites</h4>
+            @if (hasFavorites()) {
+              <button 
+                pButton 
+                type="button" 
+                icon="pi pi-trash" 
+                class="p-button-text p-button-sm p-button-danger"
+                (click)="clearFavorites($event)"
+                pTooltip="Clear all favorites">
+              </button>
+            }
+          </div>
+
+          <div class="items-container">
+            @if (favoriteItems().length === 0) {
+              <div class="empty-state">
+                <i class="pi pi-heart text-3xl text-color-secondary"></i>
+                <p class="text-color-secondary mt-2">No favorites yet</p>
+                <small class="text-color-secondary">Click the heart on recent searches to add favorites</small>
+              </div>
+            } @else {
+              <p-scrollPanel [style]="{ width: '100%', height: '200px' }" styleClass="custom-scrollpanel">
+                @for (item of favoriteItems(); track item.id) {
+                  <div class="search-item" (click)="executeSearch(item)">
+                    <div class="item-content">
+                      <div class="item-header">
+                        <i [class]="item.icon + ' mr-2'"></i>
+                        <span class="item-title">{{ item.title }}</span>
+                        <button 
+                          pButton 
+                          type="button" 
+                          icon="pi pi-heart-fill" 
+                          class="p-button-text p-button-sm p-button-danger favorite-btn"
+                          (click)="toggleFavorite(item.id, $event)"
+                          pTooltip="Remove from favorites">
+                        </button>
+                      </div>
+                      <div class="item-subtitle">{{ item.subtitle }}</div>
+                      <div class="item-timestamp">{{ formatTimestamp(item.timestamp) }}</div>
+                    </div>
+                  </div>
+                }
+              </p-scrollPanel>
+            }
+          </div>
+        </div>
+
+        <p-divider></p-divider>
+
+        <!-- Recent Searches Section -->
+        <div class="recent-section">
+          <div class="section-header">
+            <h4><i class="pi pi-clock mr-2"></i>Recent Searches</h4>
+            @if (hasRecentSearches()) {
+              <button 
+                pButton 
+                type="button" 
+                icon="pi pi-trash" 
+                class="p-button-text p-button-sm p-button-danger"
+                (click)="clearRecent($event)"
+                pTooltip="Clear all recent searches">
+              </button>
+            }
+          </div>
+
+          <div class="items-container">
+            @if (recentItems().length === 0) {
+              <div class="empty-state">
+                <i class="pi pi-clock text-3xl text-color-secondary"></i>
+                <p class="text-color-secondary mt-2">No recent searches</p>
+              </div>
+            } @else {
+              <p-scrollPanel [style]="{ width: '100%', height: '300px' }" styleClass="custom-scrollpanel">
+                @for (item of recentItems(); track item.id) {
+                  <div class="search-item" (click)="executeSearch(item)">
+                    <div class="item-content">
+                      <div class="item-header">
+                        <i [class]="item.icon + ' mr-2'"></i>
+                        <span class="item-title">{{ item.title }}</span>
+                        <button 
+                          pButton 
+                          type="button" 
+                          [icon]="isFavorite(item.id) ? 'pi pi-heart-fill' : 'pi pi-heart'" 
+                          [class]="'p-button-text p-button-sm favorite-btn ' + (isFavorite(item.id) ? 'p-button-danger' : '')"
+                          (click)="toggleFavorite(item.id, $event)"
+                          [pTooltip]="isFavorite(item.id) ? 'Remove from favorites' : 'Add to favorites'">
+                        </button>
+                      </div>
+                      <div class="item-subtitle">{{ item.subtitle }}</div>
+                      <div class="item-timestamp">{{ formatTimestamp(item.timestamp) }}</div>
+                    </div>
+                  </div>
+                }
+              </p-scrollPanel>
+            }
+          </div>
+        </div>
+
+      </div>
+    </p-popover>
+
+    <!-- Confirmation Dialogs -->
+    <p-confirmDialog></p-confirmDialog>

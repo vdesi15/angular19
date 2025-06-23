@@ -1,17 +1,101 @@
 <div class="page-content">
-    <!-- ✨ Use mode() to read the signal's value ✨ -->
-    @if (mode() === 'search') {
-      <div class="search-page-container">
-        <app-search-bar (search)="handleSearch($event)"></app-search-bar>
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">
+        <i [class]="mode() === 'search' ? 'pi pi-search' : mode() === 'browse' ? 'pi pi-list' : 'pi pi-exclamation-triangle'"></i>
+        {{ pageTitle() }}
+      </h1>
+      <p class="page-description">{{ pageDescription() }}</p>
+    </div>
+    
+    <!-- Search Statistics (for development/debugging) -->
+    @if (getActiveSearchCount() > 0) {
+      <div class="search-stats">
+        <span class="stat-item">
+          <i class="pi pi-search mr-1"></i>
+          {{ getActiveSearchCount() }} active search{{ getActiveSearchCount() > 1 ? 'es' : '' }}
+        </span>
+        @if (getStreamingSearchCount() > 0) {
+          <span class="stat-item">
+            <i class="pi pi-spin pi-spinner mr-1"></i>
+            {{ getStreamingSearchCount() }} streaming
+          </span>
+        }
       </div>
     }
-  
-    <div class="results-area">
-      @for(search of searchOrchestrator.activeSearches(); track search.id) {
-        <app-search-result [search]="search"></app-search-result>
-      }
-      @if (searchOrchestrator.activeSearches().length === 0 && mode() !== 'search') {
-        <p class="p-4 text-center">Loading live data for {{ mode() }} view...</p>
-      }
-    </div>
   </div>
+
+  <!-- Enhanced Search Bar (only shown in search mode) -->
+  @if (showSearchBar()) {
+    <div class="search-bar-container">
+      <app-search-bar (search)="handleSearch($event)"></app-search-bar>
+    </div>
+  }
+
+  <!-- Search Results Area -->
+  <div class="results-area">
+    @for(search of searchOrchestrator.activeSearches(); track search.id) {
+      <app-search-result [search]="search"></app-search-result>
+    }
+    
+    @if (searchOrchestrator.activeSearches().length === 0) {
+      <div class="empty-state">
+        @switch (mode()) {
+          @case ('search') {
+            <div class="empty-search-state">
+              <i class="pi pi-search text-4xl text-color-secondary mb-3"></i>
+              <h3 class="text-xl font-semibold mb-2">Ready to search</h3>
+              <p class="text-color-secondary mb-4">
+                Enter a transaction ID, JIRA ticket, batch ID, or ask in natural language above
+              </p>
+              <div class="search-examples">
+                <h4 class="text-lg font-semibold mb-2">Try these examples:</h4>
+                <div class="example-grid">
+                  <div class="example-card" (click)="handleSearch('550e8400-e29b-41d4-a716-446655440000')">
+                    <i class="pi pi-sitemap text-primary"></i>
+                    <span>Transaction ID</span>
+                    <small>UUID format</small>
+                  </div>
+                  <div class="example-card" (click)="handleSearch('PROJ-123')">
+                    <i class="pi pi-ticket text-warning"></i>
+                    <span>JIRA Ticket</span>
+                    <small>PROJECT-123</small>
+                  </div>
+                  <div class="example-card" (click)="handleSearch('ABC123')">
+                    <i class="pi pi-clone text-success"></i>
+                    <span>Batch ID</span>
+                    <small>5-8 characters</small>
+                  </div>
+                  <div class="example-card" (click)="handleSearch('show me errors from the last hour')">
+                    <i class="pi pi-comment text-info"></i>
+                    <span>Natural Language</span>
+                    <small>Coming soon!</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+          @case ('browse') {
+            <div class="empty-browse-state">
+              <i class="pi pi-spin pi-spinner text-4xl text-primary mb-3"></i>
+              <h3 class="text-xl font-semibold mb-2">Initializing live log stream...</h3>
+              <p class="text-color-secondary">
+                Setting up real-time connection to {{ mode() }} logs
+              </p>
+            </div>
+          }
+          @case ('error') {
+            <div class="empty-error-state">
+              <i class="pi pi-spin pi-spinner text-4xl text-red-500 mb-3"></i>
+              <h3 class="text-xl font-semibold mb-2">Initializing error log monitor...</h3>
+              <p class="text-color-secondary">
+                Setting up real-time connection to error logs
+              </p>
+            </div>
+          }
+        }
+      </div>
+    }
+  </div>
+</div>

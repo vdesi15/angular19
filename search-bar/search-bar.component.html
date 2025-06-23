@@ -1,0 +1,46 @@
+<div class="simple-search-container">
+      <div class="search-input-group">
+        <p-inputGroup>
+          <!-- Search Input -->
+          <input 
+            pInputText 
+            placeholder="Search transactions, JIRA tickets, batches..."
+            [ngModel]="searchQuery()"
+            (ngModelChange)="onInputChange($event)"
+            (keydown)="onKeyDown($event)"
+            class="search-input"
+            autocomplete="off" />
+          
+          <!-- Search Button -->
+          <button 
+            pButton 
+            type="button" 
+            icon="pi pi-search"
+            class="search-button"
+            [disabled]="!searchQuery().trim() || isSearching()"
+            (click)="executeSearch()"
+            [pTooltip]="getSearchTooltip()"
+            tooltipPosition="top">
+            @if (isSearching()) {
+              <i class="pi pi-spin pi-spinner"></i>
+            }
+          </button>
+        </p-inputGroup>
+        
+        <!-- Detection Hint (Simple) -->
+        @if (searchQuery().trim() && detectionResult()) {
+          <div class="detection-hint" [class]="'detection-' + getConfidenceLevel()">
+            <i [class]="getDetectionIcon() + ' mr-2'"></i>
+            <span>{{ getDetectionDescription() }}</span>
+            @if (detectionResult()!.confidence < 0.8) {
+              <i class="pi pi-exclamation-triangle ml-2 text-warning"></i>
+            }
+          </div>
+        }
+      </div>
+      
+      <!-- Favorites Button -->
+      <div class="favorites-section">
+        <app-favorites-popover></app-favorites-popover>
+      </div>
+    </div>

@@ -1,4 +1,4 @@
-// log-viewer.component.scss - Fix column filter width
+// log-viewer.component.scss - Add clickable cell styles
 :host {
   display: flex;
   flex-direction: column;
@@ -26,32 +26,31 @@
     min-height: 0;
   }
   
-  //  Fix column filter width to match column width
   &.compact-filters {
     .p-datatable-thead {
       tr.filter-row {
         th.filter-header {
           padding: 0.1rem;
-          position: relative; //  Ensure positioning context
+          position: relative;
           
           .p-column-filter {
             width: 100%;
-            display: block; //  Ensure block display
+            display: block;
             
             .p-column-filter-element {
               width: 100%;
-              display: block; //  Ensure block display
+              display: block;
               
               .filter-input {
-                width: 100% !important; //  Force full width
-                max-width: 100%; //  Prevent overflow
-                min-width: 0; //  Allow shrinking
+                width: 100% !important;
+                max-width: 100%;
+                min-width: 0;
                 padding: 0.25rem 0.5rem;
                 font-size: 0.75rem;
                 height: 1.75rem;
                 border-radius: 4px;
                 border: 1px solid var(--surface-d);
-                box-sizing: border-box; //  Include padding in width
+                box-sizing: border-box;
                 
                 &:focus {
                   border-color: var(--primary-color);
@@ -63,14 +62,13 @@
         }
       }
       
-      //  Ensure header cells maintain their width
       tr:first-child th {
         padding: 0.5rem;
         font-size: 0.875rem;
         font-weight: 600;
         background: var(--surface-b);
         border-bottom: 2px solid var(--surface-d);
-        position: relative; //  Positioning context
+        position: relative;
       }
     }
     
@@ -80,22 +78,62 @@
         font-size: 0.875rem;
         border-bottom: 1px solid var(--surface-d);
         
+        // ✨ Clickable cell styles
         &.clickable-cell {
           cursor: pointer;
-          color: var(--primary-color);
-          text-decoration: underline;
           transition: all 0.2s ease;
+          position: relative;
           
           &:hover {
-            color: var(--primary-color-text);
-            background-color: var(--primary-color);
-            text-decoration: none;
+            background-color: var(--surface-c);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          }
+          
+          &.transaction-cell {
+            color: var(--primary-color);
+            font-weight: 500;
+            
+            &:hover {
+              color: var(--primary-color-text);
+              background-color: var(--primary-color);
+              text-decoration: underline;
+            }
+            
+            &::after {
+              content: '🔗';
+              font-size: 0.7rem;
+              margin-left: 0.25rem;
+              opacity: 0.7;
+            }
+          }
+          
+          &.editor-cell {
+            color: var(--orange-500);
+            font-weight: 500;
+            
+            &:hover {
+              color: white;
+              background-color: var(--orange-500);
+            }
+            
+            &::after {
+              content: '📝';
+              font-size: 0.7rem;
+              margin-left: 0.25rem;
+              opacity: 0.7;
+            }
           }
         }
       }
       
       tr:hover {
         background-color: var(--surface-c);
+        
+        // Don't override clickable cell hover styles
+        td.clickable-cell:hover {
+          background-color: var(--surface-d);
+        }
       }
       
       tr.p-selectable-row {
@@ -105,15 +143,17 @@
     }
   }
   
-  //  Fix paginator positioning and dropdown direction
   .p-paginator {
     padding: 0.5rem;
     border-top: 1px solid var(--surface-d);
     background: var(--surface-a);
     flex-shrink: 0;
-    position: sticky;
-    bottom: 0;
-    z-index: 1000; //  Ensure it's above other content
+    position: relative;
+    bottom: auto;
+    z-index: 10;
+    
+    visibility: visible !important;
+    display: flex !important;
     
     .p-paginator-element {
       min-width: 2rem;
@@ -121,7 +161,6 @@
       font-size: 0.875rem;
     }
     
-    //  Fix dropdown to open upward
     .p-dropdown {
       height: 2rem;
       
@@ -130,20 +169,14 @@
         font-size: 0.875rem;
       }
       
-      //  Force dropdown panel to open upward
       .p-dropdown-panel {
-        transform-origin: bottom;
-        top: auto !important;
         bottom: 100% !important;
+        top: auto !important;
+        transform-origin: bottom;
         margin-bottom: 2px;
       }
     }
   }
-}
-
-//  Global fix for pagination dropdown in accordions
-:host ::ng-deep .p-dropdown-panel {
-  z-index: 1100 !important; //  Above accordion content
 }
 
 // Loading overlay styling
@@ -179,7 +212,13 @@
   }
 }
 
-//  Responsive adjustments
+// ✨ Global dropdown fixes
+:host ::ng-deep .p-dropdown-panel {
+  z-index: 1200 !important;
+  position: fixed !important;
+}
+
+// Responsive adjustments
 @media (max-width: 768px) {
   ::ng-deep .p-datatable.compact-filters {
     .p-datatable-thead tr:first-child th,
@@ -194,15 +233,14 @@
       padding: 0.2rem 0.4rem !important;
     }
     
-    //  Hide pagination text on mobile
-    .p-paginator {
-      .p-paginator-current {
-        display: none;
-      }
+    // Hide cell decorators on mobile
+    .clickable-cell::after {
+      display: none;
     }
   }
 }
 
+// Print styles
 @media print {
   :host {
     .table-container {

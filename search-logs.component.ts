@@ -1,3 +1,4 @@
+// search-logs.component.ts
 import { Component, inject, effect, computed, Signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
@@ -8,11 +9,17 @@ import { SearchOrchestratorService } from './services/search-orchestrator.servic
 import { FiltersService } from 'src/app/core/services/filters.service';
 import { SearchBarComponent } from './components/search-bar/search-bar.component';
 import { SearchResultComponent } from './components/search-result/search-result.component';
+import { TransactionDetailsComponent } from './components/transaction-details/transaction-details.component';
 
 @Component({
   selector: 'app-search-logs',
   standalone: true,
-  imports: [CommonModule, SearchBarComponent, SearchResultComponent],
+  imports: [
+    CommonModule, 
+    SearchBarComponent, 
+    SearchResultComponent,
+    TransactionDetailsComponent
+  ],
   templateUrl: './search-logs.component.html',
   styleUrls: ['./search-logs.component.scss']
 })
@@ -21,31 +28,52 @@ export class SearchLogsComponent {
   private route = inject(ActivatedRoute);
   private filtersService = inject(FiltersService);
 
-  // ✨ STEP 1: Create a signal directly from the route's data observable. ✨
-  // This signal will automatically update whenever you navigate between routes
-  // that use this component (e.g., from /browse to /errors).
+  // ✨ Create a signal directly from the route's data observable
   private routeData = toSignal(this.route.data);
 
-  // ✨ STEP 2: Create a computed signal for the mode. ✨
-  // It derives its value from the reactive routeData signal.
+  // ✨ Create a computed signal for the mode
   public mode: Signal<'search' | 'browse' | 'error'> = computed(() => {
     return this.routeData()?.['mode'] ?? 'search';
   });
 
+  // ✨ Computed signal to determine if search bar should be shown
+  public showSearchBar = computed(() => {
+    return this.mode() === 'search';
+  });
+
+  // ✨ Computed signal for page title
+  public pageTitle = computed(() => {
+    switch (this.mode()) {
+      case 'browse': return 'Live Log Browser';
+      case 'error': return 'Error Log Monitor';
+      case 'search': return 'Smart Search';
+      default: return 'Search Logs';
+    }
+  });
+
+  // ✨ Computed signal for page description
+  public pageDescription = computed(() => {
+    switch (this.mode()) {
+      case 'browse': return 'Real-time streaming of live application logs';
+      case 'error': return 'Real-time monitoring of error logs and exceptions';
+      case 'search': return 'Search transactions, JIRA tickets, batches, or ask in natural language';
+      default: return 'Search and analyze your application logs';
+    }
+  });
+
   constructor() {
-    // ✨ STEP 3: Create an effect that reacts to changes in the mode. ✨
-    // This replaces the logic that was previously in ngOnInit.
+    // ✨ Create an effect that reacts to changes in the mode
     effect(() => {
       const currentMode = this.mode();
       console.log(`[SearchLogsComponent] Mode changed to: ${currentMode}. Triggering initial search.`);
       this.triggerInitialSearchForMode(currentMode);
-    }, { allowSignalWrites: true }); // allowSignalWrites might be needed if performSearch updates signals immediately.
+    }, { allowSignalWrites: true });
   }
 
   triggerInitialSearchForMode(mode: 'browse' | 'error' | 'search'): void {
     if (mode === 'search') {
-      // In search mode, we wait for user input. We might want to clear old results.
-      // this.searchOrchestrator.clearAllSearches();
+      // In search mode, we wait for user input. Clear old results.
+      this.searchOrchestrator.clearAllSearches();
       return;
     }
 
@@ -63,11 +91,48 @@ export class SearchLogsComponent {
 
   handleSearch(query: string): void {
     const appName = this.filtersService.filters()?.application[0] ?? 'default-app';
+    
+    // ✨ Enhanced search using the new intelligent detection
     this.searchOrchestrator.performSearch({
-      type: 'transaction',
+      type: 'transaction', // This will be overridden by intelligent detection
       query: query,
-      title: `Search Results for: ${query}`,
+      title: `Search: ${query}`,
       appName: appName
     });
+  }
+
+  /**
+   * Helper method for testing query detection (development only)
+   */
+  public testQueryDetection(query: string): void {
+    if (!query) return;
+    
+    const result = this.searchOrchestrator.testQueryDetection(query);
+    console.log('[SearchLogsComponent] Query detection test:', {
+      query,
+      result,
+      isValid: this.searchOrchestrator.queryDetectionService?.isValidDetection(result)
+    });
+  }
+
+  /**
+   * Get available search strategies (for debugging)
+   */
+  public getAvailableStrategies(): string[] {
+    return this.searchOrchestrator.getAvailableStrategies();
+  }
+
+  /**
+   * Get current search count
+   */
+  public getActiveSearchCount(): number {
+    return this.searchOrchestrator.activeSearches().length;
+  }
+
+  /**
+   * Get streaming search count
+   */
+  public getStreamingSearchCount(): number {
+    return this.searchOrchestrator.activeStreamingSearches().length;
   }
 }

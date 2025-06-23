@@ -1,0 +1,153 @@
+<div class="search-bar-container">
+  <!-- Main Search Input -->
+  <div class="search-input-wrapper">
+    <p-inputGroup>
+      <!-- Search Input -->
+      <input 
+        pInputText 
+        [placeholder]="searchPlaceholder()"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onInputChange($event)"
+        (keydown)="onKeyDown($event)"
+        class="search-input"
+        autocomplete="off" />
+      
+      <!-- Detection Confidence Badge -->
+      @if (showDetectionHint() && detectionResult()) {
+        <span class="p-inputgroup-addon confidence-addon">
+          <p-badge 
+            [value]="confidenceLevel() + '%'" 
+            [severity]="confidenceColor()"
+            [pTooltip]="'Detection confidence: ' + queryTypeDisplay()"
+            tooltipPosition="top">
+          </p-badge>
+        </span>
+      }
+      
+      <!-- Clear Button -->
+      @if (searchQuery()) {
+        <button 
+          pButton 
+          type="button" 
+          icon="pi pi-times" 
+          class="p-button-text clear-button"
+          (click)="clearSearch()"
+          pTooltip="Clear search"
+          tooltipPosition="top">
+        </button>
+      }
+      
+      <!-- Search Button -->
+      <button 
+        pButton 
+        type="button" 
+        [icon]="searchButtonIcon()"
+        class="search-button"
+        [disabled]="!searchQuery().trim() || isSearching()"
+        (click)="executeSearch()"
+        [pTooltip]="isValidQuery() ? 'Execute search' : 'Low confidence detection - proceed anyway'"
+        tooltipPosition="top">
+        @if (isSearching()) {
+          <i class="pi pi-spin pi-spinner"></i>
+        }
+      </button>
+    </p-inputGroup>
+
+    <!-- Query Type Detection Hint -->
+    @if (showDetectionHint() && detectionResult()) {
+      <div class="detection-hint" [class]="'detection-' + confidenceColor()">
+        <i [class]="searchButtonIcon() + ' mr-2'"></i>
+        <span class="detection-text">{{ queryTypeDisplay() }}</span>
+        @if (confidenceLevel() < 80) {
+          <i class="pi pi-exclamation-triangle ml-2 text-warning"></i>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="action-buttons">
+    <!-- Favorites Button -->
+    <app-favorites-popover></app-favorites-popover>
+    
+    <!-- Examples Button -->
+    <button 
+      pButton 
+      type="button" 
+      icon="pi pi-lightbulb" 
+      class="p-button-outlined p-button-sm examples-button"
+      (click)="examplesPanel.toggle($event)"
+      pTooltip="Search examples"
+      tooltipPosition="bottom">
+    </button>
+    
+    <!-- Browse Button -->
+    <button 
+      pButton 
+      type="button" 
+      icon="pi pi-list" 
+      label="Browse" 
+      class="p-button-outlined p-button-sm"
+      (click)="navigateToBrowse()"
+      pTooltip="Browse live logs"
+      tooltipPosition="bottom">
+    </button>
+    
+    <!-- Errors Button -->
+    <button 
+      pButton 
+      type="button" 
+      icon="pi pi-exclamation-triangle" 
+      label="Errors" 
+      class="p-button-outlined p-button-sm"
+      (click)="navigateToErrors()"
+      pTooltip="View error logs"
+      tooltipPosition="bottom">
+    </button>
+  </div>
+</div>
+
+<!-- Search Examples Overlay -->
+<p-overlayPanel #examplesPanel styleClass="examples-overlay">
+  <div class="examples-container">
+    <div class="examples-header">
+      <h4 class="examples-title">
+        <i class="pi pi-lightbulb mr-2"></i>
+        Search Examples
+      </h4>
+      <p class="examples-description">
+        Click any example to try it out
+      </p>
+    </div>
+    
+    <div class="examples-content">
+      @for (category of searchExamples; track category.type) {
+        <div class="example-category">
+          <div class="category-header">
+            <i [class]="category.icon + ' mr-2'"></i>
+            <span class="category-title">{{ category.type }}</span>
+          </div>
+          
+          <div class="category-examples">
+            @for (example of category.examples; track example) {
+              <p-chip 
+                [label]="example"
+                class="example-chip"
+                (click)="useExample(example, examplesPanel)"
+                pTooltip="Click to use this example"
+                tooltipPosition="top">
+              </p-chip>
+            }
+          </div>
+        </div>
+      }
+    </div>
+    
+    <div class="examples-footer">
+      <small class="text-color-secondary">
+        <i class="pi pi-info-circle mr-1"></i>
+        AI-powered natural language search coming soon!
+      </small>
+    </div>
+  </div>
+</p-overlayPanel>

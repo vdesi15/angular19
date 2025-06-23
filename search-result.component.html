@@ -1,19 +1,74 @@
-<!-- search-result.component.html - Fixed accordion behavior -->
+<!-- Enhanced search-result.component.html -->
 <p-accordion 
   [multiple]="true" 
   [activeIndex]="search.isExpanded ? [0] : []" 
-  styleClass="result-accordion compact"
+  styleClass="result-accordion compact enhanced"
   (onOpen)="onAccordionOpen($event)"
   (onClose)="onAccordionClose($event)">
   <p-accordion-panel>
     <p-accordion-header>
-      <!-- ✨ Remove click handler from div to prevent event conflicts -->
       <div class="accordion-header">
         <div class="header-left">
-          <span class="font-bold text-lg mr-3">{{ search.title }}</span>
-                        <span class="text-sm text-color-secondary ml-2">{{ recordsSummary() }}</span>
+          <!-- Search Type Icon and Badge -->
+          <div class="search-type-indicator">
+            <i [class]="searchTypeIcon() + ' text-lg mr-2'"></i>
+            <p-badge 
+              [value]="searchTypeBadge().label" 
+              [severity]="searchTypeBadge().severity"
+              styleClass="search-type-badge">
+            </p-badge>
+          </div>
+          
+          <!-- Title and Description -->
+          <div class="title-section">
+            <span class="font-bold text-lg search-title">{{ search.title }}</span>
+            <div class="search-metadata">
+              <span class="text-sm text-color-secondary">{{ getSearchTypeDescription() }}</span>
+              @if (search.searchMetadata?.originalQuery && search.searchMetadata.originalQuery !== search.query) {
+                <span class="text-xs text-color-secondary ml-2">
+                  (from: "{{ search.searchMetadata.originalQuery }}")
+                </span>
+              }
+            </div>
+          </div>
+          
+          <!-- Records Summary -->
+          <span class="text-sm text-color-secondary records-summary">{{ recordsSummary() }}</span>
         </div>
+        
         <div class="header-right">
+          <!-- Status Indicator -->
+          <div class="status-section">
+            @if (search.isLoading || search.isStreaming) {
+              <div class="progress-container">
+                @if (getProgressValue() !== null) {
+                  <p-progressBar 
+                    [value]="getProgressValue()!" 
+                    [showValue]="false"
+                    styleClass="compact-progress">
+                  </p-progressBar>
+                }
+                <p-badge 
+                  [value]="getStatusLabel()" 
+                  [severity]="getStatusSeverity()"
+                  styleClass="status-badge">
+                </p-badge>
+              </div>
+            }
+          </div>
+
+          <!-- Confidence Indicator -->
+          @if (searchConfidence()) {
+            <div class="confidence-indicator">
+              <p-badge 
+                [value]="Math.round(searchConfidence()! * 100) + '%'" 
+                [severity]="searchConfidence()! >= 0.8 ? 'success' : searchConfidence()! >= 0.6 ? 'warning' : 'danger'"
+                pTooltip="Detection confidence"
+                tooltipPosition="top">
+              </p-badge>
+            </div>
+          }
+
           <!-- Favorite Toggle Button -->
           <button 
             pButton 
@@ -25,8 +80,33 @@
             tooltipPosition="top">
           </button>
 
+          <!-- Action Buttons -->
+          @if (search.type === 'batch') {
+            <button 
+              pButton 
+              type="button" 
+              icon="pi pi-refresh" 
+              class="p-button-sm p-button-rounded p-button-text"
+              (click)="onBatchRefresh(); $event.stopPropagation()"
+              pTooltip="Refresh batch status"
+              tooltipPosition="top">
+            </button>
+          }
+
+          @if (search.type === 'jira') {
+            <button 
+              pButton 
+              type="button" 
+              icon="pi pi-refresh" 
+              class="p-button-sm p-button-rounded p-button-text"
+              (click)="onJiraRefresh(); $event.stopPropagation()"
+              pTooltip="Refresh JIRA data"
+              tooltipPosition="top">
+            </button>
+          }
+
           <!-- Streaming Control Button -->
-          @if(search.isStreaming) {
+          @if (search.isStreaming) {
             <button 
               pButton 
               type="button" 
@@ -70,48 +150,107 @@
     
     <p-accordion-content>
       <!-- Conditionally render the correct toolbar -->
-      @if(search.type === 'transaction') {
-        <app-transaction-toolbar 
-          [availableViews]="availableViews()" 
-          [selectedViewId]="selectedViewId()"
-          (viewChange)="selectedViewId.set($event)">
-        </app-transaction-toolbar>
-      } @else {
-        <app-streaming-toolbar
-          [allAvailableColumns]="allColumnsForViewType()"
-          [currentlyVisibleColumns]="streamingVisibleColumns()"
-          (visibleColumnsChange)="onStreamingColumnsChange($event)"
-          (resetColumns)="resetStreamingColumns()"
-          [availableFilterValues]="search.aggregatedFilterValues"
-          [appliedFilters]="search.streamFilters ?? []"
-          (filtersChange)="onStreamFiltersChange($event)">
-        </app-streaming-toolbar>
+      @if (shouldShowToolbar()) {
+        @if (shouldShowTransactionToolbar()) {
+          <app-transaction-toolbar 
+            [availableViews]="availableViews()" 
+            [selectedViewId]="selectedViewId()"
+            (viewChange)="selectedViewId.set($event)">
+          </app-transaction-toolbar>
+        } @else if (shouldShowJiraToolbar()) {
+          <app-jira-toolbar 
+            [availableViews]="availableViews()" 
+            [selectedViewId]="selectedViewId()"
+            (viewChange)="selectedViewId.set($event)"
+            (refresh)="onJiraRefresh()">
+          </app-jira-toolbar>
+        } @else if (shouldShowBatchToolbar()) {
+          <app-batch-toolbar 
+            [refreshInterval]="search.refreshInterval || 0"
+            (refreshIntervalChange)="setRefreshInterval($event)"
+            (refresh)="onBatchRefresh()"
+            (toggleAutoRefresh)="toggleAutoRefresh()">
+          </app-batch-toolbar>
+        } @else if (shouldShowStreamingToolbar()) {
+          <app-streaming-toolbar
+            [allAvailableColumns]="allColumnsForViewType()"
+            [currentlyVisibleColumns]="streamingVisibleColumns()"
+            (visibleColumnsChange)="onStreamingColumnsChange($event)"
+            (resetColumns)="resetStreamingColumns()"
+            [availableFilterValues]="search.aggregatedFilterValues"
+            [appliedFilters]="search.streamFilters ?? []"
+            (filtersChange)="onStreamFiltersChange($event)">
+          </app-streaming-toolbar>
+        }
       }
       
       <div class="result-content-wrapper">
-        @if (search.isLoading && search.data.length === 0) {
-          <app-table-skeleton [columns]="allColumnsForViewType()" [rowCount]="10"></app-table-skeleton>
+        @if (showSkeleton()) {
+          <app-table-skeleton 
+            [columns]="allColumnsForViewType()" 
+            [rowCount]="10">
+          </app-table-skeleton>
         } @else if (search.error) {
           <div class="error-container">
-            <p class="p-3 text-red-500 font-bold">
-              <i class="pi pi-exclamation-circle mr-2"></i>{{ search.error }}
-            </p>
-            <button 
-              pButton 
-              type="button" 
-              label="Retry" 
-              icon="pi pi-refresh" 
-              class="p-button-sm p-button-outlined"
-              (click)="retrySearch()">
-            </button>
+            <div class="error-content">
+              <i class="pi pi-exclamation-circle text-4xl text-red-500 mb-3"></i>
+              <h4 class="text-lg font-semibold text-red-700 mb-2">Search Error</h4>
+              <p class="text-red-600 mb-4">{{ search.error }}</p>
+              
+              @if (searchConfidence() && searchConfidence()! < 0.8) {
+                <div class="low-confidence-warning">
+                  <p class="text-sm text-orange-600 mb-2">
+                    <i class="pi pi-exclamation-triangle mr-1"></i>
+                    Low detection confidence ({{ Math.round(searchConfidence()! * 100) }}%). 
+                    The search query might not have been interpreted correctly.
+                  </p>
+                </div>
+              }
+              
+              <div class="error-actions">
+                <button 
+                  pButton 
+                  type="button" 
+                  label="Retry" 
+                  icon="pi pi-refresh" 
+                  class="p-button-sm p-button-outlined"
+                  (click)="retrySearch()">
+                </button>
+                
+                @if (search.searchMetadata?.originalQuery) {
+                  <button 
+                    pButton 
+                    type="button" 
+                    label="Try Different Query" 
+                    icon="pi pi-search" 
+                    class="p-button-sm p-button-text"
+                    (click)="closePanel($event)">
+                  </button>
+                }
+              </div>
+            </div>
           </div>
-        } @else {
-          <app-log-viewer #logViewer
-            [searchInstance]="search"
-            [visibleColumns]="finalVisibleColumns()"
-            (rowDrilldown)="onDrilldown($event)" 
-            (filteredCountChange)="updateFilteredCount($event)">
-          </app-log-viewer>
+        } @else if (showContent()) {
+          @if (shouldShowLogViewer()) {
+            <app-log-viewer #logViewer
+              [searchInstance]="search"
+              [visibleColumns]="finalVisibleColumns()"
+              (rowDrilldown)="onDrilldown($event)" 
+              (filteredCountChange)="updateFilteredCount($event)">
+            </app-log-viewer>
+          } @else if (shouldShowBatchViewer()) {
+            <app-batch-viewer #batchViewer
+              [searchInstance]="search"
+              (refresh)="onBatchRefresh()">
+            </app-batch-viewer>
+          } @else if (shouldShowJiraViewer()) {
+            <app-jira-viewer #jiraViewer
+              [searchInstance]="search"
+              [visibleColumns]="finalVisibleColumns()"
+              (transactionDrilldown)="onDrilldown($event)"
+              (refresh)="onJiraRefresh()">
+            </app-jira-viewer>
+          }
         }
       </div>
     </p-accordion-content>
