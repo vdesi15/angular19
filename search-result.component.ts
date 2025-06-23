@@ -77,25 +77,56 @@ export class SearchResultComponent {
 
   public recordsSummary = computed(() => {
     const totalLoaded = this.search.data.length;
-    // Check if the LogViewer and its internal table filter state exist
-    const filteredCount = this.logViewer?.logTable?.filteredValue?.length ?? totalLoaded;
+    
+    // ✨ Get the filtered count from the LogViewer's table if available
+    let filteredCount = totalLoaded;
+    
+    // Check if LogViewer and its table exist and have filtered data
+    if (this.logViewer?.logTable) {
+      const table = this.logViewer.logTable;
+      // Use filteredValue if table filtering is active, otherwise use total
+      filteredCount = table.filteredValue ? table.filteredValue.length : table.totalRecords;
+    }
     
     let summary = '';
+    
     if (this.search.isStreaming) {
-      summary = `(Loaded: ${totalLoaded}`;
+      summary = `Loaded: ${totalLoaded}`;
+      
+      // ✨ Only show filtered count if it's different from loaded and filters are applied
+      if (filteredCount < totalLoaded) {
+        summary += ` / Filtered: ${filteredCount}`;
+      }
+      
+      return `(${summary})`;
     } else {
+      // For non-streaming searches
       if (this.search.totalRecords > 0) {
-        summary = `(Total: ${this.search.totalRecords}`;
-      } else {
-        return '';
+        summary = `Total: ${this.search.totalRecords}`;
+        
+        // Show filtered count if different
+        if (filteredCount < this.search.totalRecords) {
+          summary += ` / Filtered: ${filteredCount}`;
+        }
+        
+        return `(${summary})`;
       }
     }
+    
+    return '';
+  });
 
-    if (filteredCount < totalLoaded) {
-      summary += ` / Filtered: ${filteredCount}`;
+  public loadingSummary = computed(() => {
+    const isLoading = this.search.isLoading;
+    const isStreaming = this.search.isStreaming;
+    
+    if (isLoading && isStreaming) {
+      return '(Loading live data...)';
+    } else if (isLoading) {
+      return '(Loading...)';
     }
-
-    return summary + ')';
+    
+    return this.recordsSummary();
   });
 
   public isFavorite = computed(() => {
@@ -163,11 +194,13 @@ export class SearchResultComponent {
 
   stopStreaming(event: MouseEvent): void {
     event.stopPropagation();
+    event.preventDefault();
     this.orchestrator.stopSseStream(this.search.id);
   }
 
   closePanel(event: MouseEvent): void {
     event.stopPropagation();
+    event.preventDefault();
     this.orchestrator.closeSearch(this.search.id);
   }
 
@@ -177,14 +210,25 @@ export class SearchResultComponent {
     });
   }
 
+  // Event Handlers for Accordion
+  onAccordionOpen(event: any): void {
+    console.log('[SearchResult] Accordion opened for:', this.search.title);
+    this.orchestrator.updateSearchState(this.search.id, { isExpanded: true });
+  }
+
+  onAccordionClose(event: any): void {
+    console.log('[SearchResult] Accordion closed for:', this.search.title);
+    this.orchestrator.updateSearchState(this.search.id, { isExpanded: false });
+  }
+
   retrySearch(): void {
     console.log(`[SearchResult] Retrying search: ${this.search.title}`);
     this.orchestrator.fetchDataFor(this.search);
   }
 
   toggleFavorite(event: MouseEvent): void {
-    event.stopPropagation(); // Prevent accordion toggle
-    
+    event.stopPropagation();
+    event.preventDefault();
     const searchSignature = this.createSearchSignature();
     this.searchHistoryService.toggleFavorite(searchSignature);
   }

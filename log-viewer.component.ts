@@ -30,26 +30,85 @@ import { TransformPipe } from 'src/app/core/pipes/transform.pipe';
   templateUrl: './log-viewer.component.html',
   styleUrls: ['./log-viewer.component.scss']
 })
-export class LogViewerComponent implements OnChanges {
+export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
   @Input({ required: true }) searchInstance!: ActiveSearch;
   @Input({ required: true }) visibleColumns: ColumnDefinition[] = [];
   @Output() rowDrilldown = new EventEmitter<any>();
 
   @ViewChild('logTable') logTable!: Table;
+  @ViewChild('tableContainer', { static: true }) tableContainer!: ElementRef;
   
   // Local state for table data
   public tableData = signal<any[]>([]);
   public totalRecords = signal<number>(0);
   public isLoading = signal<boolean>(false);
 
+  public dynamicRowsPerPage = signal<number>(50);
+  public availableRowOptions = signal<number[]>([25, 50, 100, 250]);
+
   public globalFilterFields = computed(() => 
     this.visibleColumns.map(c => c.name)
   );
 
   private cdr = inject(ChangeDetectorRef);
+  private resizeObserver: ResizeObserver | null = null;
   
   constructor() {
     console.log("[LogViewerComponent] Initialized");
+  }
+
+  ngOnInit(): void {
+    // ✨ Set up resize observer for dynamic row calculation
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(entries => {
+        this.calculateOptimalRows();
+      });
+      
+      if (this.tableContainer) {
+        this.resizeObserver.observe(this.tableContainer.nativeElement);
+      }
+    }
+    
+    // ✨ Initial calculation
+    setTimeout(() => this.calculateOptimalRows(), 100);
+  }
+
+  ngOnDestroy(): void {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+  }
+
+  private calculateOptimalRows(): void {
+    if (!this.tableContainer) return;
+    
+    const containerHeight = this.tableContainer.nativeElement.clientHeight;
+    
+    // Approximate heights (in pixels)
+    const headerHeight = 100; // Table header + filter row
+    const rowHeight = 35;     // Approximate row height
+    const paginatorHeight = 50; // Paginator height
+    const bufferHeight = 20;   // Extra buffer
+    
+    const availableHeight = containerHeight - headerHeight - paginatorHeight - bufferHeight;
+    const calculatedRows = Math.floor(availableHeight / rowHeight);
+    
+    // ✨ Constrain to reasonable bounds and available options
+    const minRows = 10;
+    const maxRows = 250;
+    const optimalRows = Math.max(minRows, Math.min(maxRows, calculatedRows));
+    
+    // ✨ Find the closest available option
+    const options = this.availableRowOptions();
+    const closestOption = options.reduce((prev, curr) => 
+      Math.abs(curr - optimalRows) < Math.abs(prev - optimalRows) ? curr : prev
+    );
+    
+    // ✨ Only update if significantly different
+    if (Math.abs(this.dynamicRowsPerPage() - closestOption) > 5) {
+      this.dynamicRowsPerPage.set(closestOption);
+      console.log(`[LogViewer] Dynamic rows updated to: ${closestOption} (container height: ${containerHeight}px)`);
+    }
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -77,11 +136,9 @@ export class LogViewerComponent implements OnChanges {
       if (newHits.length > 0) {
         const processedNewRows = this.processHits(newHits);
         
-        // ✨ Update signals with new data
         this.tableData.update(current => [...current, ...processedNewRows]);
         this.totalRecords.set(this.tableData().length);
-
-        // ✨ Manually tell Angular to detect these changes
+        
         this.cdr.detectChanges();
         
         console.log(`[LogViewer] Appended ${processedNewRows.length} rows. Total now: ${this.tableData().length}`);

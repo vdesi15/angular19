@@ -1,69 +1,103 @@
-<p-table #logTable 
-  [value]="tableData()" 
-  [columns]="visibleColumns()" 
-  dataKey="_id"
-  [paginator]="true" 
-  [rows]="50" 
-  [rowsPerPageOptions]="[25, 50, 100, 250]"
-  [globalFilterFields]="visibleColumns().map(c => c.name)"
-  [scrollable]="true" 
-  scrollHeight="flex" 
-  [resizableColumns]="true" 
-  columnResizeMode="expand"
-  styleClass="p-datatable-striped p-datatable-gridlines">
+<!-- log-viewer.component.html -->
+<div #tableContainer class="table-container">
+  <p-table #logTable 
+    [value]="tableData()" 
+    [columns]="visibleColumns" 
+    dataKey="_id"
+    [paginator]="true" 
+    [rows]="dynamicRowsPerPage()" 
+    [rowsPerPageOptions]="availableRowOptions()"
+    [globalFilterFields]="globalFilterFields()"
+    [scrollable]="true" 
+    scrollHeight="flex" 
+    [resizableColumns]="true" 
+    columnResizeMode="expand"
+    styleClass="p-datatable-striped p-datatable-gridlines compact-filters"
+    [loading]="isLoading()">
 
-  <!-- CAPTION: Contains the global search bar for filtering rendered results -->
-  <ng-template pTemplate="caption">
-    <div class="flex justify-content-end align-items-center">
-      <p-iconField iconPosition="left">
-        <p-inputIcon><i class="pi pi-search"></i></p-inputIcon>
-        <input 
-          pInputText 
-          type="text" 
-          (input)="applyGlobalFilter($event)" 
-          placeholder="Filter displayed results..." />
-      </p-iconField>
-    </div>
-  </ng-template>
+    <!-- CAPTION: Contains the global search bar for filtering rendered results -->
+    <ng-template pTemplate="caption">
+      <div class="flex justify-content-end align-items-center">
+        <p-iconField iconPosition="left">
+          <p-inputIcon><i class="pi pi-search"></i></p-inputIcon>
+          <input 
+            pInputText 
+            type="text" 
+            (input)="applyGlobalFilter($event)" 
+            placeholder="Filter displayed results..." 
+            class="filter-input" />
+        </p-iconField>
+      </div>
+    </ng-template>
 
-  <!-- HEADER: Two-row header for display names and filters -->
-  <ng-template pTemplate="header" let-columns>
-    <!-- Row 1: Column Display Names -->
-    <tr>
-      @for(col of columns; track col.id) {
-        <th [pResizableColumn]="col.enableColumnResizing" [style.width]="col.width">
-          {{ col.displayName }}
-        </th>
-      }
-    </tr>
-    <!-- Row 2: Column Filter Inputs -->
-    <tr>
-      @for(col of columns; track col.id) {
-        <th>
-          @if(col.enableFiltering) {
-            <p-columnFilter [type]="'text'" [field]="col.name" [placeholder]="'Filter ' + col.displayName"></p-columnFilter>
-          }
-        </th>
-      }
-    </tr>
-  </ng-template>
-
-  <!-- BODY: Renders the data rows -->
-  <ng-template pTemplate="body" let-rowData let-columns="columns">
-    <tr (click)="handleRowClick(rowData)" class="p-selectable-row" pTooltip="Click to view transaction details" tooltipPosition="top">
-      @for(col of columns; track col.id) {
-        <td>
-          <!-- The transform pipe handles all data formatting -->
-          {{ rowData[col.name] | transform:col.transform:rowData._original }}
-        </td>
-      }
-    </tr>
-  </ng-template>
-  
-  <!-- EMPTY MESSAGE: Shown when no data matches the filters -->
-  <ng-template pTemplate="emptymessage" let-columns>
+    <!-- HEADER: Two-row header for display names and filters -->
+    <ng-template pTemplate="header" let-columns>
+      <!-- Row 1: Column Display Names -->
       <tr>
-          <td [attr.colspan]="columns.length" class="text-center p-4">No records found.</td>
+        @for(col of columns; track col.id) {
+          <th [pResizableColumn]="col.enableColumnResizing" [style.width]="col.width">
+            {{ col.displayName }}
+          </th>
+        }
       </tr>
-  </ng-template>
-</p-table>
+      <!-- Row 2: Column Filter Inputs -->
+      <tr class="filter-row">
+        @for(col of columns; track col.id) {
+          <th class="filter-header">
+            @if(col.enableFiltering !== false) {
+              <p-columnFilter 
+                [type]="'text'" 
+                [field]="col.name" 
+                [placeholder]="'Filter ' + col.displayName">
+                <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+                  <input 
+                    pInputText 
+                    [ngModel]="value" 
+                    (ngModelChange)="filter($event)"
+                    [placeholder]="'Filter ' + col.displayName"
+                    class="filter-input">
+                </ng-template>
+              </p-columnFilter>
+            }
+          </th>
+        }
+      </tr>
+    </ng-template>
+
+    <!-- BODY: Renders the data rows -->
+    <ng-template pTemplate="body" let-rowData let-columns="columns">
+      <tr (click)="handleRowClick(rowData)" 
+          class="p-selectable-row" 
+          pTooltip="Click to view transaction details" 
+          tooltipPosition="top">
+        @for(col of columns; track col.id) {
+          <td [class.clickable-cell]="isCellClickable(col, rowData)"
+              (click)="handleCellClick(col, rowData, $event)">
+            {{ rowData[col.name] | transform:col.transform:rowData._original }}
+          </td>
+        }
+      </tr>
+    </ng-template>
+    
+    <!-- EMPTY MESSAGE: Shown when no data matches the filters -->
+    <ng-template pTemplate="emptymessage" let-columns>
+        <tr>
+            <td [attr.colspan]="columns.length" class="text-center p-4">
+              @if(isLoading()) {
+                <i class="pi pi-spin pi-spinner mr-2"></i>Loading data...
+              } @else {
+                No records found.
+              }
+            </td>
+        </tr>
+    </ng-template>
+
+    <!-- ✨ Loading template -->
+    <ng-template pTemplate="loading">
+      <div class="loading-overlay">
+        <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+        <p>Loading data...</p>
+      </div>
+    </ng-template>
+  </p-table>
+</div>

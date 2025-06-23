@@ -17,8 +17,17 @@ export class FiltersService {
   private readonly _searchFilterMetadata: WritableSignal<SearchFilterMetadata | undefined> = signal(undefined);
   private readonly _filters: WritableSignal<SearchFilterModel | undefined> = signal(undefined);
 
+  // ✨ Add a change trigger signal to force reactivity
+  private readonly _filterChangeId: WritableSignal<number> = signal(0);
+
   public readonly searchFilterMetadata = this._searchFilterMetadata.asReadonly();
   public readonly filters = this._filters.asReadonly();
+  
+  // ✨ Create a computed that includes the change trigger for better reactivity
+  public readonly filtersWithChangeId = computed(() => ({
+    filters: this.filters(),
+    changeId: this._filterChangeId()
+  }));
 
   private queryParams = toSignal(
     this.router.events.pipe(
@@ -39,7 +48,10 @@ export class FiltersService {
     effect(() => {
       const fromUrl = filtersFromUrl();
       if (fromUrl) {
-        untracked(() => { this._filters.set(fromUrl); });
+        untracked(() => { 
+          this._filters.set(fromUrl);
+          this._filterChangeId.update(id => id + 1); // ✨ Trigger change
+        });
       }
     });
 
@@ -59,8 +71,22 @@ export class FiltersService {
   }
 
   public updateFilters(partialFilters: Partial<SearchFilterModel>): void {
-    const newFilters = { ...this.filters()!, ...partialFilters };
+    console.log('[FiltersService] updateFilters called with:', partialFilters);
+    
+    const currentFilters = this.filters();
+    if (!currentFilters) {
+      console.warn('[FiltersService] No current filters available');
+      return;
+    }
+
+    const newFilters = { ...currentFilters, ...partialFilters };
+    
+    // ✨ Update both the filters and trigger change detection
     this._filters.set(newFilters);
+    this._filterChangeId.update(id => id + 1);
+    
+    console.log('[FiltersService] Filters updated. New change ID:', this._filterChangeId());
+    
     const activeRoute = this.findActiveRoute(this.router.routerState.snapshot.root);
     this.updateQueryParams(newFilters, activeRoute);
   }
@@ -126,7 +152,7 @@ export class FiltersService {
       }
     }
     const timezone = location && meta.locationTimezone[location] ? meta.locationTimezone[location] : 'UTC';
-    const dateRange = this.dateTimeService.calculateDateRangeFromParams(params); // Assuming this method exists now
+    const dateRange = this.dateTimeService.calculateDateRangeFromUrlParams(params);
     return { application: validApps, environment, location, timezone, dateRange, streamFilters };
   }
   

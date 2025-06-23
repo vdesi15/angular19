@@ -32,29 +32,30 @@ export class SearchOrchestratorService {
     this.strategies['error'] = inject(SseStrategy);
     this.strategies['transaction'] = inject(GuidSearchStrategy);
 
-    // Convert the service's filter signal into an observable for advanced operations.
-    const globalFilters$ = toObservable(this.filtersService.filters);
-
     effect(() => {
-      // 1. Depend directly on the global filters signal.
-      const currentGlobalFilters = this.filtersService.filters();
+      // This now reacts to both filter content changes AND the change trigger
+      const filtersWithChange = this.filtersService.filtersWithChangeId();
+      const currentGlobalFilters = filtersWithChange.filters;
+      const changeId = filtersWithChange.changeId;
       
-      // 2. Guard against running during initial setup.
-      if (!currentGlobalFilters) return;
+      console.log(`[Orchestrator Effect] Filters changed. Change ID: ${changeId}`);
+      
+      // Guard against running during initial setup
+      if (!currentGlobalFilters || changeId === 0) return;
 
-      // 3. Use `untracked` to prevent this effect from re-running when we update streamFilters later.
+      // Use untracked to prevent this effect from re-running when we update streamFilters later
       untracked(() => {
         console.log("[Orchestrator Effect] Global filters changed. Checking active streams for re-trigger.");
         
-        // 4. For any currently active streaming search, re-trigger its data fetch.
+        // For any currently active streaming search, re-trigger its data fetch
         this.activeSearches().forEach(search => {
           if (search.isStreaming) {
-            // We call fetchDataFor, which will restart the stream with the new global filters.
+            console.log(`[Orchestrator] Re-triggering stream for: ${search.title} due to filter change`);
             this.fetchDataFor(search);
           }
         });
       });
-    }, { allowSignalWrites: true }); // This is needed because fetchDataFor will update the activeSearches signal.
+    }, { allowSignalWrites: true });
   }
 
   public performSearch(request: SearchRequest): void {

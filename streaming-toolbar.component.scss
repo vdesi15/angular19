@@ -1,8 +1,6 @@
-// This class will be applied to all interactive elements for consistent height.
-.toolbar-item {
-  height: 2.5rem; // A standard small component height in PrimeNG
-  display: flex;
-  align-items: center;
+// streaming-toolbar.component.scss - Professional layout with consistent heights
+:host {
+  --toolbar-height: 2.5rem; // ✨ Consistent with filter bar height
 }
 
 :host ::ng-deep {
@@ -10,32 +8,122 @@
     border: none;
     padding: 0.5rem 0;
     display: flex;
-    flex-wrap: wrap; // Allow wrapping on small screens
+    flex-wrap: wrap;
     gap: 1rem;
+    align-items: center; // ✨ Ensure vertical alignment
   }
   
   .p-toolbar-group-left, .p-toolbar-group-right {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    height: var(--toolbar-height); // ✨ Consistent height
   }
 
-  // Target the components inside our toolbar to apply the consistent height
+  // ✨ Ensure all interactive elements have the same height
+  .p-toolbar-group-left {
+    // Add Filter button styling
+    .p-button {
+      height: var(--toolbar-height);
+      padding: 0 0.75rem;
+      font-size: 0.875rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      
+      .p-button-icon {
+        font-size: 0.875rem;
+      }
+    }
+    
+    // Filter chips styling
+    .filter-chip {
+      height: calc(var(--toolbar-height) - 0.25rem); // ✨ Slightly shorter for visual balance
+      display: flex;
+      align-items: center;
+      font-size: 0.8rem;
+      
+      .p-chip-text {
+        padding: 0.25rem 0.5rem;
+      }
+      
+      .p-chip-remove-icon {
+        margin-left: 0.25rem;
+        font-size: 0.75rem;
+      }
+    }
+  }
+
+  // ✨ Right side controls with overlapping reset button
   .p-toolbar-group-right {
-    .p-multiselect, .p-button {
-      @extend .toolbar-item;
+    position: relative;
+    
+    .p-multiselect {
+      height: var(--toolbar-height);
+      min-width: 200px; // ✨ Ensure adequate width
+      
+      .p-multiselect-label {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        line-height: 1.2;
+      }
+      
+      .p-multiselect-trigger {
+        width: 2rem;
+        height: var(--toolbar-height);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+    
+    // ✨ Reset button positioned to overlap with multiselect right edge
+    .reset-button {
+      height: var(--toolbar-height);
+      width: 2.5rem;
+      margin-left: -0.5rem; // ✨ Overlap the multiselect edge
+      border-radius: 0 6px 6px 0; // ✨ Only round the right side
+      border-left: 1px solid var(--surface-d);
+      background: var(--surface-b);
+      z-index: 10;
+      
+      &:hover {
+        background: var(--surface-c);
+      }
+      
+      .p-button-icon {
+        font-size: 0.875rem;
+      }
     }
   }
 }
 
-// In `streaming-filter.component.scss`, we apply the same class
-.streaming-filter-container {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  // Apply the consistent height to the button and chips
-  .p-button, .p-chip {
-    @extend .toolbar-item;
+// ✨ Responsive behavior
+@media (max-width: 768px) {
+  :host ::ng-deep {
+    .p-toolbar.streaming-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+      
+      .p-toolbar-group-left,
+      .p-toolbar-group-right {
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .p-toolbar-group-right {
+        .p-multiselect {
+          flex: 1;
+          min-width: auto;
+        }
+        
+        .reset-button {
+          margin-left: 0.5rem;
+          border-radius: 6px;
+          border-left: none;
+        }
+      }
+    }
   }
 }

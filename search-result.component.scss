@@ -1,84 +1,155 @@
+// search-result.component.scss - Dynamic height management
 :host {
-      display: block;
-      margin-bottom: 1rem;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+// ✨ Dynamic height calculation based on viewport
+:host ::ng-deep .result-accordion.compact {
+  .p-accordion-header-link {
+    padding: 0.5rem 1rem !important;
+    min-height: auto;
+    transition: background-color 0.2s;
+    &:hover {
+      background-color: var(--surface-c);
     }
-
-    // Compact accordion styles
-    :host ::ng-deep .result-accordion.compact {
-      .p-accordion-header-link {
-        padding: 0.5rem 1rem !important;
-        min-height: auto;
-        transition: background-color 0.2s;
-        &:hover {
-          background-color: var(--surface-c);
-        }
-      }
-      
-      .p-accordion-content {
-        padding: 0;
-      }
-    }
-
-    .accordion-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-    }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-
-      .favorite-toggle {
-        transition: all 0.3s ease;
-        
-        &:hover {
-          color: var(--pink-500) !important;
-          transform: scale(1.1);
-        }
-        
-        &.favorited {
-          color: var(--pink-500) !important;
-        }
-      }
-
-      .streaming-control-btn {
-        width: 120px;
-        justify-content: center;
-      }
-    }
-
-    .result-content-wrapper {
+  }
+  
+  .p-accordion-content {
+    padding: 0;
+    
+    // ✨ Ensure content doesn't overflow viewport
+    .p-accordion-content-wrapper {
+      max-height: calc(100vh - 200px); // ✨ Leave room for header, filters, and pagination
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 280px);
-      min-height: 400px;
-      max-height: 800px;
     }
+  }
+}
 
-    .error-container {
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .favorite-toggle {
+    transition: all 0.3s ease;
+    
+    &:hover {
+      color: var(--pink-500) !important;
+      transform: scale(1.1);
+    }
+    
+    &.favorited {
+      color: var(--pink-500) !important;
+    }
+  }
+
+  .streaming-control-btn {
+    width: 120px;
+    justify-content: center;
+  }
+}
+
+// ✨ Dynamic result content wrapper with proper height management
+.result-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; // ✨ Critical for flexbox overflow management
+  
+  // ✨ Calculate height dynamically based on viewport
+  height: calc(100vh - 280px); // ✨ Account for header, toolbar, and pagination
+  max-height: 800px; // ✨ Maximum height limit
+  min-height: 400px; // ✨ Minimum usable height
+  
+  // ✨ Ensure table container manages its own scrolling
+  app-log-viewer {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  // ✨ Skeleton and error states with proper height
+  app-table-skeleton {
+    flex: 1;
+    min-height: 400px;
+  }
+  
+  .error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+    text-align: center;
+    min-height: 200px;
+    justify-content: center;
+  }
+}
+
+// ✨ Enhanced animations for buttons
+.header-right button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+}
+
+// ✨ Responsive height adjustments
+@media (max-height: 768px) {
+  .result-content-wrapper {
+    height: calc(100vh - 240px);
+    min-height: 300px;
+  }
+}
+
+@media (max-height: 600px) {
+  .result-content-wrapper {
+    height: calc(100vh - 200px);
+    min-height: 250px;
+  }
+}
+
+// ✨ Ensure pagination is always visible
+:host ::ng-deep {
+  .result-content-wrapper {
+    .p-datatable {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 1rem;
-      padding: 2rem;
-      text-align: center;
-    }
-
-    // Enhanced animations for buttons
-    .header-right button {
-      transition: all 0.2s ease;
+      height: 100%;
       
-      &:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      .p-datatable-wrapper {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+      }
+      
+      .p-paginator {
+        flex-shrink: 0; // ✨ Prevent pagination from being compressed
+        border-top: 1px solid var(--surface-d);
+        background: var(--surface-a);
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
       }
     }
+  }
+}

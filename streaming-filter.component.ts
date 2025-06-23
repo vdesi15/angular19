@@ -38,18 +38,16 @@ export class StreamingFilterComponent {
   @Input({ required: true }) availableFilterValues!: Map<string, Set<any>>;
   @Input() appliedFilters: StreamFilter[] = [];
   @Output() filtersChange = new EventEmitter<StreamFilter[]>();
-
-  // --- Injected Services ---
+  
   private colDefService = inject(ColumnDefinitionService);
   private filtersService = inject(FiltersService);
-  
-  // --- State Signals for the Popover ---
+    
   public selectedField: WritableSignal<ColumnDefinition | null> = signal(null);
-  public selectedValues: WritableSignal<string[]> = signal([]);
-  
-  // --- ✨ State Signals for the Custom Value Dialog ✨ ---
+  public selectedValues: WritableSignal<string[]> = signal([]);   
   public isCustomValueDialogVisible = signal(false);
   public customValueInput: WritableSignal<string> = signal('');
+
+  @ViewChild('valueMultiSelect') valueMultiSelect!: MultiSelect;
 
   // --- Derived Signals for Dropdown Options ---
   public filterableFields: Signal<ColumnDefinition[]> = computed(() => {
@@ -84,17 +82,16 @@ export class StreamingFilterComponent {
   }
 
   onValueChange(values: string[]): void {
-    // Check if the user clicked our special "Enter a custom value..." option.
     if (values.includes(CUSTOM_VALUE_TOKEN)) {
-      // 1. Immediately open the dialog for the user to type.
       this.isCustomValueDialogVisible.set(true);
-      
-      // 2. Immediately remove the token from the selection array,
-      // so it doesn't appear as a selected chip in the background.
       this.selectedValues.set(values.filter(val => val !== CUSTOM_VALUE_TOKEN));
     } else {
-      // If the user just selected regular values, update the state normally.
-      this.selectedValues.set(values);
+      this.selectedValues.set(values);      
+      if (values.length > 0 && this.valueMultiSelect) {
+        setTimeout(() => {
+          this.valueMultiSelect.hide();
+        }, 100);
+      }
     }
   }
 
@@ -110,7 +107,8 @@ export class StreamingFilterComponent {
     const value = this.customValueInput();
     if (value) {
       // Add the new custom value to the selection and close the dialog.
-      this.selectedValues.update(current => [...current, value]);
+      //this.selectedValues.update(current => [...current, value]); <-- multi select
+      this.selectedValues.update(current => [value]); //<- Single select
       this.closeCustomValueDialog();
     }
   }

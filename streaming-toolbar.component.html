@@ -1,3 +1,4 @@
+<!-- streaming-toolbar.component.html -->
 <p-toolbar styleClass="streaming-toolbar">
   <div class="p-toolbar-group-left">
     <app-streaming-filter
@@ -8,6 +9,7 @@
   </div>
 
   <div class="p-toolbar-group-right">
+    <!-- ✨ Column selector with consistent height -->
     <p-multiSelect 
       [options]="allAvailableColumns" 
       [ngModel]="currentlyVisibleColumns"
@@ -19,14 +21,15 @@
       [filter]="true">
     </p-multiSelect>
     
+    <!-- ✨ Reset button positioned to overlap the multiselect -->
     <button 
       pButton 
       type="button" 
-      label="Reset" 
       icon="pi pi-replay" 
-      class="p-button-text" 
+      class="p-button-outlined reset-button" 
       (click)="resetColumns.emit()"
-      pTooltip="Reset columns to default">
+      pTooltip="Reset columns to default"
+      tooltipPosition="top">
     </button>
   </div>
 </p-toolbar>

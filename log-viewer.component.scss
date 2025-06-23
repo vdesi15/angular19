@@ -1,9 +1,19 @@
+// log-viewer.component.scss
 :host {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
   min-height: 0;
-  margin-top: 20px; // 20px below streaming toolbar
+  margin-top: 20px;
+}
+
+// ✨ Container for the table with proper height management
+.table-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  position: relative;
 }
 
 ::ng-deep .p-datatable.p-component {
@@ -14,14 +24,15 @@
   .p-datatable-wrapper {
     flex-grow: 1;
     overflow: auto;
+    min-height: 0; // ✨ Critical for proper scrolling
   }
   
-  // Compact filter headers
+  // ✨ Compact filter headers with professional styling
   &.compact-filters {
     .p-datatable-thead {
       tr.filter-row {
         th.filter-header {
-          padding: 0.1rem; // Minimal padding as requested
+          padding: 0.1rem;
           
           .p-column-filter {
             width: 100%;
@@ -31,9 +42,16 @@
               
               .filter-input {
                 width: 100%;
-                padding: 0.25rem 0.5rem; // Compact input padding
-                font-size: 0.75rem; // Smaller font for compact look
-                height: 1.75rem; // Reduce height
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+                height: 1.75rem;
+                border-radius: 4px;
+                border: 1px solid var(--surface-d);
+                
+                &:focus {
+                  border-color: var(--primary-color);
+                  box-shadow: 0 0 0 1px var(--primary-color);
+                }
               }
             }
           }
@@ -44,46 +62,152 @@
       tr:first-child th {
         padding: 0.5rem;
         font-size: 0.875rem;
+        font-weight: 600;
+        background: var(--surface-b);
+        border-bottom: 2px solid var(--surface-d);
       }
     }
     
-    // Body cells
+    // ✨ Body cells with improved styling
     .p-datatable-tbody {
       td {
         padding: 0.25rem 0.5rem;
         font-size: 0.875rem;
+        border-bottom: 1px solid var(--surface-d);
         
         &.clickable-cell {
           cursor: pointer;
           color: var(--primary-color);
           text-decoration: underline;
+          transition: all 0.2s ease;
           
           &:hover {
             color: var(--primary-color-text);
             background-color: var(--primary-color);
+            text-decoration: none;
           }
         }
+      }
+      
+      // ✨ Row hover effects
+      tr:hover {
+        background-color: var(--surface-c);
+      }
+      
+      tr.p-selectable-row {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
       }
     }
   }
   
-  // Make the paginator more compact too
+  // ✨ Enhanced paginator styling
   .p-paginator {
-    padding: 0.25rem 0.5rem;
+    padding: 0.5rem;
+    border-top: 1px solid var(--surface-d);
+    background: var(--surface-a);
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
     
     .p-paginator-element {
       min-width: 2rem;
       height: 2rem;
+      font-size: 0.875rem;
+    }
+    
+    .p-dropdown {
+      height: 2rem;
+      
+      .p-dropdown-label {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+      }
     }
   }
 }
 
-::ng-deep .p-datatable-thead > tr > th {
-  padding: 0.5rem; 
-  .p-column-filter {
-    width: 100%; // Make the container fill the cell
+// ✨ Loading overlay styling
+::ng-deep .loading-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: var(--text-color-secondary);
+  
+  p {
+    margin-top: 1rem;
+    font-size: 0.875rem;
   }
+}
+
+// ✨ Caption (global filter) styling
+::ng-deep .p-datatable-thead > tr > th {
+  padding: 0.5rem;
+  
+  .p-column-filter {
+    width: 100%;
+  }
+  
   input.p-inputtext {
-    width: 100%; // Make the input fill the container
+    width: 100%;
+  }
+}
+
+// ✨ Global filter in caption
+::ng-deep .p-datatable-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--surface-d);
+  background: var(--surface-a);
+  
+  .p-iconfield {
+    .p-inputtext {
+      padding-right: 2.5rem;
+      font-size: 0.875rem;
+    }
+    
+    .p-icon {
+      color: var(--text-color-secondary);
+    }
+  }
+}
+
+// ✨ Responsive adjustments
+@media (max-width: 768px) {
+  ::ng-deep .p-datatable.compact-filters {
+    .p-datatable-thead tr:first-child th,
+    .p-datatable-tbody td {
+      padding: 0.25rem;
+      font-size: 0.8rem;
+    }
+    
+    .filter-input {
+      font-size: 0.7rem !important;
+      height: 1.5rem !important;
+      padding: 0.2rem 0.4rem !important;
+    }
+  }
+}
+
+// ✨ Print styles
+@media print {
+  :host {
+    .table-container {
+      height: auto !important;
+      max-height: none !important;
+    }
+    
+    ::ng-deep .p-datatable {
+      .p-paginator {
+        display: none;
+      }
+      
+      .p-datatable-wrapper {
+        overflow: visible !important;
+        height: auto !important;
+      }
+    }
   }
 }
