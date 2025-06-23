@@ -32,30 +32,46 @@ export class SearchOrchestratorService {
     this.strategies['error'] = inject(SseStrategy);
     this.strategies['transaction'] = inject(GuidSearchStrategy);
 
-    effect(() => {
-      // This now reacts to both filter content changes AND the change trigger
-      const filtersWithChange = this.filtersService.filtersWithChangeId();
-      const currentGlobalFilters = filtersWithChange.filters;
-      const changeId = filtersWithChange.changeId;
-      
-      console.log(`[Orchestrator Effect] Filters changed. Change ID: ${changeId}`);
-      
-      // Guard against running during initial setup
-      if (!currentGlobalFilters || changeId === 0) return;
+     effect(() => {
+    const currentGlobalFilters = this.filtersService.filters();
+    
+    console.log(`[Orchestrator Effect] Filters changed:`, currentGlobalFilters);
+    
+    // Guard against running during initial setup
+    if (!currentGlobalFilters) {
+      console.log('[Orchestrator Effect] No filters yet, skipping');
+      return;
+    }
 
-      // Use untracked to prevent this effect from re-running when we update streamFilters later
-      untracked(() => {
-        console.log("[Orchestrator Effect] Global filters changed. Checking active streams for re-trigger.");
+    // ✨ FIXED: Use untracked to prevent this effect from re-running when we update search state
+    untracked(() => {
+      console.log("[Orchestrator Effect] Global filters changed. Re-triggering ALL active searches.");
+      
+      // ✨ FIXED: Re-trigger ALL active searches, not just streaming ones
+      const activeSearches = this.activeSearches();
+      
+      if (activeSearches.length === 0) {
+        console.log('[Orchestrator Effect] No active searches to re-trigger');
+        return;
+      }
+      
+      activeSearches.forEach(search => {
+        console.log(`[Orchestrator] Re-triggering search: ${search.title} (type: ${search.type})`);
         
-        // For any currently active streaming search, re-trigger its data fetch
-        this.activeSearches().forEach(search => {
-          if (search.isStreaming) {
-            console.log(`[Orchestrator] Re-triggering stream for: ${search.title} due to filter change`);
-            this.fetchDataFor(search);
-          }
+        // ✨ FIXED: Clear data and show loading state immediately
+        this.updateSearchState(search.id, {
+          isLoading: true,
+          data: [],
+          error: undefined,
+          totalRecords: 0,
+          aggregatedFilterValues: new Map() // Clear filter aggregations too
         });
+        
+        // ✨ FIXED: Then fetch new data
+        this.fetchDataFor(search);
       });
-    }, { allowSignalWrites: true });
+    });
+  }, { allowSignalWrites: true });
   }
 
   public performSearch(request: SearchRequest): void {
@@ -145,7 +161,7 @@ export class SearchOrchestratorService {
             const currentData = s.data ?? [];
             const updatedData = [...currentData, ...newHits];
             const updatedAggregations = this.aggregateFilterValues(s.aggregatedFilterValues, newHits, s.appName);
-            return { ...s, data: updatedData, totalRecords: payload.total ?? s.totalRecords, aggregatedFilterValues: updatedAggregations };
+            return { ...s, data: updatedData, isLoading: false, totalRecords: payload.total ?? s.totalRecords, aggregatedFilterValues: updatedAggregations };
           case 'END':
           case 'ERROR': return { ...s, isLoading: false, isStreaming: false, error: event.error?.message };
           default: return s;

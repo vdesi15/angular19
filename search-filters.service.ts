@@ -17,18 +17,9 @@ export class FiltersService {
   private readonly _searchFilterMetadata: WritableSignal<SearchFilterMetadata | undefined> = signal(undefined);
   private readonly _filters: WritableSignal<SearchFilterModel | undefined> = signal(undefined);
 
-  // ✨ Add a change trigger signal to force reactivity
-  private readonly _filterChangeId: WritableSignal<number> = signal(0);
-
   public readonly searchFilterMetadata = this._searchFilterMetadata.asReadonly();
   public readonly filters = this._filters.asReadonly();
   
-  // ✨ Create a computed that includes the change trigger for better reactivity
-  public readonly filtersWithChangeId = computed(() => ({
-    filters: this.filters(),
-    changeId: this._filterChangeId()
-  }));
-
   private queryParams = toSignal(
     this.router.events.pipe(
       rxjsFilter((event): event is NavigationEnd => event instanceof NavigationEnd),
@@ -50,7 +41,6 @@ export class FiltersService {
       if (fromUrl) {
         untracked(() => { 
           this._filters.set(fromUrl);
-          this._filterChangeId.update(id => id + 1); // ✨ Trigger change
         });
       }
     });
@@ -67,6 +57,7 @@ export class FiltersService {
   }
 
   public setSearchFilterMetadata(metadata: SearchFilterMetadata): void {
+    console.log('[FiltersService] Setting metadata:', metadata);
     this._searchFilterMetadata.set(metadata);
   }
 
@@ -81,11 +72,8 @@ export class FiltersService {
 
     const newFilters = { ...currentFilters, ...partialFilters };
     
-    // ✨ Update both the filters and trigger change detection
+    console.log('[FiltersService] Setting new filters:', newFilters);
     this._filters.set(newFilters);
-    this._filterChangeId.update(id => id + 1);
-    
-    console.log('[FiltersService] Filters updated. New change ID:', this._filterChangeId());
     
     const activeRoute = this.findActiveRoute(this.router.routerState.snapshot.root);
     this.updateQueryParams(newFilters, activeRoute);
