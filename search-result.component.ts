@@ -37,16 +37,15 @@ export class SearchResultComponent {
   @ViewChild(LogViewerComponent) public logViewer?: LogViewerComponent;
 
   public isStopButtonHovered = signal(false);
-  public totalLoadedCount = signal<number>(0);
-  public filteredCount = signal<number>(0);
+   public totalLoadedCount = 0;
+  public filteredCount = 0;
 
   // Injected Services
   public orchestrator = inject(SearchOrchestratorService);
   private colDefService = inject(ColumnDefinitionService);
   private viewDefService = inject(ViewDefinitionService);
-  private searchHistoryService = inject(SearchHistoryService);
-  private filtersService = inject(FiltersService);
-  
+  private cdr = inject(ChangeDetectorRef);
+
   // State Signals
   public selectedViewId: WritableSignal<string> = signal('');
   public streamingVisibleColumns: WritableSignal<ColumnDefinition[]> = signal([]);
@@ -75,29 +74,7 @@ export class SearchResultComponent {
       });
     }
     return this.streamingVisibleColumns();
-  });
-
-  public recordsSummary = computed(() => {
-    const loaded = this.totalLoadedCount();
-    const filtered = this.filteredCount();
-    
-    if (this.search.isStreaming) {
-      let summary = `Loaded: ${loaded}`;
-      if (filtered < loaded) {
-        summary += ` / Filtered: ${filtered}`;
-      }
-      return `(${summary})`;
-    } else {
-      if (this.search.totalRecords > 0) {
-        let summary = `Total: ${this.search.totalRecords}`;
-        if (filtered < this.search.totalRecords) {
-          summary += ` / Filtered: ${filtered}`;
-        }
-        return `(${summary})`;
-      }
-    }
-    return '';
-  });
+  });  
 
   public isFavorite = computed(() => {
     const currentGlobalFilters = this.filtersService.filters();
@@ -134,20 +111,14 @@ export class SearchResultComponent {
         }
       }
     });
-
-    effect(() => {
-      const dataLength = this.search.data?.length ?? 0;
-      this.totalLoadedCount.set(dataLength);
-      
-      // If no filtering is active, filtered count equals loaded count
-      if (!this.logViewer?.logTable?.filteredValue) {
-        this.filteredCount.set(dataLength);
-      }
-    });
   }
 
   public updateFilteredCount(count: number): void {
-    this.filteredCount.set(count);
+    // ✅ Use setTimeout to defer the update until after change detection cycle
+    setTimeout(() => {
+      this.filteredCount = count;
+      this.cdr.detectChanges();
+    }, 0);
   }
 
   // Event Handlers

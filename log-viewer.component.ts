@@ -39,12 +39,11 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
   @ViewChild('tableContainer', { static: true }) tableContainer!: ElementRef;
   
   // Local state for table data
-  public tableData = signal<any[]>([]);
-  public totalRecords = signal<number>(0);
-  public isLoading = signal<boolean>(false);
-
-  public dynamicRowsPerPage = signal<number>(50);
-  public availableRowOptions = signal<number[]>([25, 50, 100, 250]);
+  public tableData: any[] = [];
+  public totalRecords: number = 0;
+  public isLoading: boolean = false;
+  public dynamicRowsPerPage: number = 50;
+  public availableRowOptions: number[] = [25, 50, 100, 250];
 
   public globalFilterFields = computed(() => 
     this.visibleColumns.map(c => c.name)
@@ -67,9 +66,8 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
       if (this.tableContainer) {
         this.resizeObserver.observe(this.tableContainer.nativeElement);
       }
-    }
+    }    
     
-    // ✨ Initial calculation
     setTimeout(() => this.calculateOptimalRows(), 100);
   }
 
@@ -93,18 +91,15 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
     const availableHeight = containerHeight - headerHeight - paginatorHeight - bufferHeight;
     const calculatedRows = Math.floor(availableHeight / rowHeight);
     
-    // ✨ Constrain to reasonable bounds and available options
     const minRows = 10;
     const maxRows = 250;
     const optimalRows = Math.max(minRows, Math.min(maxRows, calculatedRows));
     
-    // ✨ Find the closest available option
     const options = this.availableRowOptions();
     const closestOption = options.reduce((prev, curr) => 
       Math.abs(curr - optimalRows) < Math.abs(prev - optimalRows) ? curr : prev
     );
     
-    // ✨ Only update if significantly different
     if (Math.abs(this.dynamicRowsPerPage() - closestOption) > 5) {
       this.dynamicRowsPerPage.set(closestOption);
       console.log(`[LogViewer] Dynamic rows updated to: ${closestOption} (container height: ${containerHeight}px)`);
@@ -117,13 +112,13 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
       const previousSearch = changes['searchInstance'].previousValue as ActiveSearch | undefined;
 
       // Update loading state signal
-      this.isLoading.set(currentSearch.isLoading);
-
+       this.isLoading = currentSearch.isLoading;
+       
       // If this is a completely different search result, clear everything.
       if (!previousSearch || currentSearch.id !== previousSearch.id) {
         console.log("[LogViewer] New search detected. Resetting table.");
-        this.tableData.set([]);
-        this.totalRecords.set(0);
+        this.tableData = [...this.tableData, ...processedNewRows];
+        this.totalRecords = this.tableData.length;
         this.notifyFilteredCount(0);
         
         // Reset paginator to the first page
@@ -137,9 +132,12 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
       if (newHits.length > 0) {
         const processedNewRows = this.processHits(newHits);
         
-        this.tableData.update(current => [...current, ...processedNewRows]);
-        this.totalRecords.set(this.tableData().length);
-        this.notifyFilteredCount(this.tableData().length);
+        this.tableData = [...this.tableData, ...processedNewRows];
+        this.totalRecords = this.tableData.length;
+        
+        setTimeout(() => {
+          this.filteredCountChange.emit(this.tableData.length);
+        }, 0);
         this.cdr.detectChanges();
         
         console.log(`[LogViewer] Appended ${processedNewRows.length} rows. Total now: ${this.tableData().length}`);
@@ -156,6 +154,34 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
       console.log("[LogViewer] Visible columns updated:", this.visibleColumns.length);
     }
   }
+
+  private calculateOptimalRows(): void {
+    if (!this.tableContainer) return;
+    
+    const containerHeight = this.tableContainer.nativeElement.clientHeight;
+    const headerHeight = 100;
+    const rowHeight = 35;
+    const paginatorHeight = 50;
+    const bufferHeight = 20;
+    
+    const availableHeight = containerHeight - headerHeight - paginatorHeight - bufferHeight;
+    const calculatedRows = Math.floor(availableHeight / rowHeight);
+    
+    const minRows = 10;
+    const maxRows = 250;
+    const optimalRows = Math.max(minRows, Math.min(maxRows, calculatedRows));
+    
+    const closestOption = this.availableRowOptions.reduce((prev, curr) => 
+      Math.abs(curr - optimalRows) < Math.abs(prev - optimalRows) ? curr : prev
+    );
+    
+    if (Math.abs(this.dynamicRowsPerPage - closestOption) > 5) {
+      this.dynamicRowsPerPage = closestOption;
+      this.cdr.detectChanges();
+      console.log(`[LogViewer] Dynamic rows updated to: ${closestOption}`);
+    }
+  }
+
 
   private notifyFilteredCount(count: number): void {
     this.filteredCountChange.emit(count);
@@ -200,19 +226,21 @@ export class LogViewerComponent implements OnChanges, OnInit, OnDestroy  {
     const target = event.target as HTMLInputElement;
     if (this.logTable) {
       this.logTable.filterGlobal(target.value, 'contains');
+      
+      // After filtering, notify parent of new count
+      setTimeout(() => {
+        const filteredCount = this.logTable.filteredValue?.length ?? this.tableData.length;
+        this.filteredCountChange.emit(filteredCount);
+      }, 100);
     }
-    setTimeout(() => {
-        const filteredCount = this.logTable.filteredValue?.length ?? this.tableData().length;
-        this.notifyFilteredCount(filteredCount);
-    }, 100);
   }
 
   public onFilter(): void {
     // This gets called by PrimeNG whenever any filtering occurs
     setTimeout(() => {
-      const filteredCount = this.logTable?.filteredValue?.length ?? this.tableData().length;
+      const filteredCount = this.logTable?.filteredValue?.length ?? this.tableData.length;
       console.log(`[LogViewer] Filter applied, new count: ${filteredCount}`);
-      this.notifyFilteredCount(filteredCount);
+      this.filteredCountChange.emit(filteredCount);
     }, 50);
   }
 
