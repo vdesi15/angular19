@@ -157,20 +157,27 @@ export class SearchStateManager {
           return;
         }
         
-        activeSearches.forEach(search => {
-          console.log(`[StateManager] Re-triggering search: ${search.title} (type: ${search.type})`);
-          
-          this.updateSearch(search.id, {
+        // ✨ SIMPLE FIX: Just generate new IDs and clear data
+        this.activeSearches.update(searches => 
+          searches.map(search => ({
+            ...search,
+            id: this.generateSearchId(), // ✨ New ID forces component refresh
             isLoading: true,
-            data: [],
+            data: [], // ✨ Clear existing data
             error: undefined,
             totalRecords: 0,
             aggregatedFilterValues: new Map()
-          });
+          }))
+        );
+        
+        // Re-execute all searches
+        const updatedSearches = this.activeSearches();
+        updatedSearches.forEach(search => {
+          console.log(`[StateManager] Re-triggering search: ${search.title} (new ID: ${search.id})`);
           
-          // Delegate execution to execution manager
           if (this.executionManager) {
-            this.executionManager.executeSearch(search);
+            // Small delay to ensure state is updated
+            setTimeout(() => this.executionManager.executeSearch(search), 0);
           }
         });
       });
