@@ -44,3 +44,251 @@
     box-sizing: border-box !important;
   }
 }
+
+/* src/styles.scss - Minimal global styles, let PrimeNG handle theming */
+
+// ================================
+// GLOBAL FONT FAMILY
+// ================================
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+// ================================
+// BASIC LAYOUT
+// ================================
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+// ================================
+// CUSTOM OVERRIDES FOR YOUR SPECIFIC REQUIREMENTS
+// ================================
+
+// 1. ACCORDION BACKGROUND - Your specific requirement
+.p-accordion {
+  .p-accordion-panel {
+    background: #f7f7f7 !important; // Light mode
+  }
+  
+  .p-accordion-header {
+    background: #f7f7f7 !important; // Light mode
+    
+    .p-accordion-header-link {
+      background: #f7f7f7 !important; // Light mode
+    }
+  }
+  
+  .p-accordion-content {
+    background: #f7f7f7 !important; // Light mode
+  }
+}
+
+// Dark mode accordion - only when PrimeNG dark theme is active
+[data-theme="dark"] .p-accordion {
+  .p-accordion-panel {
+    background: #2d3748 !important; // Your dark mode color
+  }
+  
+  .p-accordion-header {
+    background: #2d3748 !important;
+    
+    .p-accordion-header-link {
+      background: #2d3748 !important;
+    }
+  }
+  
+  .p-accordion-content {
+    background: #2d3748 !important;
+  }
+}
+
+// 2. TOOLBAR BACKGROUND - Your specific blue
+.p-toolbar {
+  background: #0171c5 !important;
+  border-color: #0171c5 !important;
+  color: white !important;
+  
+  // All text and icons in toolbar should be white
+  * {
+    color: white !important;
+  }
+  
+  // Button styling in toolbar
+  .p-button {
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+      border-color: rgba(255, 255, 255, 0.5) !important;
+    }
+    
+    &.p-button-text {
+      background: transparent !important;
+      border-color: transparent !important;
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.1) !important;
+      }
+    }
+  }
+  
+  // Dropdown styling in toolbar
+  .p-dropdown {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: white !important;
+    
+    .p-dropdown-label {
+      color: white !important;
+    }
+    
+    .p-dropdown-trigger {
+      color: white !important;
+    }
+  }
+  
+  // MultiSelect styling in toolbar
+  .p-multiselect {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: white !important;
+    
+    .p-multiselect-label {
+      color: white !important;
+    }
+    
+    .p-multiselect-trigger {
+      color: white !important;
+    }
+  }
+}
+
+// 3. TABLE GRIDLINES - Your specific colors
+.p-datatable {
+  // Force gridlines on all tables with your specific colors
+  .p-datatable-thead > tr > th,
+  .p-datatable-tbody > tr > td,
+  .p-datatable-tfoot > tr > td {
+    border: 1px solid #CDCDCD !important; // Light mode
+  }
+}
+
+// Dark mode table gridlines
+[data-theme="dark"] .p-datatable {
+  .p-datatable-thead > tr > th,
+  .p-datatable-tbody > tr > td,
+  .p-datatable-tfoot > tr > td {
+    border: 1px solid #4a5568 !important; // Dark mode
+  }
+}
+
+// 4. COLUMN FILTER WIDTH FIX AND CLEAR BUTTON REMOVAL
+.p-datatable {
+  // Column filter input width fix
+  .p-datatable-thead {
+    tr.filter-row {
+      th.filter-header {
+        .p-column-filter {
+          width: 100% !important;
+          
+          .p-column-filter-element {
+            width: 100% !important;
+            
+            .p-inputtext {
+              width: 100% !important;
+              max-width: 100% !important;
+              min-width: 0 !important;
+              box-sizing: border-box !important;
+              
+              // Hide the clear icon to prevent input size issues
+              &::-webkit-search-cancel-button,
+              &::-webkit-search-decoration {
+                display: none !important;
+              }
+            }
+            
+            // Hide PrimeNG clear button
+            .p-input-icon-right {
+              .p-icon {
+                display: none !important;
+              }
+            }
+          }
+          
+          // Override any clear button from PrimeNG
+          .p-column-filter-clear-button {
+            display: none !important;
+          }
+        }
+      }
+    }
+  }
+}
+
+// 5. REMOVE SIDEBAR POPOVER ARROW (as requested)
+.favorites-popover-custom {
+  .p-popover-content::before,
+  .p-popover-content::after,
+  .p-popover::after,
+  .p-popover::before,
+  .p-popover-arrow {
+    display: none !important;
+  }
+}
+
+// ================================
+// RESPONSIVE TABLE FIXES
+// ================================
+@media (max-width: 768px) {
+  .p-datatable {
+    .p-datatable-thead tr th {
+      min-width: 100px; // Minimum column width on mobile
+      
+      .p-column-filter {
+        .p-column-filter-element {
+          .p-inputtext {
+            font-size: 14px !important; // Prevent zoom on iOS
+            min-width: 80px !important; // Minimum input width
+          }
+        }
+      }
+    }
+  }
+}
+
+// ================================
+// FOCUS STYLES - Using PrimeNG CSS variables
+// ================================
+*:focus {
+  outline: 2px solid var(--primary-color, #0171c5);
+  outline-offset: 2px;
+}
+
+// ================================
+// HIGH CONTRAST MODE SUPPORT
+// ================================
+@media (prefers-contrast: high) {
+  .p-datatable {
+    .p-datatable-thead > tr > th,
+    .p-datatable-tbody > tr > td {
+      border-width: 2px !important;
+    }
+  }
+}
+
+// ================================
+// REDUCED MOTION SUPPORT
+// ================================
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

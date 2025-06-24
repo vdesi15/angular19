@@ -1,0 +1,22 @@
+
+{
+  "projects": {
+    "your-app": {
+      "architect": {
+        "build": {
+          "options": {
+            "styles": [
+              "src/styles.scss"
+              // Remove any PrimeNG theme imports from here since we're loading dynamically
+              // "node_modules/primeng/resources/primeng.min.css",
+              // "node_modules/primeng/resources/themes/bootstrap4-light-blue/theme.css"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+
+// IMPORTANT: Remove any static PrimeNG theme imports from angular.json
+// The theme service will load them dynamically
