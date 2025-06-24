@@ -1,293 +1,43 @@
-<!-- Updated sidebar.component.html with proper popover integration -->
+<!-- The main container's class changes based on the isExpanded() signal -->
 <div class="sidebar-container" 
-     [ngClass]="{ 'sidebar-expanded': drawerVisible(), 'sidebar-collapsed': !drawerVisible() }">
+    [ngClass]="{ 'sidebar-expanded': drawerVisible(), 'sidebar-collapsed': !drawerVisible() }">
   
-  <p-drawer 
-    [visible]="true" 
-    position="left" 
-    [appendTo]="'body'" 
-    [closeable]="false" 
-    [modal]="false" 
-    [dismissable]="false"
-    styleClass="sidebar-drawer">
+  <p-drawer [visible]="true" position="left" [appendTo]="sidebarContiner" [closeable]="false" [modal]="false" [dismissable]="false">
 
-    <!-- Header with toggle -->
-    <ng-template pTemplate="header">
-      <div class="sidebar-header">
-        <button class="burger-menu" (click)="toggleSidebar()">
-          <i class="pi" [ngClass]="drawerVisible() ? 'pi-arrow-circle-left' : 'pi-bars'"></i>
-          @if(drawerVisible()) {
-            <span class="toggle-text">Collapse</span>
-          }
-        </button>
-      </div>
+    <!-- Header section with the toggle button -->
+    <ng-template class="header">
+        <div class="sidebar-seperator">
+            <button class="burger-menu" (click)="toggleSidebar()">
+                <i class="pi" [ngClass]="drawerVisible) ? 'pi-arrow-circle-left' : 'pi-bars'"></i>
+                @if(drawerVisible()) {
+                    <span>     Collapse</span>
+                }
+            </button>
+        </div>
     </ng-template>
 
-    <!-- Navigation Content -->
     <ng-template pTemplate="content">
-      <nav class="nav-list">
-        <ul>
-          <!-- Smart Search -->
-          <li>
-            <a 
-              class="nav-item"
-              routerLink="/search"
-              routerLinkActive="active"
-              [queryParamsHandling]="'preserve'"
-              title="Smart search for transactions, JIRA tickets, and more">
-              <div class="nav-content">
-                <i class="pi pi-search" aria-hidden="true"></i>
-                @if(drawerVisible()) {
-                  <span class="nav-label">Smart Search</span>
-                }
-              </div>
-            </a>
-          </li>
-
-          <!-- Live Logs -->
-          <li>
-            <a 
-              class="nav-item"
-              routerLink="/browse"
-              routerLinkActive="active"
-              [queryParamsHandling]="'preserve'"
-              title="Browse live application logs">
-              <div class="nav-content">
-                <i class="pi pi-list" aria-hidden="true"></i>
-                @if(drawerVisible()) {
-                  <span class="nav-label">Live Logs</span>
-                }
-              </div>
-            </a>
-          </li>
-
-          <!-- ✨ History & Favorites - Integrated after Browse -->
-          <li>
-            <button 
-              #favoritesButton
-              class="nav-item nav-button"
-              (click)="favoritesPopover.toggle($event)"
-              title="Search history and saved favorites">
-              <div class="nav-content">
-                <i class="pi pi-heart" 
-                   [class.text-pink-500]="favoriteCount() > 0"
-                   aria-hidden="true"></i>
-                @if(drawerVisible()) {
-                  <span class="nav-label">History & Favorites</span>
-                  @if (favoriteCount() > 0) {
-                    <p-badge 
-                      [value]="favoriteCount().toString()" 
-                      severity="info"
-                      styleClass="nav-badge">
-                    </p-badge>
-                  }
-                }
-              </div>
-            </button>
-          </li>
-
-          <!-- Error Monitor -->
-          <li>
-            <a 
-              class="nav-item"
-              routerLink="/errors"
-              routerLinkActive="active"
-              [queryParamsHandling]="'preserve'"
-              title="Monitor error logs in real-time">
-              <div class="nav-content">
-                <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
-                @if(drawerVisible()) {
-                  <span class="nav-label">Error Monitor</span>
-                }
-              </div>
-            </a>
-          </li>
-
-          <!-- Analytics -->
-          <li>
-            <a 
-              class="nav-item"
-              routerLink="/analytics"
-              routerLinkActive="active"
-              [queryParamsHandling]="'preserve'"
-              title="View analytics and dashboards">
-              <div class="nav-content">
-                <i class="pi pi-chart-bar" aria-hidden="true"></i>
-                @if(drawerVisible()) {
-                  <span class="nav-label">Analytics</span>
-                }
-              </div>
-            </a>
-          </li>
-
-          <!-- Settings -->
-          <li>
-            <a 
-              class="nav-item"
-              routerLink="/settings"
-              routerLinkActive="active"
-              [queryParamsHandling]="'preserve'"
-              title="Application settings and preferences">
-              <div class="nav-content">
-                <i class="pi pi-cog" aria-hidden="true"></i>
-                @if(drawerVisible()) {
-                  <span class="nav-label">Settings</span>
-                }
-              </div>
-            </a>
-          </li>
-        </ul>
-      </nav>
+        <nav class="nav-list">
+            <ul>
+            @for (item of navItems(); track item.routerLink) {
+                <li>
+                <a 
+                    class="nav-item side-nav-menu-item list-group-item list-group-item-action"
+                    [attr.title]="item.tooltip" 
+                    [routerLink]="item.routerLink"
+                    routerLinkActive="active"
+                    [queryParamsHandling]="'preserve'">
+                    <div class="nav_icons d-flex w-100 justify-content-start aligh-items-center">
+                        <i [class]="item.icon" aria-hidden="true"></i>
+                        @if(drawerVisible()) {
+                            <span>{{item.label}}</span>
+                        }
+                    </div>
+                </a>
+                </li>
+            }
+            </ul>
+        </nav>
     </ng-template>
   </p-drawer>
-
-  <!-- ✨ Professional Favorites Popover -->
-  <p-popover 
-    #favoritesPopover 
-    [dismissable]="true"
-    [showCloseIcon]="true"
-    [appendTo]="'body'"
-    position="right"
-    styleClass="favorites-popover-professional">
-    
-    <div class="favorites-container">
-      <!-- Header -->
-      <div class="popover-header">
-        <div class="header-content">
-          <i class="pi pi-heart header-icon"></i>
-          <div class="header-text">
-            <h3 class="header-title">Search History & Favorites</h3>
-            <p class="header-subtitle">Quick access to your saved searches</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Favorites Section -->
-      <div class="favorites-section">
-        <div class="section-header">
-          <div class="section-title">
-            <i class="pi pi-heart-fill text-pink-500"></i>
-            <span>Favorites</span>
-            <p-badge 
-              [value]="favoriteItems().length.toString()" 
-              severity="success"
-              [style]="{ 'margin-left': '0.5rem' }">
-            </p-badge>
-          </div>
-          @if (favoriteItems().length > 0) {
-            <button 
-              pButton 
-              type="button" 
-              icon="pi pi-trash" 
-              class="p-button-text p-button-sm p-button-danger clear-btn"
-              (click)="clearFavorites($event)"
-              pTooltip="Clear all favorites"
-              tooltipPosition="left">
-            </button>
-          }
-        </div>
-
-        <div class="items-container">
-          @if (favoriteItems().length === 0) {
-            <div class="empty-state">
-              <i class="pi pi-heart empty-icon"></i>
-              <p class="empty-text">No favorites yet</p>
-              <small class="empty-hint">Star searches to save them here</small>
-            </div>
-          } @else {
-            <p-scrollPanel [style]="{ width: '100%', height: '200px' }" styleClass="custom-scrollpanel">
-              @for (item of favoriteItems(); track item.id) {
-                <div class="search-item favorite-item" (click)="executeSearch(item)">
-                  <div class="item-main">
-                    <div class="item-header">
-                      <i [class]="getSearchIcon(item.searchData.type) + ' item-icon'"></i>
-                      <span class="item-title">{{ item.title }}</span>
-                      <button 
-                        pButton 
-                        type="button" 
-                        icon="pi pi-heart-fill" 
-                        class="p-button-text p-button-sm favorite-btn active"
-                        (click)="toggleFavorite(item.id, $event)"
-                        pTooltip="Remove from favorites">
-                      </button>
-                    </div>
-                    <div class="item-details">
-                      <span class="item-subtitle">{{ item.subtitle }}</span>
-                      <span class="item-time">{{ formatTimestamp(item.timestamp) }}</span>
-                    </div>
-                  </div>
-                </div>
-              }
-            </p-scrollPanel>
-          }
-        </div>
-      </div>
-
-      <p-divider styleClass="section-divider"></p-divider>
-
-      <!-- Recent History Section -->
-      <div class="history-section">
-        <div class="section-header">
-          <div class="section-title">
-            <i class="pi pi-clock text-blue-500"></i>
-            <span>Recent Searches</span>
-            <p-badge 
-              [value]="recentItems().length.toString()" 
-              severity="info"
-              [style]="{ 'margin-left': '0.5rem' }">
-            </p-badge>
-          </div>
-          @if (recentItems().length > 0) {
-            <button 
-              pButton 
-              type="button" 
-              icon="pi pi-trash" 
-              class="p-button-text p-button-sm p-button-danger clear-btn"
-              (click)="clearHistory($event)"
-              pTooltip="Clear search history"
-              tooltipPosition="left">
-            </button>
-          }
-        </div>
-
-        <div class="items-container">
-          @if (recentItems().length === 0) {
-            <div class="empty-state">
-              <i class="pi pi-clock empty-icon"></i>
-              <p class="empty-text">No recent searches</p>
-              <small class="empty-hint">Your search history will appear here</small>
-            </div>
-          } @else {
-            <p-scrollPanel [style]="{ width: '100%', height: '250px' }" styleClass="custom-scrollpanel">
-              @for (item of recentItems(); track item.id) {
-                <div class="search-item history-item" (click)="executeSearch(item)">
-                  <div class="item-main">
-                    <div class="item-header">
-                      <i [class]="getSearchIcon(item.searchData.type) + ' item-icon'"></i>
-                      <span class="item-title">{{ item.title }}</span>
-                      <button 
-                        pButton 
-                        type="button" 
-                        [icon]="isFavorite(item.id) ? 'pi pi-heart-fill' : 'pi pi-heart'" 
-                        [class]="'p-button-text p-button-sm favorite-btn ' + (isFavorite(item.id) ? 'active' : '')"
-                        (click)="toggleFavorite(item.id, $event)"
-                        [pTooltip]="isFavorite(item.id) ? 'Remove from favorites' : 'Add to favorites'">
-                      </button>
-                    </div>
-                    <div class="item-details">
-                      <span class="item-subtitle">{{ item.subtitle }}</span>
-                      <span class="item-time">{{ formatTimestamp(item.timestamp) }}</span>
-                    </div>
-                  </div>
-                </div>
-              }
-            </p-scrollPanel>
-          }
-        </div>
-      </div>
-    </div>
-  </p-popover>
-
-  <!-- Confirmation Dialogs -->
-  <p-confirmDialog></p-confirmDialog>
 </div>
