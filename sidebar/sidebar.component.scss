@@ -146,7 +146,7 @@
         min-width: 420px !important;
         max-width: 500px !important;
         max-height: 80vh !important;
-        overflow: visible !important; //  Allow arrow to show
+        overflow: visible !important;
 
         //  POSITIONING WILL BE HANDLED BY TYPESCRIPT
         position: fixed !important;
@@ -158,15 +158,17 @@
         overflow: hidden !important;
     }
 
-    //  HIDE ALL DEFAULT PRIMENG ARROWS
-    .p-popover-arrow,
-    .p-popover-arrow-content {
+    //  COMPLETELY HIDE PRIMENG ARROW
+    .p-popover::after,
+    .p-popover::before,
+    .p-popover-arrow {
         display: none !important;
         visibility: hidden !important;
+        opacity: 0 !important;
     }
 
-    //  CUSTOM LEFT-POINTING ARROW WITH HIGH SPECIFICITY
-    .p-popover::before {
+    //  CREATE OUR OWN LEFT-POINTING ARROW
+    .p-popover-content::before {
         content: '' !important;
         position: absolute !important;
         left: -12px !important;
@@ -174,14 +176,14 @@
         transform: translateY(-50%) !important;
         width: 0 !important;
         height: 0 !important;
-        border-style: solid !important;
-        border-width: 12px 12px 12px 0 !important;
-        border-color: transparent var(--p-content-background) transparent transparent !important;
-        z-index: 100 !important;
+        border: 12px solid transparent !important;
+        border-right-color: var(--p-content-background) !important;
+        border-left: none !important;
+        z-index: 1000 !important;
     }
 
     //  ARROW BORDER
-    .p-popover::after {
+    .p-popover-content::after {
         content: '' !important;
         position: absolute !important;
         left: -13px !important;
@@ -189,21 +191,21 @@
         transform: translateY(-50%) !important;
         width: 0 !important;
         height: 0 !important;
-        border-style: solid !important;
-        border-width: 13px 13px 13px 0 !important;
-        border-color: transparent var(--p-content-border-color) transparent transparent !important;
-        z-index: 99 !important;
+        border: 13px solid transparent !important;
+        border-right-color: var(--p-content-border-color) !important;
+        border-left: none !important;
+        z-index: 999 !important;
     }
 }
 
 // ================================
-// FAVORITES CONTAINER - THEME AWARE
+// FAVORITES CONTAINER - FIXED HEIGHT LAYOUT
 // ================================
 
 .favorites-container {
     display: flex;
     flex-direction: column;
-    max-height: 70vh;
+    height: 70vh; //  Fixed height instead of max-height
     background: var(--p-content-background);
     border-radius: var(--p-border-radius-lg);
     overflow: hidden;
@@ -220,9 +222,10 @@
     color: white;
     position: relative;
     overflow: hidden;
+    flex-shrink: 0; //  Prevent header from shrinking
 
     //  Dark mode gets slightly darker version
-    [data-p-theme="dark"] & {
+    html.p-dark & {
         background: linear-gradient(135deg, #004466 0%, #005a94 50%, #007bca 100%);
     }
 
@@ -272,13 +275,28 @@
 }
 
 // ================================
-// SECTION STYLES - THEME AWARE
+// SECTION STYLES - THEME AWARE WITH FIXED LAYOUT
 // ================================
 
 .favorites-section,
 .history-section {
     padding: 1.25rem;
     background: var(--p-content-background);
+    flex-shrink: 0; //  Prevent sections from shrinking
+}
+
+.favorites-section {
+    //  Fixed height for favorites section
+    min-height: 120px;
+    max-height: 280px;
+}
+
+.history-section {
+    //  Take remaining space
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; //  Allow shrinking if needed
 }
 
 .section-header {
@@ -288,6 +306,7 @@
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--p-content-border-color);
+    flex-shrink: 0; //  Header always visible
 
     .section-title {
         display: flex;
@@ -316,6 +335,7 @@
 
 .section-divider {
     margin: 0 !important;
+    flex-shrink: 0; //  Divider always visible
 
     &.p-divider {
         border-color: var(--p-content-border-color) !important;
@@ -381,8 +401,8 @@
     border-color: #cbd5e1;
     color: #1e293b;
 
-    //  DARK MODE - Much darker for better contrast
-    [data-p-theme="dark"] & {
+    //  DARK MODE - Much darker for better contrast using correct selector
+    html.p-dark & {
         background: #374151;
         border-color: #4b5563;
         color: #f9fafb;
@@ -397,7 +417,7 @@
         border-color: #94a3b8;
 
         //  DARK MODE HOVER - Lighter but still dark
-        [data-p-theme="dark"] & {
+        html.p-dark & {
             background: #4b5563;
             border-color: #6b7280;
         }
@@ -412,7 +432,7 @@
         background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
         border-color: #3b82f6;
 
-        [data-p-theme="dark"] & {
+        html.p-dark & {
             background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
             border-color: #3b82f6;
             color: #e5e7eb;
@@ -422,7 +442,7 @@
             background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
             border-color: #2563eb;
 
-            [data-p-theme="dark"] & {
+            html.p-dark & {
                 background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
                 border-color: #60a5fa;
             }
@@ -466,8 +486,8 @@
         font-size: 0.9rem;
         line-height: 1.3;
 
-        //  Light text in dark mode
-        [data-p-theme="dark"] & {
+        //  Light text in dark mode - correct selector
+        html.p-dark & {
             color: #f9fafb;
         }
     }
@@ -515,8 +535,8 @@
         overflow: hidden;
         font-weight: 500;
 
-        //  Light gray in dark mode
-        [data-p-theme="dark"] & {
+        //  Light gray in dark mode - correct selector
+        html.p-dark & {
             color: #cbd5e1;
         }
     }
@@ -526,8 +546,8 @@
         color: #94a3b8; //  Lighter gray in light mode
         font-weight: 500;
 
-        //  Medium gray in dark mode
-        [data-p-theme="dark"] & {
+        //  Medium gray in dark mode - correct selector
+        html.p-dark & {
             color: #9ca3af;
         }
     }
@@ -630,7 +650,7 @@
 // DARK MODE SPECIFIC SIDEBAR ADJUSTMENTS
 // ================================
 
-[data-p-theme="dark"] {
+html.p-dark {
     .sidebar-container {
         background-color: #1a2332;
 
