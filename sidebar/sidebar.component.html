@@ -1,4 +1,3 @@
-<!-- Keep your existing drawer style -->
 <div class="sidebar-container"
     [ngClass]="{ 'sidebar-expanded': drawerVisible(), 'sidebar-collapsed': !drawerVisible() }">
 
@@ -12,51 +11,56 @@
         </button>
     </div>
 
-    <!-- Your existing navigation with added favorites -->
-    <nav class="nav-list">
-        <ul class="list-group">
-            <!-- Your existing nav items from config -->
-            @for (item of navItems(); track item.routerLink) {
-            <li>
-                <a class="nav-item side-nav-menu-item list-group-item list-group-item-action"
-                    [attr.title]="item.tooltip" [routerLink]="item.routerLink" routerLinkActive="active"
-                    [queryParamsHandling]="'preserve'">
-                    <div class="nav_icons d-flex w-100 justify-content-start align-items-center">
-                        <i [class]="item.icon" aria-hidden="true"></i>
-                        @if(drawerVisible()) {
-                        <span>{{item.label}}</span>
-                        }
-                    </div>
-                </a>
-            </li>
-            }
+    <!--  Navigation content that fills remaining height -->
+    <div class="sidebar-content">
+        <nav class="nav-list">
+            <ul class="list-group">
+                <!-- Your existing nav items from config -->
+                @for (item of navItems(); track item.routerLink) {
+                <li>
+                    <a class="nav-item side-nav-menu-item list-group-item list-group-item-action"
+                        [attr.title]="item.tooltip" [routerLink]="item.routerLink" routerLinkActive="active"
+                        [queryParamsHandling]="'preserve'">
+                        <div class="nav_icons d-flex w-100 justify-content-start align-items-center">
+                            <i [class]="item.icon" aria-hidden="true"></i>
+                            @if(drawerVisible()) {
+                            <span>{{item.label}}</span>
+                            }
+                        </div>
+                    </a>
+                </li>
+                }
 
-            <!-- Add History & Favorites after your existing items -->
-            <li>
-                <button #favoritesButton
-                    class="nav-item side-nav-menu-item list-group-item list-group-item-action nav-button"
-                    (click)="favoritesPopover.toggle($event)" title="Search history and saved favorites">
-                    <div class="nav_icons d-flex w-100 justify-content-start align-items-center">
-                        <i class="fa fa-heart" [class.text-pink-500]="favoriteCount() > 0" aria-hidden="true"></i>
-                        @if(drawerVisible()) {
-                        <span>History & Favorites</span>
-                        @if (favoriteCount() > 0) {
-                        <p-badge [value]="favoriteCount().toString()" severity="info" styleClass="ml-auto">
-                        </p-badge>
-                        }
-                        }
-                    </div>
-                </button>
-            </li>
-        </ul>
-    </nav>
+                <!--  History & Favorites after your existing items -->
+                <li>
+                    <button #favoritesButton
+                        class="nav-item side-nav-menu-item list-group-item list-group-item-action nav-button"
+                        (click)="favoritesPopover.toggle($event)" title="Search history and saved favorites">
+                        <div class="nav_icons d-flex w-100 justify-content-start align-items-center">
+                            <i class="fa fa-heart" [class.text-pink-500]="favoriteCount() > 0" aria-hidden="true"></i>
+                            @if(drawerVisible()) {
+                            <span>History & Favorites</span>
+                            @if (favoriteCount() > 0) {
+                            <p-badge [value]="favoriteCount().toString()" severity="info" styleClass="ml-auto">
+                            </p-badge>
+                            }
+                            }
+                        </div>
+                    </button>
+                </li>
+            </ul>
+        </nav>
 
-    <!-- Keep the same professional popover -->
+        <!--  Spacer to push content down -->
+        <div class="sidebar-spacer"></div>
+    </div>
+
+    <!--  PrimeNG Aura theme compliant popover with blue/teal colors -->
     <p-popover #favoritesPopover [dismissable]="true" [showCloseIcon]="true" [appendTo]="'body'" position="right"
-        styleClass="favorites-popover-professional">
+        styleClass="favorites-popover-aura">
 
         <div class="favorites-container">
-            <!-- Header -->
+            <!-- Header with blue/teal gradient -->
             <div class="popover-header">
                 <div class="header-content">
                     <i class="pi pi-heart header-icon"></i>
@@ -71,9 +75,9 @@
             <div class="favorites-section">
                 <div class="section-header">
                     <div class="section-title">
-                        <i class="pi pi-heart-fill text-pink-500"></i>
+                        <i class="pi pi-heart-fill text-primary"></i>
                         <span>Favorites</span>
-                        <p-badge [value]="favoriteItems().length.toString()" severity="success"
+                        <p-badge [value]="favoriteItems().length.toString()" severity="info"
                             [style]="{ 'margin-left': '0.5rem' }">
                         </p-badge>
                     </div>
@@ -123,9 +127,9 @@
             <div class="history-section">
                 <div class="section-header">
                     <div class="section-title">
-                        <i class="pi pi-clock text-blue-500"></i>
+                        <i class="pi pi-clock text-primary"></i>
                         <span>Recent Searches</span>
-                        <p-badge [value]="recentItems().length.toString()" severity="info"
+                        <p-badge [value]="recentItems().length.toString()" severity="secondary"
                             [style]="{ 'margin-left': '0.5rem' }">
                         </p-badge>
                     </div>
