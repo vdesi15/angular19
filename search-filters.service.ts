@@ -1,154 +1,129 @@
-import { Injectable, signal, effect, inject, computed, untracked, WritableSignal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { Router, ActivatedRoute, Params, NavigationEnd, ActivatedRouteSnapshot } from '@angular/router';
-import { filter as rxjsFilter, map } from 'rxjs/operators';
-import { SearchFilterMetadata, SearchFilterModel, DateTimeRange } from '../models/search-filter.model';
-import { StreamFilter } from '../models/stream-filter.model';
-import { DateTimeService } from './date-time.service';
+import { Injectable, signal, computed, inject, effect } from '@angular/core';
+import { SearchFilterModel, SearchFilterMetadata } from '../models/search-filter.model';
+import { UrlStateService } from './url-state.service';
 
 @Injectable({
   providedIn: 'root'
 })
-export class FiltersService {
-  private router = inject(Router);
-  private activatedRoute = inject(ActivatedRoute);
-  private dateTimeService = inject(DateTimeService);
+export class SearchFilterService {
+  private urlStateService = inject(UrlStateService);
 
-  private readonly _searchFilterMetadata: WritableSignal<SearchFilterMetadata | undefined> = signal(undefined);
-  private readonly _filters: WritableSignal<SearchFilterModel | undefined> = signal(undefined);
+  // Internal state signals
+  private _metadata: WritableSignal<SearchFilterMetadata | null> = signal(null);
 
-  public readonly searchFilterMetadata = this._searchFilterMetadata.asReadonly();
-  public readonly filters = this._filters.asReadonly();
-  
-  private queryParams = toSignal(
-    this.router.events.pipe(
-      rxjsFilter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      map(() => this.router.routerState.root.snapshot.queryParams)
-    ),
-    { initialValue: this.router.routerState.root.snapshot.queryParams }
-  );
+  // Public readonly signals
+  public readonly searchFilterMetadata = this._metadata.asReadonly();
+
+  // Computed filter model from URL state and metadata
+  public readonly filters = computed<SearchFilterModel | null>(() => {
+    const metadata = this._metadata();
+    if (!metadata) return null;
+
+    const apps = this.urlStateService.applications();
+    const env = this.urlStateService.environment();
+    const loc = this.urlStateService.location();
+    const streamFilters = this.urlStateService.streamFilters();
+    const dateRange = this.urlStateService.dateRange();
+
+    // Validate applications against metadata
+    const validApps = apps.filter(app => 
+      metadata.applications.some(a => a.label === app)
+    );
+
+    // Validate environment
+    const validEnv = Object.keys(metadata.environments).includes(env) ? env : '';
+
+    // Validate location
+    let validLoc = '';
+    if (validEnv && metadata.environments[validEnv]?.includes(loc)) {
+      validLoc = loc;
+    }
+
+    // Get timezone
+    const timezone = validLoc && metadata.locationTimezone[validLoc] 
+      ? metadata.locationTimezone[validLoc] 
+      : 'UTC';
+
+    return {
+      application: validApps,
+      environment: validEnv,
+      location: validLoc,
+      timezone,
+      dateRange,
+      streamFilters
+    };
+  });
 
   constructor() {
-    const filtersFromUrl = computed<SearchFilterModel | undefined>(() => {
-      const params = this.queryParams();
-      const meta = this.searchFilterMetadata();
-      if (!params || !meta) return undefined;
-      return this.parseFiltersFromParams(params, meta);
-    });
-
+    // Auto-sync filters back to URL when changed programmatically
     effect(() => {
-      const fromUrl = filtersFromUrl();
-      if (fromUrl) {
-        untracked(() => { 
-          this._filters.set(fromUrl);
-        });
+      const currentFilters = this.filters();
+      if (currentFilters) {
+        this.syncFiltersToUrl(currentFilters);
       }
     });
-
-    effect(() => {
-      this.queryParams(); 
-      const activeRoute = this.findActiveRoute(this.router.routerState.snapshot.root);
-      untracked(() => {
-        if (this.filters()) {
-          this.updateQueryParams(this.filters()!, activeRoute);
-        }
-      });
-    });
   }
 
+  /**
+   * Set metadata (called by resolver)
+   */
   public setSearchFilterMetadata(metadata: SearchFilterMetadata): void {
-    console.log('[FiltersService] Setting metadata:', metadata);
-    this._searchFilterMetadata.set(metadata);
+    console.log('[SearchFilterService] Setting metadata:', metadata);
+    this._metadata.set(metadata);
   }
 
+  /**
+   * Update filters programmatically
+   */
   public updateFilters(partialFilters: Partial<SearchFilterModel>): void {
-    console.log('[FiltersService] updateFilters called with:', partialFilters);
+    console.log('[SearchFilterService] Updating filters:', partialFilters);
     
-    const currentFilters = this.filters();
-    if (!currentFilters) {
-      console.warn('[FiltersService] No current filters available');
+    const current = this.filters();
+    if (!current) {
+      console.warn('[SearchFilterService] No current filters available');
       return;
     }
 
-    const newFilters = { ...currentFilters, ...partialFilters };
-    
-    console.log('[FiltersService] Setting new filters:', newFilters);
-    this._filters.set(newFilters);
-    
-    const activeRoute = this.findActiveRoute(this.router.routerState.snapshot.root);
-    this.updateQueryParams(newFilters, activeRoute);
+    const updated = { ...current, ...partialFilters };
+    this.syncFiltersToUrl(updated);
   }
 
-  private updateQueryParams(filters: SearchFilterModel, route: ActivatedRouteSnapshot): void {
-    const allowedFilters = route.data['allowedFilters'] || [];
-    const queryParams: any = {};
+  private syncFiltersToUrl(filters: SearchFilterModel): void {
+    const params: Record<string, string | null> = {};
 
-    queryParams['applications'] = allowedFilters.includes('application') && filters.application?.length ? this.encode(filters.application.join(',')) : null;
-    queryParams['env'] = allowedFilters.includes('environment') && filters.environment ? this.encode(filters.environment) : null;
-    queryParams['loc'] = allowedFilters.includes('location') && filters.location ? this.encode(filters.location) : null;
-    queryParams['stream_filters'] = filters.streamFilters ? this.encode(filters.streamFilters) : null;
-    queryParams['site'] = null;
+    params['applications'] = filters.application?.length 
+      ? encodeURIComponent(filters.application.join(',')) 
+      : null;
+    
+    params['env'] = filters.environment 
+      ? encodeURIComponent(filters.environment) 
+      : null;
+    
+    params['loc'] = filters.location 
+      ? encodeURIComponent(filters.location) 
+      : null;
+    
+    params['stream_filters'] = filters.streamFilters 
+      ? encodeURIComponent(filters.streamFilters) 
+      : null;
 
-    if (allowedFilters.includes('dateRange') && filters.dateRange) {
+    if (filters.dateRange) {
       const dr = filters.dateRange;
-      queryParams['isAbs'] = dr.isAbsolute.toString();
+      params['isAbs'] = dr.isAbsolute.toString();
+      
       if (dr.isAbsolute) {
-        queryParams['start'] = dr.startDate.toISOString();
-        queryParams['end'] = dr.endDate.toISOString();
-        queryParams['relVal'] = null;
-        queryParams['relUnit'] = null;
+        params['start'] = dr.startDate.toISOString();
+        params['end'] = dr.endDate.toISOString();
+        params['relVal'] = null;
+        params['relUnit'] = null;
       } else {
-        queryParams['relVal'] = dr.relativeValue?.toString() ?? null;
-        queryParams['relUnit'] = dr.relativeUnit ?? null;
-        queryParams['start'] = null;
-        queryParams['end'] = null;
-      }
-    } else {
-      queryParams['isAbs'] = null;
-      queryParams['start'] = null;
-      queryParams['end'] = null;
-      queryParams['relVal'] = null;
-      queryParams['relUnit'] = null;
-    }
-
-    this.router.navigate([], {
-      relativeTo: this.activatedRoute,
-      queryParams,
-      queryParamsHandling: 'merge',
-      replaceUrl: true
-    });
-  }
-
-  private parseFiltersFromParams(params: Params, meta: SearchFilterMetadata): SearchFilterModel {
-    const decodedApps = params['applications'] ? this.decode(params['applications']).split(',').filter(Boolean) : [];
-    const validApps = decodedApps.filter((app: string) => meta.applications.some(a => a.label === app));
-    const decodedEnv = params['env'] ? this.decode(params['env']) : '';
-    const streamFilters = this.decode(params['stream_filters']);
-    const envIsValid = Object.keys(meta.environments).includes(decodedEnv);
-    const environment = envIsValid ? decodedEnv : '';
-    let location = '';
-    const decodedLoc = params['loc'] ? this.decode(params['loc']) : '';
-    if (envIsValid && meta.environments[environment]?.includes(decodedLoc)) {
-      location = decodedLoc;
-    } else {
-      const decodedSite = params['site'] ? this.decode(params['site']) : '';
-      const siteMappingEnvKey = environment.toUpperCase();
-      if (envIsValid && decodedSite && meta.siteToLocationMapping[siteMappingEnvKey]) {
-        const locationsForEnv = meta.siteToLocationMapping[siteMappingEnvKey];
-        const foundEntry = Object.entries(locationsForEnv).find(([locKey, siteArray]) => siteArray.includes(decodedSite));
-        if (foundEntry) location = foundEntry[0];
+        params['relVal'] = dr.relativeValue?.toString() ?? null;
+        params['relUnit'] = dr.relativeUnit ?? null;
+        params['start'] = null;
+        params['end'] = null;
       }
     }
-    const timezone = location && meta.locationTimezone[location] ? meta.locationTimezone[location] : 'UTC';
-    const dateRange = this.dateTimeService.calculateDateRangeFromUrlParams(params);
-    return { application: validApps, environment, location, timezone, dateRange, streamFilters };
+
+    this.urlStateService.updateParams(params);
   }
-  
-  private findActiveRoute(route: ActivatedRouteSnapshot): ActivatedRouteSnapshot {
-    if (route.firstChild) return this.findActiveRoute(route.firstChild);
-    return route;
-  }
-  
-  private encode = (v: string): string | null => v ? encodeURIComponent(v) : null;
-  private decode = (v: string): string => v ? (decodeURIComponent(v) || '') : '';
 }
