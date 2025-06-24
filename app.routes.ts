@@ -1,8 +1,10 @@
+// src/app/app.routes.ts
 import { Routes } from '@angular/router';
 import { startupResolver } from './core/guards/startup.resolver';
 import { authenticationGuard } from './core/guards/authentication.guard';
 import { authorizationGuard } from './core/guards/authorization.guard';
 import { urlParametersGuard } from './core/guards/url-parameters.guard';
+import { ShellComponent } from './shell/shell.component';
 
 export const routes: Routes = [
   {
@@ -12,45 +14,38 @@ export const routes: Routes = [
   },
   {
     path: 'logs',
+    component: ShellComponent,
+    canActivate: [authenticationGuard, authorizationGuard],
+    resolve: { startupData: startupResolver },
     children: [
       {
         path: 'search',
-        loadComponent: () => import('./features/search-logs/search-logs.component')
-          .then(m => m.SearchLogsComponent),
-        canActivate: [authenticationGuard, authorizationGuard, urlParametersGuard],
-        resolve: { startup: startupResolver },
+        loadComponent: () => import('./features/search-logs/search-logs.component').then(m => m.SearchLogsComponent),
         data: { 
           mode: 'search',
-          allowedFilters: ['application', 'environment', 'location'],
-          title: 'Smart Search',
-          preserveUrlParams: true // Flag for our URL guard
+          allowedFilters: ['application', 'environment', 'location']
         }
       },
       {
         path: 'browse',
-        loadComponent: () => import('./features/search-logs/search-logs.component')
-          .then(m => m.SearchLogsComponent),
-        canActivate: [authenticationGuard, authorizationGuard, urlParametersGuard],
-        resolve: { startup: startupResolver },
+        loadComponent: () => import('./features/search-logs/search-logs.component').then(m => m.SearchLogsComponent),
         data: { 
           mode: 'browse',
-          allowedFilters: ['application', 'environment', 'location', 'dateRange'],
-          title: 'Live Log Browser',
-          preserveUrlParams: true
+          allowedFilters: ['application', 'environment', 'location', 'dateRange']
         }
       },
       {
         path: 'errors',
-        loadComponent: () => import('./features/search-logs/search-logs.component')
-          .then(m => m.SearchLogsComponent),
-        canActivate: [authenticationGuard, authorizationGuard, urlParametersGuard],
-        resolve: { startup: startupResolver },
+        loadComponent: () => import('./features/search-logs/search-logs.component').then(m => m.SearchLogsComponent)
         data: { 
           mode: 'error',
-          allowedFilters: ['application', 'environment', 'location', 'dateRange'],
-          title: 'Error Log Monitor',
-          preserveUrlParams: true
+          allowedFilters: ['application', 'environment', 'location', 'dateRange']
         }
+      },
+      {
+        path: '',
+        redirectTo: 'search',
+        pathMatch: 'full'
       }
     ]
   },
