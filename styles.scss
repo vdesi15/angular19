@@ -1,171 +1,3 @@
-// global-styles.scss - Add these global fixes
-
-// Global fix for pagination dropdowns in constrained spaces
-.p-paginator .p-dropdown.dropdown-up {
-  .p-dropdown-panel {
-    bottom: 100% !important;
-    top: auto !important;
-    transform-origin: bottom !important;
-    margin-bottom: 2px !important;
-    position: fixed !important;
-    z-index: 1300 !important;
-  }
-}
-
-// Global fix for accordion overflow issues
-.p-accordion .p-accordion-content {
-  overflow: visible !important;
-  
-  .p-accordion-content-wrapper {
-    overflow: visible !important;
-  }
-}
-
-// Global fix for table pagination visibility
-.p-datatable .p-paginator {
-  visibility: visible !important;
-  display: flex !important;
-  flex-shrink: 0 !important;
-}
-
-// Global fix for dropdown panels in tables
-.p-datatable .p-dropdown-panel {
-  z-index: 1200 !important;
-  position: fixed !important;
-}
-
-// Global fix for column filters
-.p-datatable .p-column-filter .p-column-filter-element {
-  width: 100% !important;
-  
-  .p-inputtext {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-}
-
-// styles.scss - Minimal Global Styles Following PrimeNG Best Practices
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-// ================================
-// GLOBAL FONT FAMILY ONLY
-// ================================
-* {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  margin: 0;
-  padding: 0;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-// ================================
-// ACCORDION SCROLLING FIX
-// ================================
-.p-accordion {
-  .p-accordion-content {
-    overflow: visible !important;
-    max-height: none !important;
-    
-    .p-accordion-content-wrapper {
-      overflow: visible !important;
-      max-height: none !important;
-      
-      // Add proper scrolling container
-      .result-content-wrapper {
-        max-height: 80vh;
-        overflow-y: auto;
-        overflow-x: hidden;
-      }
-    }
-  }
-}
-
-// ================================
-// COMPACT DATATABLE FIXES
-// ================================
-.p-datatable {
-  // Compact header cells
-  .p-datatable-thead tr th {
-    padding: 0.375rem 0.5rem !important;
-    font-size: 0.875rem !important;
-    line-height: 1.2 !important;
-  }
-  
-  // Compact body cells
-  .p-datatable-tbody tr td {
-    padding: 0.25rem 0.5rem !important;
-    font-size: 0.875rem !important;
-    line-height: 1.3 !important;
-  }
-  
-  // Compact filter row
-  .p-datatable-thead tr.p-filter-row th {
-    padding: 0.2rem !important;
-    
-    .p-column-filter {
-      width: 100% !important;
-      
-      .p-column-filter-element {
-        width: 100% !important;
-        
-        .p-inputtext {
-          width: 100% !important;
-          box-sizing: border-box !important;
-          font-size: 0.8rem !important;
-          padding: 0.25rem 0.375rem !important;
-          height: 1.8rem !important;
-          
-          // Hide clear filter icons to prevent input shrinking
-          &::-webkit-search-cancel-button,
-          &::-webkit-search-decoration {
-            display: none !important;
-          }
-        }
-      }
-      
-      // Hide PrimeNG's clear filter icon
-      .p-column-filter-clear-button {
-        display: none !important;
-      }
-    }
-  }
-}
-
-// ================================
-// FORCE EXACT COLUMN WIDTHS - CRITICAL FIX
-// ================================
-.p-datatable {
-  table-layout: fixed !important; // Force fixed layout
-  width: 100% !important;
-  
-  th, td {
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
-  
-  // Force width inheritance for filter inputs
-  .p-datatable-thead tr.p-filter-row th {
-    .p-column-filter .p-column-filter-element .p-inputtext {
-      // Calculate width based on column header width
-      width: calc(100% - 4px) !important; // Account for borders
-      min-width: calc(100% - 4px) !important;
-      max-width: calc(100% - 4px) !important;
-    }
-  }
-}
-
-// ================================
-// SPECIFIC COLUMN WIDTH ENFORCEMENT
-// ================================
-.p-datatable th[style*="width"],
-.p// styles.scss - Minimal Global Styles Following PrimeNG Best Practices
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 // ================================
@@ -391,5 +223,301 @@ body {
   .p-datatable-tbody tr td {
     padding: 0.2rem 0.3rem !important;
     font-size: 0.8rem !important;
+  }
+}
+
+// global-styles.scss - Professional theme overrides for light and dark modes
+
+// ================================
+// GLOBAL BUTTON TEXT COLORS
+// ================================
+
+:root {
+  // Professional color palette
+  --table-header-bg: #CDCDCD;
+  --accordion-header-bg: #B8B8B8;
+  --toolbar-blue: #0171c5;
+  --toolbar-blue-hover: #005aa3;
+  --button-text-light: #2c3e50;
+  --button-text-dark: #ecf0f1;
+}
+
+// Light mode button text
+.p-button {
+  &:not(.p-button-text):not(.p-button-outlined) {
+    color: white !important; // Solid buttons always white text
+  }
+  
+  &.p-button-text,
+  &.p-button-outlined {
+    color: var(--button-text-light) !important;
+    
+    &:hover {
+      color: var(--button-text-light) !important;
+      background-color: rgba(44, 62, 80, 0.1) !important;
+    }
+  }
+  
+  // Success buttons (Add Filter)
+  &.p-button-success {
+    background-color: #27ae60 !important;
+    border-color: #27ae60 !important;
+    color: white !important;
+    
+    &:hover {
+      background-color: #219a52 !important;
+      border-color: #219a52 !important;
+    }
+    
+    &.p-button-outlined {
+      color: #27ae60 !important;
+      background-color: transparent !important;
+      
+      &:hover {
+        background-color: #27ae60 !important;
+        color: white !important;
+      }
+    }
+  }
+}
+
+// Dark mode button text
+html.p-dark {
+  .p-button {
+    &.p-button-text,
+    &.p-button-outlined {
+      color: var(--button-text-dark) !important;
+      
+      &:hover {
+        color: var(--button-text-dark) !important;
+        background-color: rgba(236, 240, 241, 0.1) !important;
+      }
+    }
+    
+    // Success buttons in dark mode
+    &.p-button-success {
+      background-color: #2ecc71 !important;
+      border-color: #2ecc71 !important;
+      
+      &:hover {
+        background-color: #27ae60 !important;
+        border-color: #27ae60 !important;
+      }
+      
+      &.p-button-outlined {
+        color: #2ecc71 !important;
+        
+        &:hover {
+          background-color: #2ecc71 !important;
+          color: white !important;
+        }
+      }
+    }
+  }
+}
+
+// ================================
+// TABLE HEADER STYLING
+// ================================
+
+.p-datatable {
+  .p-datatable-thead {
+    > tr {
+      // Main header row
+      &:first-child > th {
+        background-color: var(--table-header-bg) !important;
+        color: #2c3e50 !important;
+        font-weight: 600 !important;
+        border-bottom: 2px solid #a8a8a8 !important;
+      }
+      
+      // Filter row
+      &.filter-row > th,
+      &:nth-child(2) > th {
+        background-color: var(--table-header-bg) !important;
+        border-bottom: 1px solid #a8a8a8 !important;
+      }
+    }
+  }
+}
+
+// Dark mode table headers
+html.p-dark {
+  :root {
+    --table-header-bg: #4a5568;
+    --accordion-header-bg: #3a4553;
+  }
+  
+  .p-datatable .p-datatable-thead > tr:first-child > th {
+    color: #e2e8f0 !important;
+    border-bottom-color: #2d3748 !important;
+  }
+}
+
+// ================================
+// ACCORDION HEADER STYLING
+// ================================
+
+.p-accordion {
+  .p-accordion-header {
+    .p-accordion-header-link {
+      background-color: var(--accordion-header-bg) !important;
+      color: #2c3e50 !important;
+      font-weight: 500 !important;
+      border: 1px solid #a8a8a8 !important;
+      
+      &:hover {
+        background-color: #a8a8a8 !important;
+      }
+    }
+  }
+}
+
+// Dark mode accordion headers
+html.p-dark {
+  .p-accordion .p-accordion-header .p-accordion-header-link {
+    color: #e2e8f0 !important;
+    border-color: #2d3748 !important;
+    
+    &:hover {
+      background-color: #2d3748 !important;
+    }
+  }
+}
+
+// ================================
+// PROFESSIONAL TOOLBAR STYLING
+// ================================
+
+.p-toolbar {
+  &.streaming-toolbar {
+    background: linear-gradient(135deg, var(--toolbar-blue) 0%, #0284d1 100%) !important;
+    border: none !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(1, 113, 197, 0.2) !important;
+    
+    .p-toolbar-group-left,
+    .p-toolbar-group-right {
+      .p-button {
+        &.p-button-outlined {
+          border-color: rgba(255, 255, 255, 0.3) !important;
+          color: white !important;
+          
+          &:hover {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.5) !important;
+          }
+        }
+        
+        &.p-button-success {
+          background-color: rgba(255, 255, 255, 0.15) !important;
+          border-color: rgba(255, 255, 255, 0.3) !important;
+          color: white !important;
+          
+          &:hover {
+            background-color: rgba(255, 255, 255, 0.25) !important;
+          }
+        }
+      }
+      
+      .p-multiselect {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
+        color: white !important;
+        
+        .p-multiselect-label {
+          color: white !important;
+        }
+        
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.15) !important;
+        }
+      }
+      
+      .p-chip {
+        background-color: rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+      }
+    }
+  }
+}
+
+// ================================
+// IMPROVED DARK MODE CONTRAST
+// ================================
+
+html.p-dark {
+  .p-toolbar.streaming-toolbar {
+    background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%) !important;
+    box-shadow: 0 2px 8px rgba(26, 54, 93, 0.3) !important;
+    
+    .p-toolbar-group-left,
+    .p-toolbar-group-right {
+      .p-multiselect {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+      }
+    }
+  }
+}
+
+// ================================
+// PAGINATION DROPDOWN FIXES
+// ================================
+
+.p-paginator .p-dropdown.dropdown-up {
+  .p-dropdown-panel {
+    bottom: 100% !important;
+    top: auto !important;
+    transform-origin: bottom !important;
+    margin-bottom: 2px !important;
+    position: fixed !important;
+    z-index: 1300 !important;
+  }
+}
+
+// ================================
+// ACCORDION OVERFLOW FIXES
+// ================================
+
+.p-accordion .p-accordion-content {
+  overflow: visible !important;
+  
+  .p-accordion-content-wrapper {
+    overflow: visible !important;
+  }
+}
+
+// ================================
+// TABLE PAGINATION VISIBILITY
+// ================================
+
+.p-datatable .p-paginator {
+  visibility: visible !important;
+  display: flex !important;
+  flex-shrink: 0 !important;
+}
+
+// ================================
+// DROPDOWN PANEL Z-INDEX
+// ================================
+
+.p-datatable .p-dropdown-panel {
+  z-index: 1200 !important;
+  position: fixed !important;
+}
+
+// ================================
+// COLUMN FILTER INPUTS
+// ================================
+
+.p-datatable .p-column-filter .p-column-filter-element {
+  width: 100% !important;
+  
+  .p-inputtext {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 }
