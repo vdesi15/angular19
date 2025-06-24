@@ -1,11 +1,11 @@
-// components/sidebar/sidebar.component.scss - Fixed positioning, blue gradients, and dark mode
+// components/sidebar/sidebar.component.scss - Fixed with #007bca gradient and proper contrast
 // ================================
 // SIDEBAR CONTAINER - FULL HEIGHT
 // ================================
 
 :host {
-  display: block;
-  height: 100vh;
+    display: block;
+    height: 100vh;
 }
 
 .sidebar-container {
@@ -51,7 +51,7 @@
 
             span {
                 font-size: 13px;
-                white-space: nowrap;                
+                white-space: nowrap;
             }
         }
     }
@@ -76,7 +76,7 @@
         margin: 0px;
         display: flex;
         flex-direction: column;
-        
+
         .active {
             background-color: #38aecc;
             color: #2a4062;
@@ -88,16 +88,16 @@
         display: flex;
         align-items: center;
         background: center;
-        border: 1px solid rgba(0,0,0,.125);
+        border: 1px solid rgba(0, 0, 0, .125);
         border-radius: .25rem;
         padding: .75rem 1.25rem;
         width: -webkit-fill-available;
         cursor: pointer;
         font-size: 13px;
-        color: rgb(255,255,255);
+        color: rgb(255, 255, 255);
         height: 50px;
         text-decoration: none;
-        
+
         &:hover {
             background-color: #13518e;
             color: white;
@@ -106,9 +106,9 @@
 
     .nav-button {
         background: none;
-        border: 1px solid rgba(0,0,0,.125);
+        border: 1px solid rgba(0, 0, 0, .125);
         border-radius: .25rem;
-        
+
         &:focus {
             outline: 2px solid #38aecc;
             outline-offset: 2px;
@@ -120,11 +120,11 @@
             font-size: 14px;
             margin-right: 10px;
         }
-        
+
         .text-pink-500 {
             color: #ec4899 !important;
         }
-        
+
         .ml-auto {
             margin-left: auto;
         }
@@ -132,40 +132,38 @@
 }
 
 // ================================
-// POPOVER POSITIONING FIX - FORCE RIGHT POSITIONING
+// POPOVER POSITIONING - MANUAL RIGHT POSITIONING
 // ================================
 
-:host ::ng-deep .favorites-popover-aura {
-  .p-popover {
-    background: var(--p-content-background) !important;
-    border: 1px solid var(--p-content-border-color) !important;
-    border-radius: var(--p-border-radius-lg) !important;
-    box-shadow: var(--p-overlay-shadow) !important;
-    min-width: 420px !important;
-    max-width: 500px !important;
-    max-height: 80vh !important;
-    overflow: hidden !important;
-    
-    // ✨ FORCE POSITION TO THE RIGHT
-    &[data-p-placement="right"] {
-      margin-left: 8px !important;
-    }
-    
-    // ✨ OVERRIDE ANY BOTTOM POSITIONING
-    &[data-p-placement="bottom"] {
-      transform: translateX(100px) translateY(-50%) !important;
-    }
-  }
+:host ::ng-deep .favorites-popover-custom {
+    .p-popover {
+        background: var(--p-content-background) !important;
+        border: 1px solid var(--p-content-border-color) !important;
+        border-radius: var(--p-border-radius-lg) !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+        min-width: 420px !important;
+        max-width: 500px !important;
+        max-height: 80vh !important;
+        overflow: hidden !important;
 
-  .p-popover-content {
-    padding: 0 !important;
-    border-radius: var(--p-border-radius-lg) !important;
-    overflow: hidden !important;
-  }
+        //  FORCE POSITIONING TO RIGHT OF SIDEBAR
+        position: fixed !important;
+        left: 160px !important; // Just to the right of expanded sidebar
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        z-index: 10000 !important;
+    }
 
-  .p-popover-arrow {
-    border-right-color: var(--p-content-background) !important;
-  }
+    .p-popover-content {
+        padding: 0 !important;
+        border-radius: var(--p-border-radius-lg) !important;
+        overflow: hidden !important;
+    }
+
+    // Hide arrow since we're manually positioning
+    .p-popover-arrow {
+        display: none !important;
+    }
 }
 
 // ================================
@@ -173,74 +171,74 @@
 // ================================
 
 .favorites-container {
-  display: flex;
-  flex-direction: column;
-  max-height: 70vh;
-  background: var(--p-content-background);
-  border-radius: var(--p-border-radius-lg);
-  overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 70vh;
+    background: var(--p-content-background);
+    border-radius: var(--p-border-radius-lg);
+    overflow: hidden;
 }
 
 // ================================
-// POPOVER HEADER - BLUE GRADIENTS ONLY
+// POPOVER HEADER - #007bca GRADIENT
 // ================================
 
 .popover-header {
-  // ✨ Beautiful blue gradients - light and dark mode aware
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
-  padding: 1.5rem;
-  color: white;
-  position: relative;
-  overflow: hidden;
-
-  // ✨ Dark mode gets darker blue gradient
-  :host-context([data-p-theme="dark"]) & {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 50%, #2563eb 100%);
-  }
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
-    opacity: 0.6;
-  }
-
-  .header-content {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+    //  Using your specified #007bca color in gradient
+    background: linear-gradient(135deg, #005a94 0%, #007bca 50%, #0099e6 100%);
+    padding: 1.5rem;
+    color: white;
     position: relative;
-    z-index: 1;
-  }
+    overflow: hidden;
 
-  .header-icon {
-    font-size: 2rem;
-    opacity: 0.95;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-  }
-
-  .header-text {
-    flex: 1;
-
-    .header-title {
-      margin: 0 0 0.25rem 0;
-      font-size: 1.25rem;
-      font-weight: 600;
-      line-height: 1.2;
+    //  Dark mode gets slightly darker version
+    [data-p-theme="dark"] & {
+        background: linear-gradient(135deg, #004466 0%, #005a94 50%, #007bca 100%);
     }
 
-    .header-subtitle {
-      margin: 0;
-      font-size: 0.9rem;
-      opacity: 0.9;
-      line-height: 1.3;
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+        opacity: 0.8;
     }
-  }
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .header-icon {
+        font-size: 2rem;
+        opacity: 0.95;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+
+    .header-text {
+        flex: 1;
+
+        .header-title {
+            margin: 0 0 0.25rem 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .header-subtitle {
+            margin: 0;
+            font-size: 0.9rem;
+            opacity: 0.9;
+            line-height: 1.3;
+        }
+    }
 }
 
 // ================================
@@ -249,280 +247,262 @@
 
 .favorites-section,
 .history-section {
-  padding: 1.25rem;
-  // ✨ Ensure proper background inheritance
-  background: inherit;
+    padding: 1.25rem;
+    background: var(--p-content-background);
 }
 
 .section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--p-content-border-color);
-
-  .section-title {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-    color: var(--p-text-color);
-    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--p-content-border-color);
 
-    i {
-      font-size: 1rem;
-    }
-    
-    .text-primary {
-      color: var(--p-primary-color);
-    }
-  }
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: var(--p-text-color);
+        font-size: 0.95rem;
 
-  .clear-btn {
-    opacity: 0.7;
-    transition: all 0.2s ease;
-
-    &:hover {
-      opacity: 1;
-      transform: scale(1.05);
+        i {
+            font-size: 1rem;
+            color: #007bca;
+        }
     }
-  }
+
+    .clear-btn {
+        opacity: 0.7;
+        transition: all 0.2s ease;
+
+        &:hover {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+    }
 }
 
 .section-divider {
-  margin: 0 !important;
-  
-  &.p-divider {
-    border-color: var(--p-content-border-color) !important;
-  }
+    margin: 0 !important;
+
+    &.p-divider {
+        border-color: var(--p-content-border-color) !important;
+    }
 }
 
 // ================================
-// ITEMS CONTAINER - FIXED BACKGROUNDS
+// ITEMS CONTAINER - PROPER BACKGROUNDS
 // ================================
 
 .items-container {
-  min-height: 80px;
-  // ✨ Ensure container respects theme background
-  background: transparent;
+    min-height: 80px;
+    background: var(--p-content-background);
 }
 
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
-  text-align: center;
-  color: var(--p-text-muted-color);
-  // ✨ Ensure empty state has proper background
-  background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    text-align: center;
+    background: var(--p-content-background);
 
-  .empty-icon {
-    font-size: 2.5rem;
-    margin-bottom: 0.75rem;
-    opacity: 0.4;
-  }
+    .empty-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.75rem;
+        opacity: 0.4;
+        color: var(--p-text-muted-color);
+    }
 
-  .empty-text {
-    margin: 0 0 0.5rem 0;
-    font-weight: 500;
-    font-size: 0.95rem;
-    color: var(--p-text-color);
-  }
+    .empty-text {
+        margin: 0 0 0.5rem 0;
+        font-weight: 500;
+        font-size: 0.95rem;
+        color: var(--p-text-color);
+    }
 
-  .empty-hint {
-    margin: 0;
-    font-size: 0.8rem;
-    opacity: 0.7;
-  }
+    .empty-hint {
+        margin: 0;
+        font-size: 0.8rem;
+        color: var(--p-text-muted-color);
+        opacity: 0.7;
+    }
 }
 
 // ================================
-// SEARCH ITEMS - IMPROVED THEME SUPPORT
+// SEARCH ITEMS - DARK WITH PROPER CONTRAST
 // ================================
 
 .search-item {
-  padding: 0.875rem;
-  border-radius: var(--p-border-radius-md);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid transparent;
-  margin-bottom: 0.5rem;
-  position: relative;
-  overflow: hidden;
-  
-  // ✨ LIGHT MODE - Blue themed backgrounds
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  border-color: #93c5fd;
+    padding: 0.875rem;
+    border-radius: var(--p-border-radius-md);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    margin-bottom: 0.5rem;
+    position: relative;
+    overflow: hidden;
 
-  // ✨ DARK MODE - Dark blue themed backgrounds
-  :host-context([data-p-theme="dark"]) & {
-    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-    border-color: #3b82f6;
-    color: #e5e7eb;
-  }
+    //  LIGHT MODE - Dark items for contrast
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #1e293b;
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.1) 100%);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--p-overlay-shadow);
-
-    // ✨ LIGHT MODE HOVER
-    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
-    border-color: #60a5fa;
-
-    // ✨ DARK MODE HOVER
-    :host-context([data-p-theme="dark"]) & {
-      background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
-      border-color: #60a5fa;
-    }
-
-    &::before {
-      opacity: 1;
-    }
-
-    .favorite-btn {
-      opacity: 1;
-    }
-  }
-
-  // ✨ FAVORITES - Slightly different blue shade
-  &.favorite-item {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    border-color: #3b82f6;
-
-    :host-context([data-p-theme="dark"]) & {
-      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-      border-color: #60a5fa;
+    //  DARK MODE - Even darker items
+    [data-p-theme="dark"] & {
+        background: #1e293b;
+        border-color: #374151;
+        color: #f8fafc;
     }
 
     &:hover {
-      background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
-      border-color: #2563eb;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
-      :host-context([data-p-theme="dark"]) & {
-        background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
-        border-color: #93c5fd;
-      }
-    }
-  }
+        //  LIGHT MODE HOVER - Slightly darker
+        background: #f1f5f9;
+        border-color: #cbd5e1;
 
-  // ✨ HISTORY - Same blue theme consistency
-  &.history-item {
-    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-    border-color: #7dd3fc;
+        //  DARK MODE HOVER - Lighter
+        [data-p-theme="dark"] & {
+            background: #374151;
+            border-color: #4b5563;
+        }
 
-    :host-context([data-p-theme="dark"]) & {
-      background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%);
-      border-color: #0ea5e9;
+        .favorite-btn {
+            opacity: 1;
+        }
     }
 
-    &:hover {
-      background: linear-gradient(135deg, #bae6fd 0%, #7dd3fc 100%);
-      border-color: #38bdf8;
+    //  FAVORITES - Subtle blue tint
+    &.favorite-item {
+        background: #f0f9ff;
+        border-color: #bae6fd;
 
-      :host-context([data-p-theme="dark"]) & {
-        background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
-        border-color: #38bdf8;
-      }
+        [data-p-theme="dark"] & {
+            background: #1e3a8a;
+            border-color: #3b82f6;
+        }
+
+        &:hover {
+            background: #e0f2fe;
+            border-color: #7dd3fc;
+
+            [data-p-theme="dark"] & {
+                background: #1d4ed8;
+                border-color: #60a5fa;
+            }
+        }
     }
-  }
+
+    //  HISTORY - Consistent with favorites
+    &.history-item {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+
+        [data-p-theme="dark"] & {
+            background: #1e293b;
+            border-color: #374151;
+        }
+
+        &:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+
+            [data-p-theme="dark"] & {
+                background: #374151;
+                border-color: #4b5563;
+            }
+        }
+    }
 }
 
 .item-main {
-  width: 100%;
-  position: relative;
-  z-index: 1;
+    width: 100%;
+    position: relative;
+    z-index: 1;
 }
 
 .item-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-  gap: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    gap: 0.75rem;
 
-  .item-icon {
-    font-size: 1rem;
-    color: var(--p-primary-color);
-    opacity: 0.8;
-    min-width: 16px;
-  }
-
-  .item-title {
-    font-weight: 500;
-    color: var(--p-text-color);
-    flex: 1;
-    margin-right: 0.5rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 0.9rem;
-    line-height: 1.3;
-  }
-
-  .favorite-btn {
-    opacity: 0.5;
-    transition: all 0.2s ease;
-    width: 2rem !important;
-    height: 2rem !important;
-    border-radius: 50% !important;
-
-    &:hover {
-      transform: scale(1.1);
+    .item-icon {
+        font-size: 1rem;
+        color: #007bca;
+        opacity: 0.8;
+        min-width: 16px;
     }
 
-    &.active {
-      color: var(--p-red-500) !important;
-      opacity: 1;
+    .item-title {
+        font-weight: 600;
+        color: var(--p-text-color);
+        flex: 1;
+        margin-right: 0.5rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.9rem;
+        line-height: 1.3;
     }
 
-    &:not(.active) {
-      color: var(--p-text-muted-color) !important;
+    .favorite-btn {
+        opacity: 0.5;
+        transition: all 0.2s ease;
+        width: 2rem !important;
+        height: 2rem !important;
+        border-radius: 50% !important;
 
-      &:hover {
-        color: var(--p-red-500) !important;
-        opacity: 1;
-      }
+        &:hover {
+            transform: scale(1.1);
+        }
+
+        &.active {
+            color: #ef4444 !important;
+            opacity: 1;
+        }
+
+        &:not(.active) {
+            color: var(--p-text-muted-color) !important;
+
+            &:hover {
+                color: #ef4444 !important;
+                opacity: 1;
+            }
+        }
     }
-  }
 }
 
 .item-details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-left: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-left: 1.75rem;
 
-  .item-subtitle {
-    font-size: 0.8rem;
-    color: var(--p-text-muted-color);
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
+    .item-subtitle {
+        font-size: 0.8rem;
+        color: var(--p-text-color);
+        opacity: 0.8;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        font-weight: 500;
+    }
 
-  .item-time {
-    font-size: 0.75rem;
-    color: var(--p-text-muted-color);
-    font-weight: 500;
-    opacity: 0.8;
-  }
+    .item-time {
+        font-size: 0.75rem;
+        color: var(--p-text-color);
+        font-weight: 500;
+        opacity: 0.6;
+    }
 }
 
 // ================================
@@ -530,27 +510,26 @@
 // ================================
 
 :host ::ng-deep .custom-scrollpanel {
-  .p-scrollpanel-wrapper {
-    border-right: none !important;
-  }
-  
-  .p-scrollpanel-bar {
-    background: var(--p-primary-color) !important;
-    opacity: 0.3 !important;
-    width: 6px !important;
-    border-radius: 3px !important;
-    transition: all 0.2s ease !important;
-  }
-  
-  .p-scrollpanel-bar:hover {
-    opacity: 0.6 !important;
-  }
+    .p-scrollpanel-wrapper {
+        border-right: none !important;
+    }
 
-  .p-scrollpanel-content {
-    padding-right: 0.5rem !important;
-    // ✨ Ensure scrollpanel content respects theme
-    background: transparent !important;
-  }
+    .p-scrollpanel-bar {
+        background: #007bca !important;
+        opacity: 0.3 !important;
+        width: 6px !important;
+        border-radius: 3px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .p-scrollpanel-bar:hover {
+        opacity: 0.6 !important;
+    }
+
+    .p-scrollpanel-content {
+        padding-right: 0.5rem !important;
+        background: var(--p-content-background) !important;
+    }
 }
 
 // ================================
@@ -558,89 +537,90 @@
 // ================================
 
 @media (max-width: 768px) {
-  .sidebar-container {
-    &.sidebar-expanded {
-      width: 140px;
+    .sidebar-container {
+        &.sidebar-expanded {
+            width: 140px;
+        }
+
+        &.sidebar-collapsed {
+            width: 50px;
+        }
     }
 
-    &.sidebar-collapsed {
-      width: 50px;
-    }
-  }
-
-  :host ::ng-deep .favorites-popover-aura {
-    .p-popover {
-      min-width: 320px !important;
-      max-width: 90vw !important;
-      max-height: 70vh !important;
-    }
-  }
-
-  .favorites-section,
-  .history-section {
-    padding: 1rem;
-  }
-
-  .popover-header {
-    padding: 1.25rem;
-
-    .header-icon {
-      font-size: 1.75rem;
+    :host ::ng-deep .favorites-popover-custom {
+        .p-popover {
+            min-width: 320px !important;
+            max-width: 90vw !important;
+            max-height: 70vh !important;
+            left: 50px !important; // Adjust for collapsed sidebar
+        }
     }
 
-    .header-title {
-      font-size: 1.1rem;
+    .favorites-section,
+    .history-section {
+        padding: 1rem;
     }
 
-    .header-subtitle {
-      font-size: 0.85rem;
+    .popover-header {
+        padding: 1.25rem;
+
+        .header-icon {
+            font-size: 1.75rem;
+        }
+
+        .header-title {
+            font-size: 1.1rem;
+        }
+
+        .header-subtitle {
+            font-size: 0.85rem;
+        }
     }
-  }
 
-  .search-item {
-    padding: 0.75rem;
+    .search-item {
+        padding: 0.75rem;
 
-    .item-header .item-title {
-      font-size: 0.85rem;
+        .item-header .item-title {
+            font-size: 0.85rem;
+        }
+
+        .item-details {
+            margin-left: 1.5rem;
+
+            .item-subtitle {
+                font-size: 0.75rem;
+            }
+
+            .item-time {
+                font-size: 0.7rem;
+            }
+        }
     }
-
-    .item-details {
-      margin-left: 1.5rem;
-
-      .item-subtitle {
-        font-size: 0.75rem;
-      }
-
-      .item-time {
-        font-size: 0.7rem;
-      }
-    }
-  }
 }
 
 // ================================
 // DARK MODE SPECIFIC SIDEBAR ADJUSTMENTS
 // ================================
 
-:host-context([data-p-theme="dark"]) {
-  .sidebar-container {
-    background-color: #1a2332;
-    
-    .sidebar-seperator {
-      background-color: #0f4c75;
+[data-p-theme="dark"] {
+    .sidebar-container {
+        background-color: #1a2332;
+
+        .sidebar-seperator {
+            background-color: #007bca;
+        }
+
+        .side-nav-menu-item {
+            &:hover {
+                background-color: #2c3e50;
+            }
+
+            &.active {
+                background-color: #007bca;
+                color: white;
+            }
+        }
     }
-    
-    .side-nav-menu-item {
-      &:hover {
-        background-color: #2c3e50;
-      }
-      
-      &.active {
-        background-color: #3498db;
-        color: white;
-      }
-    }
-  }
 }
 
 // ================================
@@ -648,63 +628,63 @@
 // ================================
 
 :host ::ng-deep {
-  .p-badge {
-    &.p-badge-info {
-      background-color: var(--p-primary-color);
-      color: var(--p-primary-contrast-color);
-    }
-    
-    &.p-badge-success {
-      background-color: var(--p-green-500);
-      color: white;
-    }
-    
-    &.p-badge-secondary {
-      background-color: var(--p-surface-500);
-      color: white;
-    }
-  }
+    .p-badge {
+        &.p-badge-info {
+            background-color: #007bca;
+            color: white;
+        }
 
-  .p-button {
-    &.p-button-text {
-      color: var(--p-text-color);
-      
-      &:hover {
-        background-color: var(--p-text-hover-background);
-      }
-    }
-    
-    &.p-button-danger {
-      background-color: var(--p-red-500);
-      border-color: var(--p-red-500);
-      color: white;
-      
-      &:hover {
-        background-color: var(--p-red-600);
-        border-color: var(--p-red-600);
-      }
-    }
-  }
+        &.p-badge-success {
+            background-color: var(--p-green-500);
+            color: white;
+        }
 
-  .p-divider {
-    border-color: var(--p-content-border-color);
-  }
+        &.p-badge-secondary {
+            background-color: var(--p-surface-500);
+            color: white;
+        }
+    }
 
-  .p-confirm-dialog {
-    background: var(--p-content-background);
-    border: 1px solid var(--p-content-border-color);
-    border-radius: var(--p-border-radius-md);
-    
-    .p-dialog-header {
-      background: var(--p-content-background);
-      color: var(--p-text-color);
+    .p-button {
+        &.p-button-text {
+            color: var(--p-text-color);
+
+            &:hover {
+                background-color: var(--p-surface-hover);
+            }
+        }
+
+        &.p-button-danger {
+            background-color: #ef4444;
+            border-color: #ef4444;
+            color: white;
+
+            &:hover {
+                background-color: #dc2626;
+                border-color: #dc2626;
+            }
+        }
     }
-    
-    .p-dialog-content {
-      background: var(--p-content-background);
-      color: var(--p-text-color);
+
+    .p-divider {
+        border-color: var(--p-content-border-color);
     }
-  }
+
+    .p-confirm-dialog {
+        background: var(--p-content-background);
+        border: 1px solid var(--p-content-border-color);
+        border-radius: var(--p-border-radius-md);
+
+        .p-dialog-header {
+            background: var(--p-content-background);
+            color: var(--p-text-color);
+        }
+
+        .p-dialog-content {
+            background: var(--p-content-background);
+            color: var(--p-text-color);
+        }
+    }
 }
 
 // ================================
@@ -713,18 +693,18 @@
 
 .side-nav-menu-item:focus,
 .nav-button:focus {
-  outline: 2px solid var(--p-focus-ring-color);
-  outline-offset: 2px;
+    outline: 2px solid #007bca;
+    outline-offset: 2px;
 }
 
 .search-item:focus {
-  outline: 2px solid var(--p-focus-ring-color);
-  outline-offset: 2px;
+    outline: 2px solid #007bca;
+    outline-offset: 2px;
 }
 
 .favorite-btn:focus {
-  outline: 2px solid var(--p-focus-ring-color);
-  outline-offset: 2px;
+    outline: 2px solid #007bca;
+    outline-offset: 2px;
 }
 
 // ================================
@@ -732,20 +712,21 @@
 // ================================
 
 @media (prefers-reduced-motion: reduce) {
-  .search-item,
-  .favorite-btn,
-  .burger-menu,
-  .clear-btn,
-  .side-nav-menu-item {
-    transition: none !important;
-    transform: none !important;
-  }
 
-  .search-item:hover {
-    transform: none !important;
-  }
+    .search-item,
+    .favorite-btn,
+    .burger-menu,
+    .clear-btn,
+    .side-nav-menu-item {
+        transition: none !important;
+        transform: none !important;
+    }
 
-  .sidebar-container {
-    transition: none !important;
-  }
+    .search-item:hover {
+        transform: none !important;
+    }
+
+    .sidebar-container {
+        transition: none !important;
+    }
 }

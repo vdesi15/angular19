@@ -35,7 +35,7 @@
                 <li>
                     <button #favoritesButton
                         class="nav-item side-nav-menu-item list-group-item list-group-item-action nav-button"
-                        (click)="favoritesPopover.toggle($event)" title="Search history and saved favorites">
+                        (click)="showFavoritesPopover($event)" title="Search history and saved favorites">
                         <div class="nav_icons d-flex w-100 justify-content-start align-items-center">
                             <i class="fa fa-heart" [class.text-pink-500]="favoriteCount() > 0" aria-hidden="true"></i>
                             @if(drawerVisible()) {
@@ -55,12 +55,12 @@
         <div class="sidebar-spacer"></div>
     </div>
 
-    <!--  PrimeNG Aura theme compliant popover with blue/teal colors -->
-    <p-popover #favoritesPopover [dismissable]="true" [showCloseIcon]="true" [appendTo]="'body'" position="right"
-        styleClass="favorites-popover-aura">
+    <!--   FIXED POPOVER - Manually positioned to the right -->
+    <p-popover #favoritesPopover [dismissable]="true" [showCloseIcon]="true" [appendTo]="'body'" [autoZIndex]="true"
+        [baseZIndex]="10000" styleClass="favorites-popover-custom">
 
         <div class="favorites-container">
-            <!-- Header with blue/teal gradient -->
+            <!-- Header with #007bca gradient -->
             <div class="popover-header">
                 <div class="header-content">
                     <i class="pi pi-heart header-icon"></i>
