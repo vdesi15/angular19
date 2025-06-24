@@ -143,6 +143,53 @@ export class FiltersService {
     const dateRange = this.dateTimeService.calculateDateRangeFromUrlParams(params);
     return { application: validApps, environment, location, timezone, dateRange, streamFilters };
   }
+
+  public parseAndApplyUrlParameters(params: Params): void {
+  console.log('[FiltersService] Parsing URL parameters:', params);
+  
+  const metadata = this.searchFilterMetadata();
+  if (!metadata) {
+    console.warn('[FiltersService] Cannot parse URL params without metadata');
+    return;
+  }
+
+  try {
+    const parsedFilters = this.parseFiltersFromParams(params, metadata);
+    console.log('[FiltersService] Parsed filters from URL:', parsedFilters);
+    
+    // Apply the parsed filters without triggering URL updates
+    this._filters.set(parsedFilters);
+    console.log('[FiltersService] URL parameters successfully applied');
+    
+  } catch (error) {
+    console.error('[FiltersService] Error parsing URL parameters:', error);
+    // Fall back to default filters on error
+    this.initializeFiltersFromMetadata(metadata);
+  }
+
+  /**
+ * Initialize filters from metadata (fallback method)
+ */
+private initializeFiltersFromMetadata(metadata: SearchFilterMetadata): void {
+  const defaultApp = metadata.applications?.[0]?.label || '';
+  const defaultEnv = Object.keys(metadata.environments)[0] || '';
+  const defaultLoc = defaultEnv ? (metadata.environments[defaultEnv]?.[0] || '') : '';
+  const timezone = defaultLoc && metadata.locationTimezone?.[defaultLoc] 
+    ? metadata.locationTimezone[defaultLoc] 
+    : 'UTC';
+
+  const filters: SearchFilterModel = {
+    application: defaultApp ? [defaultApp] : [],
+    environment: defaultEnv,
+    location: defaultLoc,
+    timezone,
+    dateRange: this.dateTimeService.getDefaultDateRange(),
+    streamFilters: ''
+  };
+
+  this._filters.set(filters);
+  console.log('[FiltersService] Initialized filters from metadata:', filters);
+}
   
   private findActiveRoute(route: ActivatedRouteSnapshot): ActivatedRouteSnapshot {
     if (route.firstChild) return this.findActiveRoute(route.firstChild);
