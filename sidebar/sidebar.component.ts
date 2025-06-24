@@ -47,6 +47,30 @@ export class SidebarComponent {
     public favoriteCount = computed(() => this.favoriteItems().length);
 
     /**
+     *  Show favorites popover positioned to the right
+     */
+    public showFavoritesPopover(event: Event): void {
+        // Use the event target for positioning
+        this.favoritesPopover.toggle(event);
+
+        // Force positioning after the popover opens
+        setTimeout(() => {
+            const popoverEl = document.querySelector('.favorites-popover-custom') as HTMLElement;
+            if (popoverEl) {
+                const buttonRect = this.favoritesButton.nativeElement.getBoundingClientRect();
+                const sidebarWidth = this.drawerVisible() ? 145 : 55;
+
+                // Position to the right of the sidebar
+                popoverEl.style.position = 'fixed';
+                popoverEl.style.left = `${sidebarWidth + 10}px`;
+                popoverEl.style.top = `${buttonRect.top + (buttonRect.height / 2)}px`;
+                popoverEl.style.transform = 'translateY(-50%)';
+                popoverEl.style.zIndex = '10000';
+            }
+        }, 10);
+    }
+
+    /**
      * Toggle sidebar expanded/collapsed state
      */
     toggleSidebar(): void {

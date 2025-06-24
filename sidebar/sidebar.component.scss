@@ -132,10 +132,12 @@
 }
 
 // ================================
-// POPOVER POSITIONING - PROPER RIGHT POSITIONING WITH ARROW
+// POPOVER POSITIONING - PrimeNG v19 Compatible
 // ================================
 
 :host ::ng-deep .favorites-popover-custom {
+
+    //  MAIN POPOVER STYLING
     .p-popover {
         background: var(--p-content-background) !important;
         border: 1px solid var(--p-content-border-color) !important;
@@ -145,6 +147,9 @@
         max-width: 500px !important;
         max-height: 80vh !important;
         overflow: hidden !important;
+
+        //  POSITIONING WILL BE HANDLED BY TYPESCRIPT
+        position: fixed !important;
     }
 
     .p-popover-content {
@@ -153,45 +158,39 @@
         overflow: hidden !important;
     }
 
-    //  ARROW POSITIONING - Left side pointing to sidebar
+    //  CUSTOM ARROW - Points to the left (toward sidebar)
+    &::before {
+        content: '';
+        position: absolute;
+        left: -8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-top: 8px solid transparent;
+        border-bottom: 8px solid transparent;
+        border-right: 8px solid var(--p-content-background);
+        z-index: 1;
+    }
+
+    //  ARROW BORDER (for the border effect)
+    &::after {
+        content: '';
+        position: absolute;
+        left: -9px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-top: 9px solid transparent;
+        border-bottom: 9px solid transparent;
+        border-right: 9px solid var(--p-content-border-color);
+        z-index: 0;
+    }
+
+    //  Hide default PrimeNG arrow if it exists
     .p-popover-arrow {
-        border-right-color: var(--p-content-background) !important;
-        border-left: none !important;
-        border-top: 8px solid transparent !important;
-        border-bottom: 8px solid transparent !important;
-        border-right: 8px solid var(--p-content-background) !important;
-        left: -8px !important;
-        top: 50% !important;
-        transform: translateY(-50%) !important;
-    }
-
-    //  FORCE RIGHT POSITIONING
-    &[data-p-placement*="right"] {
-        margin-left: 8px !important;
-
-        .p-popover-arrow {
-            left: -8px !important;
-            border-right-color: var(--p-content-background) !important;
-        }
-    }
-
-    //  OVERRIDE ANY OTHER POSITIONING
-    &[data-p-placement*="bottom"],
-    &[data-p-placement*="top"],
-    &[data-p-placement*="left"] {
-        // Force to right position
-        transform: translateX(160px) translateY(-50%) !important;
-
-        .p-popover-arrow {
-            left: -8px !important;
-            top: 50% !important;
-            transform: translateY(-50%) !important;
-            border-right-color: var(--p-content-background) !important;
-            border-left: none !important;
-            border-top: 8px solid transparent !important;
-            border-bottom: 8px solid transparent !important;
-            border-right: 8px solid var(--p-content-background) !important;
-        }
+        display: none !important;
     }
 }
 
