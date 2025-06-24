@@ -57,32 +57,36 @@ export const CustomPreset = definePreset(Aura, {
   },
   
   components: {
-    // Accordion customization using your specified colors
+    // Accordion customization with reduced padding and professional colors
     accordion: {
       panel: {
         borderWidth: '1px',
-        borderColor: '{surface.300}'
+        borderColor: '{surface.300}',
+        borderRadius: '6px'
       },
       header: {
         color: '{text.color}',
         borderWidth: '1px',
         borderColor: '{surface.300}',
-        background: '#f7f7f7', // Your specified light mode color
-        hoverBackground: '#e5e5e5',
-        borderRadius: '6px'
+        background: '#b8b8b8', // Darker shade of #CDCDCD
+        hoverBackground: '#a8a8a8',
+        borderRadius: '6px',
+        padding: '0.5rem 1rem', // Reduced padding
+        fontWeight: '600'
       },
       content: {
         background: '#f7f7f7', // Your specified light mode color
         color: '{text.color}',
         borderWidth: '1px',
         borderColor: '{surface.300}',
-        borderRadius: '6px'
+        borderRadius: '6px',
+        padding: '0.75rem' // Reduced padding
       },
       colorScheme: {
         dark: {
           header: {
-            background: '#2a2a2a', // Your specified dark mode color
-            hoverBackground: '#1e1e1e',
+            background: '#1a1a1a', // Darker shade for dark mode
+            hoverBackground: '#0f0f0f',
             color: '{text.color}'
           },
           content: {
@@ -99,61 +103,114 @@ export const CustomPreset = definePreset(Aura, {
       borderColor: '#0171c5',
       color: '#ffffff',
       gap: '0.5rem',
-      padding: '0.75rem 1rem'
+      padding: '0.5rem 1rem' // Reduced padding
     },
     
-    // DataTable customization for gridlines
+    // DataTable customization for compact layout and professional colors
     datatable: {
       header: {
         cell: {
           borderColor: '#CDCDCD', // Your specified gridline color
-          borderWidth: '1px'
+          borderWidth: '1px',
+          background: '#CDCDCD', // Professional header background
+          color: '#333333', // Dark text for contrast
+          padding: '0.375rem 0.5rem', // Compact padding
+          fontSize: '0.875rem',
+          fontWeight: '600'
         }
       },
       body: {
         cell: {
           borderColor: '#CDCDCD', // Your specified gridline color
-          borderWidth: '1px'
+          borderWidth: '1px',
+          padding: '0.25rem 0.5rem', // Very compact padding
+          fontSize: '0.875rem'
+        }
+      },
+      filter: {
+        cell: {
+          background: '#CDCDCD', // Same as header
+          borderColor: '#CDCDCD',
+          padding: '0.2rem' // Minimal padding for filter row
         }
       },
       colorScheme: {
         dark: {
           header: {
             cell: {
-              borderColor: '#404040' // Dark mode gridline color
+              borderColor: '#404040', // Dark mode gridline color
+              background: '#404040', // Dark mode header background
+              color: '#e5e5e5' // Light text for dark mode
             }
           },
           body: {
             cell: {
               borderColor: '#404040' // Dark mode gridline color
             }
-          }
-        }
-      }
-    },
-    
-    // Button customizations for toolbar
-    button: {
-      colorScheme: {
-        dark: {
-          text: {
-            primary: {
-              color: '#ffffff'
+          },
+          filter: {
+            cell: {
+              background: '#404040', // Dark mode filter background
+              borderColor: '#404040'
             }
           }
         }
       }
     },
     
-    // Input customizations for proper sizing
+    // Button customizations with proper contrast
+    button: {
+      root: {
+        fontSize: '0.875rem',
+        fontWeight: '500'
+      },
+      outlined: {
+        primary: {
+          color: '#0171c5', // Professional blue for light mode
+          borderColor: '#0171c5',
+          hoverColor: '#ffffff',
+          hoverBackground: '#0171c5'
+        }
+      },
+      text: {
+        primary: {
+          color: '#0171c5', // Professional blue for light mode
+          hoverColor: '#0171c5',
+          hoverBackground: 'rgba(1, 113, 197, 0.1)'
+        }
+      },
+      colorScheme: {
+        dark: {
+          outlined: {
+            primary: {
+              color: '#60a5fa', // Light blue for dark mode
+              borderColor: '#60a5fa',
+              hoverColor: '#000000',
+              hoverBackground: '#60a5fa'
+            }
+          },
+          text: {
+            primary: {
+              color: '#60a5fa', // Light blue for dark mode
+              hoverColor: '#60a5fa',
+              hoverBackground: 'rgba(96, 165, 250, 0.1)'
+            }
+          }
+        }
+      }
+    },
+    
+    // Input customizations for proper sizing and compact layout
     inputtext: {
-      paddingX: '0.5rem',
-      paddingY: '0.375rem',
-      fontSize: '0.875rem'
+      paddingX: '0.375rem',
+      paddingY: '0.25rem',
+      fontSize: '0.8rem',
+      borderRadius: '4px'
     },
     
     // Dropdown customizations for toolbar
     dropdown: {
+      fontSize: '0.875rem',
       colorScheme: {
         dark: {
           background: 'rgba(255, 255, 255, 0.1)',
@@ -165,6 +222,7 @@ export const CustomPreset = definePreset(Aura, {
     
     // MultiSelect customizations for toolbar  
     multiselect: {
+      fontSize: '0.875rem',
       colorScheme: {
         dark: {
           background: 'rgba(255, 255, 255, 0.1)',
