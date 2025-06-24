@@ -1,24 +1,30 @@
 // src/app/core/services/theme.service.ts
-import { Injectable, signal, effect, WritableSignal } from '@angular/core';
+import { Injectable, signal, effect, inject, DOCUMENT, computed } from '@angular/core';
+
+export type ThemeMode = 'light' | 'dark';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ThemeService {
-  private readonly THEME_KEY = 'app-theme';
+  private document = inject(DOCUMENT);
+  private readonly STORAGE_KEY = 'app-theme-mode';
+  private readonly DARK_MODE_CLASS = 'app-dark';
+
+  // Signal for current theme mode - default to dark
+  public readonly currentMode = signal<ThemeMode>('dark');
   
-  // Default to dark mode
-  public readonly isDarkMode: WritableSignal<boolean> = signal(true);
+  // Computed signal for dark mode state
+  public readonly isDarkMode = computed(() => this.currentMode() === 'dark');
 
   constructor() {
-    // Load theme from localStorage or default to dark
-    const savedTheme = localStorage.getItem(this.THEME_KEY);
-    const prefersDark = savedTheme === 'dark' || (!savedTheme);
-    this.isDarkMode.set(prefersDark);
-
-    // Apply theme effect
+    // Load saved theme or default to dark
+    this.loadSavedTheme();
+    
+    // Effect to update DOM when theme changes
     effect(() => {
-      this.applyTheme(this.isDarkMode());
+      this.applyTheme(this.currentMode());
+      this.saveTheme(this.currentMode());
     });
   }
 
@@ -26,42 +32,72 @@ export class ThemeService {
    * Toggle between light and dark mode
    */
   public toggleTheme(): void {
-    this.isDarkMode.update(isDark => !isDark);
+    this.currentMode.update(mode => mode === 'light' ? 'dark' : 'light');
   }
 
   /**
-   * Set specific theme
+   * Set specific theme mode
    */
-  public setTheme(isDark: boolean): void {
-    this.isDarkMode.set(isDark);
+  public setTheme(mode: ThemeMode): void {
+    this.currentMode.set(mode);
   }
 
   /**
-   * Apply theme to document
+   * Apply theme to DOM using PrimeNG's darkModeSelector approach
    */
-  private applyTheme(isDark: boolean): void {
-    const theme = isDark ? 'dark' : 'light';
-    const htmlElement = document.documentElement;
+  private applyTheme(mode: ThemeMode): void {
+    const htmlElement = this.document.documentElement;
     
-    // Remove existing theme classes
-    htmlElement.classList.remove('light-theme', 'dark-theme');
+    if (mode === 'dark') {
+      htmlElement.classList.add(this.DARK_MODE_CLASS);
+    } else {
+      htmlElement.classList.remove(this.DARK_MODE_CLASS);
+    }
     
-    // Add new theme class
-    htmlElement.classList.add(`${theme}-theme`);
-    
-    // Set data attribute for PrimeNG
-    htmlElement.setAttribute('data-theme', theme);
-    
-    // Save to localStorage
-    localStorage.setItem(this.THEME_KEY, theme);
-    
-    console.log(`[ThemeService] Applied ${theme} theme`);
+    console.log(`[ThemeService] Applied ${mode} theme with class: ${this.DARK_MODE_CLASS}`);
   }
 
   /**
-   * Get current theme name
+   * Load saved theme from localStorage
    */
-  public getCurrentTheme(): string {
-    return this.isDarkMode() ? 'dark' : 'light';
+  private loadSavedTheme(): void {
+    try {
+      const saved = localStorage.getItem(this.STORAGE_KEY) as ThemeMode;
+      if (saved && (saved === 'light' || saved === 'dark')) {
+        this.currentMode.set(saved);
+      }
+      // If no saved theme, defaults to 'dark' from signal initialization
+    } catch (error) {
+      console.warn('[ThemeService] Failed to load saved theme:', error);
+      // Defaults to 'dark' from signal initialization
+    }
+  }
+
+  /**
+   * Save theme to localStorage
+   */
+  private saveTheme(mode: ThemeMode): void {
+    try {
+      localStorage.setItem(this.STORAGE_KEY, mode);
+    } catch (error) {
+      console.warn('[ThemeService] Failed to save theme:', error);
+    }
+  }
+
+  /**
+   * Get theme-aware color values using PrimeNG design tokens
+   */
+  public getThemedColor(lightColor: string, darkColor: string): string {
+    return this.isDarkMode() ? darkColor : lightColor;
+  }
+
+  /**
+   * Check system preference
+   */
+  public getSystemThemePreference(): ThemeMode {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
   }
 }

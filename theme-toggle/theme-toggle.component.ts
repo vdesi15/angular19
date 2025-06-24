@@ -1,91 +1,79 @@
-// src/app/core/services/theme.service.ts
-import { Injectable, signal, effect, WritableSignal, DOCUMENT, inject } from '@angular/core';
+// src/app/shared/components/theme-toggle/theme-toggle.component.ts
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
+import { ThemeService } from 'src/app/core/services/theme.service';
 
-@Injectable({
-  providedIn: 'root'
-})
-export class ThemeService {
-  private document = inject(DOCUMENT);
-  private readonly THEME_KEY = 'app-theme';
-  
-  // Default to dark mode
-  public readonly isDarkMode: WritableSignal<boolean> = signal(true);
-
-  // PrimeNG theme URLs
-  private readonly themes = {
-    light: 'bootstrap4-light-blue', // PrimeNG light theme
-    dark: 'bootstrap4-dark-blue'    // PrimeNG dark theme
-  };
-
-  constructor() {
-    // Load theme from localStorage or default to dark
-    const savedTheme = localStorage.getItem(this.THEME_KEY);
-    const prefersDark = savedTheme === 'dark' || (!savedTheme);
-    this.isDarkMode.set(prefersDark);
-
-    // Apply theme effect
-    effect(() => {
-      this.switchPrimeNGTheme(this.isDarkMode());
-    });
-  }
-
-  /**
-   * Toggle between light and dark mode
-   */
-  public toggleTheme(): void {
-    this.isDarkMode.update(isDark => !isDark);
-  }
-
-  /**
-   * Set specific theme
-   */
-  public setTheme(isDark: boolean): void {
-    this.isDarkMode.set(isDark);
-  }
-
-  /**
-   * Switch PrimeNG theme dynamically
-   */
-  private switchPrimeNGTheme(isDark: boolean): void {
-    const themeName = isDark ? this.themes.dark : this.themes.light;
-    const themeKey = isDark ? 'dark' : 'light';
-    
-    // Find existing theme link
-    const existingThemeLink = this.document.getElementById('app-theme') as HTMLLinkElement;
-    
-    if (existingThemeLink) {
-      // Update existing theme
-      existingThemeLink.href = `https://cdn.jsdelivr.net/npm/primeng@19.0.0/resources/themes/${themeName}/theme.css`;
-    } else {
-      // Create new theme link if it doesn't exist
-      const themeLink = this.document.createElement('link');
-      themeLink.id = 'app-theme';
-      themeLink.rel = 'stylesheet';
-      themeLink.type = 'text/css';
-      themeLink.href = `https://cdn.jsdelivr.net/npm/primeng@19.0.0/resources/themes/${themeName}/theme.css`;
-      this.document.head.appendChild(themeLink);
+@Component({
+  selector: 'app-theme-toggle',
+  standalone: true,
+  imports: [CommonModule, ButtonModule, TooltipModule],
+  template: `
+    <button 
+      pButton 
+      type="button" 
+      [icon]="themeService.isDarkMode() ? 'pi pi-sun' : 'pi pi-moon'"
+      class="p-button-text p-button-rounded theme-toggle-btn"
+      (click)="themeService.toggleTheme()"
+      [pTooltip]="getTooltipText()"
+      tooltipPosition="bottom">
+    </button>
+  `,
+  styles: [`
+    .theme-toggle-btn {
+      width: 2.5rem;
+      height: 2.5rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      
+      &:hover {
+        background-color: var(--surface-hover) !important;
+        transform: scale(1.05);
+      }
+      
+      .pi {
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+      }
+      
+      // Light mode styling
+      .light-mode & {
+        color: var(--yellow-600);
+        
+        &:hover {
+          color: var(--yellow-500);
+          background-color: var(--yellow-50) !important;
+        }
+      }
+      
+      // Dark mode styling  
+      .dark-mode & {
+        color: var(--blue-300);
+        
+        &:hover {
+          color: var(--blue-200);
+          background-color: var(--blue-900) !important;
+        }
+      }
     }
     
-    // Add data attribute for any custom styles that need theme awareness
-    this.document.documentElement.setAttribute('data-theme', themeKey);
+    // Smooth icon transition animation
+    @keyframes fadeIn {
+      from { opacity: 0; transform: rotate(-180deg); }
+      to { opacity: 1; transform: rotate(0deg); }
+    }
     
-    // Save to localStorage
-    localStorage.setItem(this.THEME_KEY, themeKey);
-    
-    console.log(`[ThemeService] Applied PrimeNG ${themeKey} theme: ${themeName}`);
-  }
+    .theme-toggle-btn .pi {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+  `]
+})
+export class ThemeToggleComponent {
+  public themeService = inject(ThemeService);
 
-  /**
-   * Get current theme name
-   */
-  public getCurrentTheme(): string {
-    return this.isDarkMode() ? 'dark' : 'light';
-  }
-
-  /**
-   * Get current PrimeNG theme name
-   */
-  public getCurrentPrimeNGTheme(): string {
-    return this.isDarkMode() ? this.themes.dark : this.themes.light;
+  public getTooltipText(): string {
+    return this.themeService.isDarkMode() 
+      ? 'Switch to light mode' 
+      : 'Switch to dark mode';
   }
 }

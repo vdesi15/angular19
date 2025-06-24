@@ -1,739 +1,376 @@
-// src/app/core/components/sidebar/sidebar.component.scss - Arrow completely removed
-// ================================
-// SIDEBAR CONTAINER - FULL HEIGHT
-// ================================
-
+// log-viewer.component.scss - Simplified using PrimeNG design tokens
 :host {
-    display: block;
-    height: 100vh;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 0;
+  margin-top: 20px;
 }
 
-.sidebar-container {
-    background-color: #2a4062;
-    padding: 0;
-    overflow-x: hidden;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-
-    &.sidebar-expanded {
-        width: 145px;
-    }
-
-    &.sidebar-collapsed {
-        width: 55px;
-        transition: width 0.3s ease;
-        background-color: #2a4062;
-    }
-
-    .sidebar-seperator {
-        background-color: #007bca;
-        height: 35px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        flex-shrink: 0;
-
-        .burger-menu {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            font-size: 1rem;
-            align-items: center;
-            gap: 1.5rem;
-            width: 100%;
-
-            i {
-                font-size: 13px;
-            }
-
-            span {
-                font-size: 13px;
-                white-space: nowrap;
-            }
-        }
-    }
-
-    .sidebar-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-
-    .nav-list {
-        flex-shrink: 0;
-    }
-
-    .sidebar-spacer {
-        flex: 1;
-    }
-
-    .list-group {
-        padding-left: 0px;
-        margin: 0px;
-        display: flex;
-        flex-direction: column;
-
-        .active {
-            background-color: #38aecc;
-            color: #2a4062;
-            border: 1px solid #007bff;
-        }
-    }
-
-    .side-nav-menu-item {
-        display: flex;
-        align-items: center;
-        background: center;
-        border: 1px solid rgba(0, 0, 0, .125);
-        border-radius: .25rem;
-        padding: .75rem 1.25rem;
-        width: -webkit-fill-available;
-        cursor: pointer;
-        font-size: 13px;
-        color: rgb(255, 255, 255);
-        height: 50px;
-        text-decoration: none;
-
-        &:hover {
-            background-color: #13518e;
-            color: white;
-        }
-    }
-
-    .nav-button {
-        background: none;
-        border: 1px solid rgba(0, 0, 0, .125);
-        border-radius: .25rem;
-
-        &:focus {
-            outline: 2px solid #38aecc;
-            outline-offset: 2px;
-        }
-    }
-
-    .nav_icons {
-        i {
-            font-size: 14px;
-            margin-right: 10px;
-        }
-
-        .text-pink-500 {
-            color: #ec4899 !important;
-        }
-
-        .ml-auto {
-            margin-left: auto;
-        }
-    }
+.table-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  position: relative;
 }
 
 // ================================
-// POPOVER POSITIONING - NO ARROW AT ALL
+// TABLE CAPTION STYLING
 // ================================
-
-:host ::ng-deep .favorites-popover-custom {
-
-    //  MAIN POPOVER STYLING - NO ARROW
-    .p-popover {
-        background: var(--app-background) !important;
-        border: 1px solid var(--app-border) !important;
-        border-radius: 8px !important;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
-        min-width: 420px !important;
-        max-width: 500px !important;
-        max-height: 80vh !important;
-        overflow: visible !important;
-        position: fixed !important;
+:host ::ng-deep .table-caption {
+  padding: 0.75rem 1rem;
+  background: var(--p-content-background);
+  border-bottom: 1px solid var(--p-content-border-color);
+  
+  .p-iconfield {
+    max-width: 300px;
+    
+    .global-search-input {
+      width: 100%;
+      font-size: 0.875rem;
+      padding: 0.5rem 2.5rem 0.5rem 2.5rem;
     }
-
-    .p-popover-content {
-        padding: 0 !important;
-        border-radius: 8px !important;
-        overflow: hidden !important;
+    
+    .p-inputicon {
+      color: var(--p-text-muted-color);
     }
-
-    //  COMPLETELY REMOVE ALL ARROWS AND PSEUDO ELEMENTS
-    .p-popover::after,
-    .p-popover::before,
-    .p-popover-arrow,
-    .p-popover-content::before,
-    .p-popover-content::after {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        content: none !important;
-    }
+  }
 }
 
 // ================================
-// FAVORITES CONTAINER - FIXED HEIGHT LAYOUT
+// MAIN DATATABLE STYLING
 // ================================
-
-.favorites-container {
-    display: flex;
-    flex-direction: column;
-    height: 70vh;
-    background: var(--app-background);
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-// ================================
-// POPOVER HEADER - #007bca GRADIENT WITH THEME SUPPORT
-// ================================
-
-.popover-header {
-    background: linear-gradient(135deg, #005a94 0%, #007bca 50%, #0099e6 100%);
-    padding: 1.5rem;
-    color: white;
-    position: relative;
-    overflow: hidden;
-    flex-shrink: 0;
-
-    // Dark mode gets same gradient - looks good in both themes
-    .dark-theme & {
-        background: linear-gradient(135deg, #004466 0%, #005a94 50%, #007bca 100%);
-    }
-
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-        opacity: 0.8;
-    }
-
-    .header-content {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        position: relative;
-        z-index: 1;
-    }
-
-    .header-icon {
-        font-size: 2rem;
-        opacity: 0.95;
-        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-    }
-
-    .header-text {
-        flex: 1;
-
-        .header-title {
-            margin: 0 0 0.25rem 0;
-            font-size: 1.25rem;
-            font-weight: 600;
-            line-height: 1.2;
-        }
-
-        .header-subtitle {
-            margin: 0;
-            font-size: 0.9rem;
-            opacity: 0.9;
-            line-height: 1.3;
-        }
-    }
-}
-
-// ================================
-// SECTION STYLES - THEME AWARE WITH FIXED LAYOUT
-// ================================
-
-.favorites-section,
-.history-section {
-    padding: 1.25rem;
-    background: var(--app-background);
-    flex-shrink: 0;
-}
-
-.favorites-section {
-    min-height: 120px;
-    max-height: 280px;
-}
-
-.history-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+:host ::ng-deep .p-datatable.p-component {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
+  .p-datatable-wrapper {
+    flex-grow: 1;
+    overflow: auto;
     min-height: 0;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--app-border);
-    flex-shrink: 0;
-
-    .section-title {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+  }
+  
+  // ================================
+  // HEADER STYLING
+  // ================================
+  .p-datatable-thead {
+    tr.column-header {
+      th {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.875rem;
         font-weight: 600;
-        color: var(--app-text-primary);
-        font-size: 0.95rem;
-
-        i {
-            font-size: 1rem;
-            color: #007bca;
-        }
-    }
-
-    .clear-btn {
-        opacity: 0.7;
-        transition: all 0.2s ease;
-
-        &:hover {
-            opacity: 1;
-            transform: scale(1.05);
-        }
-    }
-}
-
-.section-divider {
-    margin: 0 !important;
-    flex-shrink: 0;
-
-    &.p-divider {
-        border-color: var(--app-border) !important;
-    }
-}
-
-// ================================
-// ITEMS CONTAINER - PROPER BACKGROUNDS
-// ================================
-
-.items-container {
-    min-height: 80px;
-    background: var(--app-background);
-}
-
-.empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem 1rem;
-    text-align: center;
-    background: var(--app-background);
-
-    .empty-icon {
-        font-size: 2.5rem;
-        margin-bottom: 0.75rem;
-        opacity: 0.4;
-        color: var(--app-text-secondary);
-    }
-
-    .empty-text {
-        margin: 0 0 0.5rem 0;
-        font-weight: 500;
-        font-size: 0.95rem;
-        color: var(--app-text-primary);
-    }
-
-    .empty-hint {
-        margin: 0;
-        font-size: 0.8rem;
-        color: var(--app-text-secondary);
-        opacity: 0.7;
-    }
-}
-
-// ================================
-// SEARCH ITEMS - PROPER DARK MODE CONTRAST
-// ================================
-
-.search-item {
-    padding: 0.875rem;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid transparent;
-    margin-bottom: 0.5rem;
-    position: relative;
-    overflow: hidden;
-
-    // LIGHT MODE - Nice gray with good contrast
-    background: #f1f5f9;
-    border-color: #cbd5e1;
-    color: #1e293b;
-
-    // DARK MODE - Much darker for better contrast
-    .dark-theme & {
-        background: #374151;
-        border-color: #4b5563;
-        color: #f9fafb;
-    }
-
-    &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-
-        // LIGHT MODE HOVER - Darker gray
-        background: #e2e8f0;
-        border-color: #94a3b8;
-
-        // DARK MODE HOVER - Lighter but still dark
-        .dark-theme & {
-            background: #4b5563;
-            border-color: #6b7280;
-        }
-
-        .favorite-btn {
-            opacity: 1;
-        }
-    }
-
-    // FAVORITES - Blue accent
-    &.favorite-item {
-        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-        border-color: #3b82f6;
-
-        .dark-theme & {
-            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-            border-color: #3b82f6;
-            color: #e5e7eb;
-        }
-
-        &:hover {
-            background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
-            border-color: #2563eb;
-
-            .dark-theme & {
-                background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
-                border-color: #60a5fa;
-            }
-        }
-    }
-}
-
-.item-main {
-    width: 100%;
-    position: relative;
-    z-index: 1;
-}
-
-.item-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    gap: 0.75rem;
-
-    .item-icon {
-        font-size: 1rem;
-        color: #007bca;
-        opacity: 0.8;
-        min-width: 16px;
-    }
-
-    .item-title {
-        font-weight: 600;
-        color: #1e293b;
-        flex: 1;
-        margin-right: 0.5rem;
+        position: relative;
         white-space: nowrap;
+        
+        // Ensure column width is respected
+        box-sizing: border-box;
         overflow: hidden;
         text-overflow: ellipsis;
-        font-size: 0.9rem;
-        line-height: 1.3;
-
-        .dark-theme & {
-            color: #f9fafb;
-        }
+      }
     }
-
-    .favorite-btn {
-        opacity: 0.5;
-        transition: all 0.2s ease;
-        width: 2rem !important;
-        height: 2rem !important;
-        border-radius: 50% !important;
-
-        &:hover {
-            transform: scale(1.1);
-        }
-
-        &.active {
-            color: #ef4444 !important;
-            opacity: 1;
-        }
-
-        &:not(.active) {
-            color: var(--app-text-secondary) !important;
-
-            &:hover {
-                color: #ef4444 !important;
-                opacity: 1;
+    
+    // ================================
+    // FILTER ROW STYLING - ONLY ESSENTIAL FIXES
+    // ================================
+    tr.p-filter-row {
+      th.filter-header {
+        padding: 0.25rem !important;
+        
+        // FORCE COLUMN WIDTH INHERITANCE
+        box-sizing: border-box !important;
+        
+        .p-column-filter {
+          width: 100% !important;
+          display: block !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          
+          .p-column-filter-element {
+            width: 100% !important;
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            
+            .filter-input {
+              // CRITICAL: Respect the exact column width
+              width: 100% !important;
+              min-width: 100% !important;
+              max-width: 100% !important;
+              box-sizing: border-box !important;
+              
+              // Remove any margins or padding that could cause overflow
+              margin: 0 !important;
+              padding: 0.375rem 0.5rem !important;
+              font-size: 0.8rem !important;
+              height: 2rem !important;
+              border-radius: 4px;
+              
+              // Focus styling using PrimeNG tokens
+              &:focus {
+                border-color: var(--p-focus-ring-color);
+                box-shadow: var(--p-focus-ring-shadow);
+                outline: none;
+              }
+              
+              // Placeholder styling
+              &::placeholder {
+                color: var(--p-text-muted-color);
+                opacity: 0.7;
+                font-size: 0.75rem;
+              }
+              
+              // HIDE ALL CLEAR BUTTONS AND SEARCH DECORATIONS
+              &::-webkit-search-cancel-button,
+              &::-webkit-search-decoration,
+              &::-webkit-search-results-button,
+              &::-webkit-search-results-decoration {
+                display: none !important;
+                -webkit-appearance: none !important;
+              }
+              
+              // For Firefox
+              &::-moz-search-cancel-button {
+                display: none !important;
+              }
             }
+          }
+          
+          // HIDE PRIMENG CLEAR BUTTON COMPLETELY
+          .p-column-filter-clear-button,
+          .p-column-filter-remove-button,
+          .p-button.p-column-filter-clear-button {
+            display: none !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+          
+          // Hide menu button if it appears
+          .p-column-filter-menu-button {
+            display: none !important;
+          }
         }
+      }
     }
-}
-
-.item-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    margin-left: 1.75rem;
-
-    .item-subtitle {
-        font-size: 0.8rem;
-        color: #64748b;
-        line-height: 1.4;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
+  }
+  
+  // ================================
+  // BODY STYLING
+  // ================================
+  .p-datatable-tbody {
+    tr.data-row {
+      transition: background-color 0.2s ease;
+      
+      &:hover {
+        background-color: var(--p-content-hover-background);
+      }
+      
+      &.clickable-row {
+        cursor: pointer;
+      }
+      
+      td {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+        
+        // Ensure column width is respected in body cells too
+        box-sizing: border-box;
         overflow: hidden;
-        font-weight: 500;
-
-        .dark-theme & {
-            color: #cbd5e1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        
+        // ================================
+        // CLICKABLE CELL STYLING
+        // ================================
+        &.clickable-cell {
+          cursor: pointer;
+          transition: all 0.2s ease;
+          position: relative;
+          
+          &:hover {
+            background-color: var(--p-content-hover-background);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          }
+          
+          &.transaction-cell {
+            color: var(--p-primary-color);
+            font-weight: 500;
+            
+            &:hover {
+              color: var(--p-primary-contrast-color);
+              background-color: var(--p-primary-color);
+              text-decoration: underline;
+            }
+            
+            &::after {
+              content: '🔗';
+              font-size: 0.7rem;
+              margin-left: 0.25rem;
+              opacity: 0.7;
+            }
+          }
+          
+          &.editor-cell {
+            color: var(--p-orange-500);
+            font-weight: 500;
+            
+            &:hover {
+              color: white;
+              background-color: var(--p-orange-500);
+            }
+            
+            &::after {
+              content: '📝';
+              font-size: 0.7rem;
+              margin-left: 0.25rem;
+              opacity: 0.7;
+            }
+          }
         }
+      }
     }
-
-    .item-time {
-        font-size: 0.75rem;
-        color: #94a3b8;
-        font-weight: 500;
-
-        .dark-theme & {
-            color: #9ca3af;
-        }
+  }
+  
+  // ================================
+  // PAGINATOR STYLING
+  // ================================
+  .p-paginator {
+    padding: 0.75rem 1rem;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    
+    visibility: visible !important;
+    display: flex !important;
+    
+    .p-paginator-element {
+      min-width: 2.5rem;
+      height: 2.5rem;
+      font-size: 0.875rem;
     }
+    
+    .p-dropdown {
+      height: 2.5rem;
+      
+      .p-dropdown-label {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+      }
+      
+      .p-dropdown-panel {
+        bottom: 100% !important;
+        top: auto !important;
+        transform-origin: bottom;
+        margin-bottom: 2px;
+        z-index: 1400 !important;
+      }
+    }
+  }
 }
 
 // ================================
-// CUSTOM SCROLLPANEL - THEME AWARE
+// LOADING AND EMPTY STATES
 // ================================
-
-:host ::ng-deep .custom-scrollpanel {
-    .p-scrollpanel-wrapper {
-        border-right: none !important;
-    }
-
-    .p-scrollpanel-bar {
-        background: #007bca !important;
-        opacity: 0.3 !important;
-        width: 6px !important;
-        border-radius: 3px !important;
-        transition: all 0.2s ease !important;
-    }
-
-    .p-scrollpanel-bar:hover {
-        opacity: 0.6 !important;
-    }
-
-    .p-scrollpanel-content {
-        padding-right: 0.5rem !important;
-        background: var(--app-background) !important;
-    }
+.loading-overlay,
+.empty-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  color: var(--p-text-muted-color);
+  text-align: center;
+  
+  i {
+    margin-bottom: 1rem;
+  }
+  
+  h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--p-text-color);
+  }
+  
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
 }
 
 // ================================
 // RESPONSIVE DESIGN
 // ================================
-
 @media (max-width: 768px) {
-    .sidebar-container {
-        &.sidebar-expanded {
-            width: 140px;
-        }
-
-        &.sidebar-collapsed {
-            width: 50px;
-        }
+  :host ::ng-deep .p-datatable {
+    .p-datatable-thead tr th,
+    .p-datatable-tbody tr td {
+      padding: 0.375rem 0.25rem;
+      font-size: 0.8rem;
     }
-
-    :host ::ng-deep .favorites-popover-custom {
-        .p-popover {
-            min-width: 320px !important;
-            max-width: 90vw !important;
-            max-height: 70vh !important;
-            left: 50px !important;
-        }
+    
+    .filter-input {
+      font-size: 0.75rem !important;
+      height: 1.75rem !important;
+      padding: 0.25rem 0.375rem !important;
     }
-
-    .favorites-section,
-    .history-section {
-        padding: 1rem;
+    
+    // Hide cell decorators on mobile for cleaner look
+    .clickable-cell::after {
+      display: none;
     }
-
-    .popover-header {
-        padding: 1.25rem;
-
-        .header-icon {
-            font-size: 1.75rem;
-        }
-
-        .header-title {
-            font-size: 1.1rem;
-        }
-
-        .header-subtitle {
-            font-size: 0.85rem;
-        }
+  }
+  
+  .table-caption {
+    padding: 0.5rem !important;
+    
+    .p-iconfield {
+      max-width: 100%;
+      
+      .global-search-input {
+        font-size: 16px !important; // Prevent zoom on iOS
+      }
     }
-
-    .search-item {
-        padding: 0.75rem;
-
-        .item-header .item-title {
-            font-size: 0.85rem;
-        }
-
-        .item-details {
-            margin-left: 1.5rem;
-
-            .item-subtitle {
-                font-size: 0.75rem;
-            }
-
-            .item-time {
-                font-size: 0.7rem;
-            }
-        }
-    }
-}
-
-// ================================
-// DARK MODE SPECIFIC SIDEBAR ADJUSTMENTS
-// ================================
-
-.dark-theme {
-    .sidebar-container {
-        background-color: #1a2332;
-
-        .sidebar-seperator {
-            background-color: #007bca;
-        }
-
-        .side-nav-menu-item {
-            &:hover {
-                background-color: #2c3e50;
-            }
-
-            &.active {
-                background-color: #007bca;
-                color: white;
-            }
-        }
-    }
-}
-
-// ================================
-// PRIMENG THEME COMPONENT OVERRIDES
-// ================================
-
-:host ::ng-deep {
-    .p-badge {
-        &.p-badge-info {
-            background-color: #007bca;
-            color: white;
-        }
-
-        &.p-badge-success {
-            background-color: #10b981;
-            color: white;
-        }
-
-        &.p-badge-secondary {
-            background-color: var(--app-text-secondary);
-            color: white;
-        }
-    }
-
-    .p-button {
-        &.p-button-text {
-            color: var(--app-text-primary);
-
-            &:hover {
-                background-color: var(--app-surface);
-            }
-        }
-
-        &.p-button-danger {
-            background-color: #ef4444;
-            border-color: #ef4444;
-            color: white;
-
-            &:hover {
-                background-color: #dc2626;
-                border-color: #dc2626;
-            }
-        }
-    }
-
-    .p-divider {
-        border-color: var(--app-border);
-    }
-
-    .p-confirm-dialog {
-        background: var(--app-background);
-        border: 1px solid var(--app-border);
-        border-radius: 8px;
-
-        .p-dialog-header {
-            background: var(--app-background);
-            color: var(--app-text-primary);
-        }
-
-        .p-dialog-content {
-            background: var(--app-background);
-            color: var(--app-text-primary);
-        }
-    }
+  }
 }
 
 // ================================
 // ACCESSIBILITY ENHANCEMENTS
 // ================================
-
-.side-nav-menu-item:focus,
-.nav-button:focus {
-    outline: 2px solid #007bca;
-    outline-offset: 2px;
-}
-
-.search-item:focus {
-    outline: 2px solid #007bca;
-    outline-offset: 2px;
-}
-
-.favorite-btn:focus {
-    outline: 2px solid #007bca;
-    outline-offset: 2px;
+.clickable-cell:focus,
+.filter-input:focus {
+  outline: 2px solid var(--p-focus-ring-color) !important;
+  outline-offset: 2px !important;
 }
 
 // ================================
-// REDUCED MOTION
+// PRINT STYLES
 // ================================
-
-@media (prefers-reduced-motion: reduce) {
-    .search-item,
-    .favorite-btn,
-    .burger-menu,
-    .clear-btn,
-    .side-nav-menu-item {
-        transition: none !important;
-        transform: none !important;
+@media print {
+  :host {
+    .table-container {
+      height: auto !important;
+      max-height: none !important;
     }
-
-    .search-item:hover {
-        transform: none !important;
+    
+    .p-datatable {
+      .p-paginator,
+      .table-caption {
+        display: none !important;
+      }
+      
+      .p-datatable-wrapper {
+        overflow: visible !important;
+        height: auto !important;
+      }
+      
+      .filter-input {
+        display: none !important;
+      }
     }
-
-    .sidebar-container {
-        transition: none !important;
-    }
+  }
 }

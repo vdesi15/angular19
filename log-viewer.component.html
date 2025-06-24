@@ -1,229 +1,112 @@
-// log-viewer.component.ts - Updated with enhanced click handling
-import { Component, Input, Output, EventEmitter, ViewChild, OnChanges, SimpleChanges, inject, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { get } from 'lodash-es';
+<!-- log-viewer.component.html -->
+<div #tableContainer class="table-container">
+  <p-table #logTable 
+    [value]="tableData" 
+    [columns]="visibleColumns" 
+    dataKey="_id"
+    [paginator]="true" 
+    [rows]="50" 
+    [rowsPerPageOptions]="[25, 50, 100, 250]"
+    [globalFilterFields]="globalFilterFields()"
+    [scrollable]="true" 
+    scrollHeight="flex" 
+    [resizableColumns]="true" 
+    columnResizeMode="expand"
+    styleClass="p-datatable-striped p-datatable-gridlines compact-filters"
+    [loading]="isLoading"
+    (onFilter)="onFilter()">
 
-// PrimeNG imports
-import { Table, TableModule } from 'primeng/table';
-import { InputTextModule } from 'primeng/inputtext';
-import { IconFieldModule } from 'primeng/iconfield';
-import { InputIconModule } from 'primeng/inputicon';
-import { TooltipModule } from 'primeng/tooltip';
+    <!-- CAPTION: Contains the global search bar for filtering rendered results -->
+    <ng-template pTemplate="caption">
+      <div class="flex justify-content-end align-items-center">
+        <p-iconField iconPosition="left">
+          <p-inputIcon><i class="pi pi-search"></i></p-inputIcon>
+          <input 
+            pInputText 
+            type="text" 
+            (input)="applyGlobalFilter($event)" 
+            placeholder="Filter displayed results..." 
+            class="filter-input" />
+        </p-iconField>
+      </div>
+    </ng-template>
 
-// App imports
-import { ActiveSearch, ElkHit } from '../../models/search.model';
-import { ColumnDefinition, CellClickEvent } from 'src/app/core/models/column-definition.model';
-import { TransformPipe } from 'src/app/core/pipes/transform.pipe';
-
-@Component({
-  selector: 'app-log-viewer',
-  standalone: true,
-  imports: [
-    CommonModule,
-    TableModule,
-    InputTextModule,
-    IconFieldModule,
-    InputIconModule,
-    TooltipModule,
-    TransformPipe
-  ],
-  templateUrl: './log-viewer.component.html',
-  styleUrls: ['./log-viewer.component.scss']
-})
-export class LogViewerComponent implements OnChanges {
-  @Input({ required: true }) searchInstance!: ActiveSearch;
-  @Input({ required: true }) visibleColumns: ColumnDefinition[] = [];
-  @Output() rowDrilldown = new EventEmitter<any>();
-  @Output() filteredCountChange = new EventEmitter<number>();
-  
-  // ✨ New output for cell clicks
-  @Output() cellClick = new EventEmitter<CellClickEvent>();
-
-  @ViewChild('logTable') logTable!: Table;
-  @ViewChild('tableContainer', { static: true }) tableContainer!: ElementRef;
-  
-  // Simple properties
-  public tableData: any[] = [];
-  public totalRecords: number = 0;
-  public isLoading: boolean = false;
-
-  public globalFilterFields = computed(() => 
-    this.visibleColumns.map(c => c.name)
-  );
-
-  private cdr = inject(ChangeDetectorRef);
-  
-  constructor() {
-    console.log("[LogViewerComponent] Initialized");
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['searchInstance']) {
-      const currentSearch = changes['searchInstance'].currentValue as ActiveSearch;
-      const previousSearch = changes['searchInstance'].previousValue as ActiveSearch | undefined;
-
-      this.isLoading = currentSearch.isLoading;
-
-      if (!previousSearch || currentSearch.id !== previousSearch.id) {
-        console.log("[LogViewer] New search detected. Resetting table.");
-        this.tableData = [];
-        this.totalRecords = 0;
-        
-        setTimeout(() => {
-          this.filteredCountChange.emit(0);
-        }, 0);
-        
-        if (this.logTable) {
-          this.logTable.first = 0;
+    <!-- HEADER: Two-row header for display names and filters -->
+    <ng-template pTemplate="header" let-columns>
+      <!-- Row 1: Column Display Names -->
+      <tr>
+        @for(col of columns; track col.id) {
+          <th [pResizableColumn]="col.enableColumnResizing" [style.width]="col.width">
+            {{ col.displayName }}
+          </th>
         }
-      }
+      </tr>
+      <!-- Row 2: Column Filter Inputs -->
+      <tr class="filter-row">
+        @for(col of columns; track col.id) {
+          <th class="filter-header">
+            @if(col.enableFiltering !== false) {
+              <p-columnFilter 
+                [type]="'text'" 
+                [field]="col.name" 
+                [placeholder]="'Filter ' + col.displayName">
+                <input 
+                      pInputText 
+                      type="text"
+                      [value]="value || ''"
+                      (input)="filter($event.target.value)"
+                      [style.width]="col.width || '100%'"
+                      [style.min-width]="col.width || '100%'"
+                      [style.max-width]="col.width || '100%'"
+                      class="filter-input"
+                      [placeholder]=""
+                      autocomplete="off" />
+              </p-columnFilter>
+            }
+          </th>
+        }
+      </tr>
+    </ng-template>
 
-      const newHits = this.getNewHits(currentSearch, previousSearch);
-
-      if (newHits.length > 0) {
-        const processedNewRows = this.processHits(newHits);
-        
-        this.tableData = [...this.tableData, ...processedNewRows];
-        this.totalRecords = this.tableData.length;
-        
-        setTimeout(() => {
-          this.filteredCountChange.emit(this.tableData.length);
-        }, 0);
-
-        this.cdr.detectChanges();
-        
-        console.log(`[LogViewer] Appended ${processedNewRows.length} rows. Total now: ${this.tableData.length}`);
-      }
-
-      if (currentSearch.error) {
-        console.error(`[LogViewer] Search error: ${currentSearch.error}`);
-      }
-    }
-
-    if (changes['visibleColumns']) {
-      console.log("[LogViewer] Visible columns updated:", this.visibleColumns.length);
-    }
-  }
-
-  private getNewHits(current: ActiveSearch, previous: ActiveSearch | undefined): ElkHit[] {
-    const currentData = current?.data ?? [];
-    if (!previous) { 
-      return currentData; 
-    }
+    <!-- BODY: Renders the data rows with clickable cells -->
+    <ng-template pTemplate="body" let-rowData let-columns="columns">
+      <tr (click)="handleRowClick(rowData)" 
+          class="p-selectable-row" 
+          pTooltip="Click to view transaction details" 
+          tooltipPosition="top">
+        @for(col of columns; track col.id) {
+          <td 
+            [class.clickable-cell]="isCellClickable(col)"
+            [class.transaction-cell]="col.clickTarget === 'TransactionDetailsGrid'"
+            [class.editor-cell]="col.clickTarget === 'Editor'"
+            (click)="isCellClickable(col) ? handleCellClick(col, rowData, $event) : null"
+            [pTooltip]="isCellClickable(col) ? getCellTooltip(col) : ''"
+            tooltipPosition="top">
+            {{ rowData[col.name] | transform:col.transform:rowData._original }}
+          </td>
+        }
+      </tr>
+    </ng-template>
     
-    const previousLength = previous.data?.length ?? 0;
-    if (currentData.length <= previousLength) { 
-      return []; 
-    }
-    
-    return currentData.slice(previousLength);
-  }
+    <!-- EMPTY MESSAGE: Shown when no data matches the filters -->
+    <ng-template pTemplate="emptymessage" let-columns>
+        <tr>
+            <td [attr.colspan]="columns.length" class="text-center p-4">
+              @if(isLoading) {
+                <i class="pi pi-spin pi-spinner mr-2"></i>Loading data...
+              } @else {
+                No records found.
+              }
+            </td>
+        </tr>
+    </ng-template>
 
-  private processHits(hits: ElkHit[]): any[] {
-    const columns = this.visibleColumns;
-    return hits.map(hit => {
-      const row: any = { 
-        _id: hit._id, 
-        _original: hit._source,
-        _timestamp: new Date()
-      };
-      
-      columns.forEach(col => {
-        const rawValue = get(hit._source, col.field, null);
-        row[col.name] = rawValue;
-      });
-      
-      return row;
-    });
-  }
-
-  public applyGlobalFilter(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    if (this.logTable) {
-      this.logTable.filterGlobal(target.value, 'contains');
-      
-      setTimeout(() => {
-        const filteredCount = this.logTable.filteredValue?.length ?? this.tableData.length;
-        this.filteredCountChange.emit(filteredCount);
-      }, 200);
-    }
-  }
-
-  public onFilter(): void {
-    setTimeout(() => {
-      const filteredCount = this.logTable?.filteredValue?.length ?? this.tableData.length;
-      console.log(`[LogViewer] Filter applied, new count: ${filteredCount}`);
-      this.filteredCountChange.emit(filteredCount);
-    }, 200);
-  }
-
-  public handleRowClick(rowData: any): void {
-    const identifier = this.extractIdentifierFromRow(rowData);
-    if (identifier) {
-      console.log(`[LogViewer] Row clicked, drilling down with: ${identifier}`);
-      this.rowDrilldown.emit(identifier);
-    }
-  }
-
-  // ✨ Enhanced cell click handler
-  public handleCellClick(column: ColumnDefinition, rowData: any, event: Event): void {
-    event.stopPropagation(); // Prevent row click
-    
-    if (column.isClickable && column.clickTarget) {
-      const clickEvent: CellClickEvent = {
-        column: column,
-        rowData: rowData,
-        originalData: rowData._original,
-        clickTarget: column.clickTarget
-      };
-      
-      console.log(`[LogViewer] Cell clicked:`, {
-        column: column.displayName,
-        target: column.clickTarget,
-        value: rowData[column.name]
-      });
-      
-      this.cellClick.emit(clickEvent);
-    }
-  }
-
-  // ✨ Updated method to check if cell is clickable
-  public isCellClickable(column: ColumnDefinition): boolean {
-    return column.isClickable === true && !!column.clickTarget;
-  }
-
-  private extractIdentifierFromRow(rowData: any): string | null {
-    const identifierFields = [
-      'trace.id', 'traceId', 'transaction.id', 'transactionId', 
-      'span.id', 'spanId', 'correlation.id', 'correlationId',
-      'request.id', 'requestId', '_id'
-    ];
-
-    for (const field of identifierFields) {
-      const value = get(rowData._original, field) || rowData[field];
-      if (value && typeof value === 'string' && value.length > 0) {
-        return value;
-      }
-    }
-
-    return rowData._id || null;
-  }
-
-  // ✨ Get tooltip text for clickable cells
-  public getCellTooltip(column: ColumnDefinition): string {
-    if (column.clickTarget === 'TransactionDetailsGrid') {
-      return 'Click to view transaction details';
-    } else if (column.clickTarget === 'Editor') {
-      return 'Click to view in JSON editor';
-    }
-    return '';
-  }
-
-  public exportData(): void {
-    console.log(`[LogViewer] Export requested for ${this.tableData.length} rows`);
-  }
-
-  public refresh(): void {
-    console.log("[LogViewer] Manual refresh requested");
-  }
-}
+    <!-- Loading template -->
+    <ng-template pTemplate="loading">
+      <div class="loading-overlay">
+        <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+        <p>Loading data...</p>
+      </div>
+    </ng-template>
+  </p-table>
+</div>
