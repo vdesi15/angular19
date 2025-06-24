@@ -132,7 +132,7 @@
 }
 
 // ================================
-// POPOVER POSITIONING - MANUAL RIGHT POSITIONING
+// POPOVER POSITIONING - PROPER RIGHT POSITIONING WITH ARROW
 // ================================
 
 :host ::ng-deep .favorites-popover-custom {
@@ -145,13 +145,6 @@
         max-width: 500px !important;
         max-height: 80vh !important;
         overflow: hidden !important;
-
-        //  FORCE POSITIONING TO RIGHT OF SIDEBAR
-        position: fixed !important;
-        left: 160px !important; // Just to the right of expanded sidebar
-        top: 50% !important;
-        transform: translateY(-50%) !important;
-        z-index: 10000 !important;
     }
 
     .p-popover-content {
@@ -160,9 +153,45 @@
         overflow: hidden !important;
     }
 
-    // Hide arrow since we're manually positioning
+    //  ARROW POSITIONING - Left side pointing to sidebar
     .p-popover-arrow {
-        display: none !important;
+        border-right-color: var(--p-content-background) !important;
+        border-left: none !important;
+        border-top: 8px solid transparent !important;
+        border-bottom: 8px solid transparent !important;
+        border-right: 8px solid var(--p-content-background) !important;
+        left: -8px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+    }
+
+    //  FORCE RIGHT POSITIONING
+    &[data-p-placement*="right"] {
+        margin-left: 8px !important;
+
+        .p-popover-arrow {
+            left: -8px !important;
+            border-right-color: var(--p-content-background) !important;
+        }
+    }
+
+    //  OVERRIDE ANY OTHER POSITIONING
+    &[data-p-placement*="bottom"],
+    &[data-p-placement*="top"],
+    &[data-p-placement*="left"] {
+        // Force to right position
+        transform: translateX(160px) translateY(-50%) !important;
+
+        .p-popover-arrow {
+            left: -8px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            border-right-color: var(--p-content-background) !important;
+            border-left: none !important;
+            border-top: 8px solid transparent !important;
+            border-bottom: 8px solid transparent !important;
+            border-right: 8px solid var(--p-content-background) !important;
+        }
     }
 }
 

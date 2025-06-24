@@ -54,32 +54,6 @@ export class SidebarComponent {
     }
 
     /**
-     *  Show favorites popover with manual positioning
-     */
-    public showFavoritesPopover(event: Event): void {
-        event.preventDefault();
-        event.stopPropagation();
-
-        // Calculate position manually to ensure it appears to the right
-        const buttonRect = this.favoritesButton.nativeElement.getBoundingClientRect();
-        const sidebarWidth = this.drawerVisible() ? 145 : 55;
-
-        // Position the popover to the right of the sidebar
-        setTimeout(() => {
-            const popoverElement = document.querySelector('.favorites-popover-custom .p-popover') as HTMLElement;
-            if (popoverElement) {
-                popoverElement.style.position = 'fixed';
-                popoverElement.style.left = `${sidebarWidth + 8}px`;
-                popoverElement.style.top = '50%';
-                popoverElement.style.transform = 'translateY(-50%)';
-                popoverElement.style.zIndex = '10000';
-            }
-        }, 0);
-
-        this.favoritesPopover.toggle(event);
-    }
-
-    /**
      * Execute a search from history/favorites
      */
     public executeSearch(item: SearchDisplayItem): void {
