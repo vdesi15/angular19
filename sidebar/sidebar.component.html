@@ -1,0 +1,43 @@
+<!-- The main container's class changes based on the isExpanded() signal -->
+<div class="sidebar-container" 
+    [ngClass]="{ 'sidebar-expanded': drawerVisible(), 'sidebar-collapsed': !drawerVisible() }">
+  
+  <p-drawer [visible]="true" position="left" [appendTo]="sidebarContiner" [closeable]="false" [modal]="false" [dismissable]="false">
+
+    <!-- Header section with the toggle button -->
+    <ng-template class="header">
+        <div class="sidebar-seperator">
+            <button class="burger-menu" (click)="toggleSidebar()">
+                <i class="pi" [ngClass]="drawerVisible) ? 'pi-arrow-circle-left' : 'pi-bars'"></i>
+                @if(drawerVisible()) {
+                    <span>     Collapse</span>
+                }
+            </button>
+        </div>
+    </ng-template>
+
+    <ng-template pTemplate="content">
+        <nav class="nav-list">
+            <ul>
+            @for (item of navItems(); track item.routerLink) {
+                <li>
+                <a 
+                    class="nav-item side-nav-menu-item list-group-item list-group-item-action"
+                    [attr.title]="item.tooltip" 
+                    [routerLink]="item.routerLink"
+                    routerLinkActive="active"
+                    [queryParamsHandling]="'preserve'">
+                    <div class="nav_icons d-flex w-100 justify-content-start aligh-items-center">
+                        <i [class]="item.icon" aria-hidden="true"></i>
+                        @if(drawerVisible()) {
+                            <span>{{item.label}}</span>
+                        }
+                    </div>
+                </a>
+                </li>
+            }
+            </ul>
+        </nav>
+    </ng-template>
+  </p-drawer>
+</div>
