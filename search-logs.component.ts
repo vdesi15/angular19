@@ -61,10 +61,11 @@ export class SearchLogsComponent {
   constructor() {
     // Effect runs after resolver completes and filters are available
     effect(() => {
-      const filters = this.filtersService.filters();
+      const hasFilters = this.filtersService.hasFilters();
       const currentMode = this.mode();
 
-      if (filters) {
+      if (hasFilters) {
+        const filters = this.filtersService.safeFilters();
         console.log(`[SearchLogsComponent] Filters ready for mode: ${currentMode}`, filters);
         this.triggerInitialSearchForMode(currentMode);
       }
@@ -80,8 +81,8 @@ export class SearchLogsComponent {
         this.searchOrchestrator.startErrorMode();
         break;
       case 'search':
-        const filters = this.filtersService.filters();
-        if (filters?.streamFilters) {
+        const filters = this.filtersService.safeFilters();
+        if (filters.streamFilters) {
           // Auto-search if URL contains search parameters
           this.searchOrchestrator.performSearch('', 'browse');
         }

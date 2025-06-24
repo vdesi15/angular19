@@ -15,7 +15,7 @@ export class SearchFilterService {
   public readonly searchFilterMetadata = this._metadata.asReadonly();
 
   // Computed filter model from URL state and metadata
-  public readonly filters = computed<SearchFilterModel | null>(() => {
+  public readonly filters = computed(() => {
     const metadata = this._metadata();
     if (!metadata) return null;
 
@@ -54,7 +54,24 @@ export class SearchFilterService {
     };
   });
 
-  constructor() {
+  // Additional computed signals for safe access
+  public readonly hasFilters = computed(() => this.filters() !== null);
+  
+  public readonly safeFilters = computed(() => {
+    const filters = this.filters();
+    return filters ?? {
+      application: [],
+      environment: '',
+      location: '',
+      timezone: 'UTC',
+      dateRange: {
+        isAbsolute: false,
+        relativeValue: 15,
+        relativeUnit: 'minutes'
+      },
+      streamFilters: ''
+    };
+  });
     // Auto-sync filters back to URL when changed programmatically
     effect(() => {
       const currentFilters = this.filters();
@@ -78,12 +95,12 @@ export class SearchFilterService {
   public updateFilters(partialFilters: Partial<SearchFilterModel>): void {
     console.log('[SearchFilterService] Updating filters:', partialFilters);
     
-    const current = this.filters();
-    if (!current) {
-      console.warn('[SearchFilterService] No current filters available');
+    if (!this.hasFilters()) {
+      console.warn('[SearchFilterService] No metadata available, cannot update filters');
       return;
     }
 
+    const current = this.safeFilters();
     const updated = { ...current, ...partialFilters };
     this.syncFiltersToUrl(updated);
   }

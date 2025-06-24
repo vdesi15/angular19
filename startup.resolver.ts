@@ -1,3 +1,5 @@
+
+// 1. UPDATED: startup.resolver.ts - Store URL params before loading data
 import { inject } from '@angular/core';
 import { ResolveFn, Router } from '@angular/router';
 import { filter, switchMap, take, tap, forkJoin, map } from 'rxjs';
