@@ -1,4 +1,5 @@
 import { StreamFilter } from "src/app/core/models/stream-filter.model";
+import { TransactionDetailsResponse } from "./transactionDetails/transaction-details.model";
 
 /**
  * Defines the type of search being performed. This controls which
@@ -139,6 +140,8 @@ export interface ActiveSearch extends SearchRequest {
   // Auto-refresh settings for batch searches
   refreshInterval?: number;
   lastUpdated?: Date;
+
+  transactionDetails?: TransactionDetailsResponse;
 }
 
 /**

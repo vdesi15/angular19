@@ -121,20 +121,12 @@ export class SearchExecutionManager {
         const executionTime = Date.now() - startTime;
         console.log(`[ExecutionManager] HTTP search completed in ${executionTime}ms for: ${search.title}`, response);
         
-        this.updateSearchState(search.id, {
-          isLoading: false,
-          data: response.hits || [],
-          totalRecords: response.total || 0,
-          aggregatedFilterValues: this.aggregateFilterValues(
-            new Map(),
-            response.hits || [],
-            search.appName
-          ),
-          searchMetadata: {
-            ...search.searchMetadata,
-            executionTime
-          }
-        });
+        if (this.isTransactionDetailsResponse(response)) {
+          this.handleTransactionDetailsResponse(search.id, response, executionTime);
+        } else {
+          // Handle regular response (your existing logic)
+          this.handleRegularResponse(search.id, response, executionTime);
+        }
       },
       error: (error) => {
         const executionTime = Date.now() - startTime;
@@ -151,6 +143,95 @@ export class SearchExecutionManager {
       }
     });
   }
+
+  private isTransactionDetailsResponse(response: any): response is TransactionDetailsResponse {
+    return response && 
+           typeof response === 'object' &&
+           'hits' in response &&
+           'overflow' in response &&
+           'call_count' in response &&
+           ('FORMATTED_PAYLOADS' in response || 'TRANSACTION_TIMELINE' in response);
+  }
+
+  // NEW: Handle TransactionDetailsResponse specifically
+  private handleTransactionDetailsResponse(
+    searchId: string, 
+    response: TransactionDetailsResponse, 
+    executionTime: number
+  ): void {
+    // Map hits to normalized ElkHit format
+    const normalizedHits = this.normalizeTransactionHits(response.hits);
+    
+    // Create transaction details data
+    const transactionDetails: TransactionDetailsData = {
+      overflow: response.overflow,
+      call_count: response.call_count,
+      formattedPayloads: response.FORMATTED_PAYLOADS || [],
+      transactionTimeline: response.TRANSACTION_TIMELINE || []
+    };
+
+    // Resolve appName for aggregation
+    const appName = this.resolveAppName(search, globalFilters);
+
+    // Update search state with both normalized data and transaction details
+    this.updateSearchState(searchId, {
+      isLoading: false,
+      data: normalizedHits, // <- This goes to ActiveSearch.data
+      totalRecords: response.hits?.total || normalizedHits.length,
+      transactionDetails, // <- This goes to ActiveSearch.transactionDetails
+      aggregatedFilterValues: this.aggregateFilterValues(
+        new Map(),
+        normalizedHits,
+        appName
+      ),
+      searchMetadata: {
+        executionTime,
+        searchStrategy: 'TransactionDetails'
+      }
+    });
+  }
+
+  // NEW: Handle regular response (your existing logic)
+  private handleRegularResponse(
+    searchId: string, 
+    response: any, 
+    executionTime: number
+  ): void {
+    // Resolve appName for aggregation
+    const appName = this.resolveAppName(search, globalFilters);
+    this.updateSearchState(searchId, {
+      isLoading: false,
+      data: response.hits || [],
+      totalRecords: response.total || 0,
+      aggregatedFilterValues: this.aggregateFilterValues(
+        new Map(),
+        response.hits || [],
+        appName
+      ),
+      searchMetadata: {
+        executionTime
+      }
+    });
+  }
+
+  private resolveAppName(search: ActiveSearch, globalFilters: SearchFilterModel): string {
+  
+  if (search.appName && search.appName.trim()) {
+    return search.appName;
+  }
+
+  const applications = globalFilters.application || [];
+  
+  if (applications.length === 0) {
+    return 'generic'; // No apps selected
+  } else if (applications.length === 1) {
+    return applications[0]; // Single app selected
+  } else if (applications.length === 2) {
+    return applications.join('_'); // Two apps: "app1_app2"
+  } else {
+    return 'generic'; // More than 2 apps selected, use generic
+  }
+}
 
   // ================================
   // SSE STREAMING EXECUTION
