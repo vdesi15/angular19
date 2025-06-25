@@ -1,72 +1,43 @@
-// src/app/core/guards/authentication.guard.ts
+// src/app/core/guards/authentication.guard.ts - Enhanced to store URL
 import { inject } from '@angular/core';
-import { CanActivateFn, Router, ActivatedRouteSnapshot } from '@angular/router';
+import { CanActivateFn, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { OidcSecurityService, LoginResponse } from 'angular-auth-oidc-client';
 import { Observable, of } from 'rxjs';
-import { switchMap, tap } from 'rxjs/operators';
-import { signal } from '@angular/core';
+import { switchMap } from 'rxjs/operators';
 
 /**
- * Enhanced authentication guard with URL preservation.
- * Uses Angular 19 patterns and preserves the full URL during auth flow.
- * 
- * Key improvements:
- * - Preserves complete URL with query parameters
- * - Better error handling and logging
- * - Reactive state management with signals
- * - Prevents multiple concurrent auth attempts
+ * Enhanced authentication guard that preserves URL during OIDC flow
  */
-
-// Signal to track authentication state
-const authenticationState = signal<'idle' | 'checking' | 'authenticating'>('idle');
-
-export const authenticationGuard: CanActivateFn = (route: ActivatedRouteSnapshot): Observable<boolean> => {
+export const authenticationGuard: CanActivateFn = (
+  route: ActivatedRouteSnapshot, 
+  state: RouterStateSnapshot
+): Observable<boolean> => {
   const oidcSecurityService = inject(OidcSecurityService);
   const router = inject(Router);
 
-  console.log('[AuthenticationGuard] Checking authentication for route:', route.routeConfig?.path);
-
-  // Prevent concurrent authentication attempts
-  if (authenticationState() === 'authenticating') {
-    console.log('[AuthenticationGuard] Authentication already in progress, waiting...');
-    return of(false);
-  }
-
-  authenticationState.set('checking');
-
   return oidcSecurityService.checkAuth().pipe(
-    tap((loginResponse: LoginResponse) => {
-      console.log('[AuthenticationGuard] Auth check result:', {
-        isAuthenticated: loginResponse.isAuthenticated,
-        hasToken: !!loginResponse.accessToken,
-        configId: loginResponse.configId
-      });
-    }),
     switchMap((loginResponse: LoginResponse) => {
       if (loginResponse.isAuthenticated) {
-        console.log('[AuthenticationGuard] User is authenticated, allowing navigation');
-        authenticationState.set('idle');
+        console.log('[AuthenticationGuard] Access granted. User is authenticated.');
+        
+        const savedUrl = sessionStorage.getItem('pre_auth_url');
+        if (savedUrl && savedUrl !== state.url) {
+          console.log('[AuthenticationGuard] Restoring saved URL:', savedUrl);
+          sessionStorage.removeItem('pre_auth_url');
+          router.navigateByUrl(savedUrl);
+          return of(false); // Prevent current navigation, we're redirecting
+        }
+        
         return of(true);
       }
 
-      console.log('[AuthenticationGuard] User not authenticated, starting authorization flow');
+      console.log('[AuthenticationGuard] User not authenticated. Starting authorization flow...');
       
-      // Preserve the current URL with all parameters
-      const fullUrl = router.url;
-      console.log('[AuthenticationGuard] Preserving URL for post-auth redirect:', fullUrl);
+      const currentUrl = state.url;
+      console.log('[AuthenticationGuard] Storing URL before auth:', currentUrl);
+      sessionStorage.setItem('pre_auth_url', currentUrl);
       
-      // Store the URL in session storage for retrieval after auth
-      try {
-        sessionStorage.setItem('auth_redirect_url', fullUrl);
-      } catch (error) {
-        console.warn('[AuthenticationGuard] Could not store redirect URL:', error);
-      }
-
-      authenticationState.set('authenticating');
-      
-      // Start the authorization flow
       oidcSecurityService.authorize();
-      
       return of(false);
     })
   );

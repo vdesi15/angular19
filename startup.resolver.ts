@@ -1,4 +1,4 @@
-// src/app/core/guards/startup.resolver.ts - Minimal change
+// src/app/core/guards/startup.resolver.ts - Final version
 import { inject } from '@angular/core';
 import { ResolveFn, ActivatedRouteSnapshot } from '@angular/router';
 import { filter, switchMap, take, tap, forkJoin, map } from 'rxjs';
@@ -9,9 +9,6 @@ import { SearchFilterMetadataApiService } from '../services/search-filter-metada
 import { ColumnDefinitionService } from '../services/column-definition.service';
 import { ViewDefinitionService } from '../services/view-definition.service';
 
-/**
- * Enhanced startup resolver - just adds URL parameter processing after data load
- */
 export const startupResolver: ResolveFn<boolean> = (route: ActivatedRouteSnapshot) => {
   const oidcService = inject(OidcSecurityService);
   const searchFilterService = inject(SearchFilterService);
@@ -32,44 +29,49 @@ export const startupResolver: ResolveFn<boolean> = (route: ActivatedRouteSnapsho
       });
     }),
     tap(startupData => {
-      // Your existing code
       searchFilterService.setSearchFilterMetadata(startupData.filterMetadata);
       console.log('[StartupResolver] All startup data loaded and services populated.');
       
-      // 🔥 NEW: Process URL parameters after metadata is loaded
-      const deepestRoute = findDeepestChild(route);
-      const queryParams = deepestRoute.queryParams;
-      
+      // 🔥 Process URL parameters AFTER data is loaded
+      const queryParams = findQueryParams(route);
       if (queryParams && Object.keys(queryParams).length > 0) {
-        console.log('[StartupResolver] Found URL parameters, applying them:', queryParams);
-        searchFilterService.parseAndApplyUrlParameters(queryParams);
-      } else {
-        console.log('[StartupResolver] No URL parameters found');
+        console.log('[StartupResolver] Processing URL parameters:', queryParams);
+        try {
+          searchFilterService.parseAndApplyUrlParameters(queryParams);
+          console.log('[StartupResolver] URL parameters applied successfully');
+        } catch (error) {
+          console.error('[StartupResolver] Error applying URL parameters:', error);
+        }
       }
     }),
     map(() => true)
   );
 };
 
-// Helper function to find the child route with query parameters
-function findDeepestChild(route: ActivatedRouteSnapshot): ActivatedRouteSnapshot {
-  let current = route;
-  
-  // Keep going down the route tree to find the actual destination
-  while (current.firstChild) {
-    current = current.firstChild;
+// Helper to find query parameters in route tree
+function findQueryParams(route: ActivatedRouteSnapshot): any {
+  // Check current route first
+  if (route.queryParams && Object.keys(route.queryParams).length > 0) {
+    return route.queryParams;
   }
   
-  // If no query params on deepest child, check parent routes
-  if (!current.queryParams || Object.keys(current.queryParams).length === 0) {
-    let parent = current.parent;
-    while (parent) {
-      if (parent.queryParams && Object.keys(parent.queryParams).length > 0) {
-        return parent;
-      }
-      parent = parent.parent;
+  // Check all child routes
+  let current = route;
+  while (current.firstChild) {
+    current = current.firstChild;
+    if (current.queryParams && Object.keys(current.queryParams).length > 0) {
+      return current.queryParams;
     }
   }
   
-  return current;
+  // Check parent routes
+  let parent = route.parent;
+  while (parent) {
+    if (parent.queryParams && Object.keys(parent.queryParams).length > 0) {
+      return parent.queryParams;
+    }
+    parent = parent.parent;
+  }
+  
+  return null;
 }
