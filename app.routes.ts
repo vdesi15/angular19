@@ -13,6 +13,15 @@ export const routes: Routes = [
     pathMatch: 'full'
   },
   {
+    path: 'signin-oidc',
+    loadComponent: () => import('./auth/oidc-callback/oidc-callback.component').then(m => m.OidcCallbackComponent),
+  },
+  {
+    path: 'auth/callback',
+    redirectTo: '/signin-oidc',
+    pathMatch: 'full'
+  },
+  {
     path: 'logs',
     component: ShellComponent,
     canActivate: [authenticationGuard, authorizationGuard],
