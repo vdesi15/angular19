@@ -1,5 +1,5 @@
 // transaction-timeline.component.ts
-import { Component, Input, computed, inject, signal } from '@angular/core';
+import { Component, Input, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TimelineModule } from 'primeng/timeline';
 import { CardModule } from 'primeng/card';
@@ -25,12 +25,7 @@ interface TimelineEvent {
   standalone: true,
   imports: [CommonModule, TimelineModule, CardModule, ButtonModule, TooltipModule],
   template: `
-    <div class="timeline-container">
-      <div class="timeline-header">
-        <h4>Timeline for {{ timelineKey() }}</h4>
-        <span class="timeline-count">{{ timelineEvents().length }} events</span>
-      </div>
-      
+    <div class="timeline-wrapper">
       <p-timeline 
         [value]="timelineEvents()" 
         layout="vertical" 
@@ -44,76 +39,66 @@ interface TimelineEvent {
         </ng-template>
         
         <ng-template pTemplate="content" let-event>
-          <p-card styleClass="timeline-card">
+          <div class="timeline-card">
             <div class="timeline-content">
               <div class="timeline-time">
                 {{ event.time }}
               </div>
               <div class="timeline-action">
-                <a 
-                  [href]="event.actionLink" 
-                  target="_blank"
-                  class="action-link"
-                  pTooltip="Open transaction details">
-                  {{ event.action }}
-                </a>
+                @if (event.actionLink) {
+                  <a 
+                    [href]="event.actionLink" 
+                    target="_blank"
+                    class="action-link"
+                    pTooltip="Open transaction details">
+                    {{ event.action }}
+                  </a>
+                } @else {
+                  <span class="action-text">{{ event.action }}</span>
+                }
               </div>
               <div class="timeline-description">
                 {{ event.description }}
               </div>
             </div>
-          </p-card>
+          </div>
         </ng-template>
       </p-timeline>
+      
+      @if (timelineEvents().length === 0) {
+        <div class="empty-timeline">
+          <i class="pi pi-clock text-2xl text-color-secondary mb-2"></i>
+          <p class="text-color-secondary">No timeline events available</p>
+        </div>
+      }
     </div>
   `,
   styles: [`
-    .timeline-container {
+    .timeline-wrapper {
       height: 100%;
-      display: flex;
-      flex-direction: column;
-      background: var(--surface-a);
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    
-    .timeline-header {
       padding: 1rem;
-      background: var(--surface-b);
-      border-bottom: 1px solid var(--surface-d);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .timeline-header h4 {
-      margin: 0;
-      color: var(--text-color);
-      font-size: 1rem;
-    }
-    
-    .timeline-count {
-      font-size: 0.8rem;
-      color: var(--text-color-secondary);
-      background: var(--surface-c);
-      padding: 0.25rem 0.5rem;
-      border-radius: 12px;
+      overflow-y: auto;
+      background: var(--surface-a);
     }
     
     :host ::ng-deep .transaction-timeline {
-      padding: 1rem;
-      height: 100%;
-      overflow-y: auto;
-      
       .p-timeline-event-marker {
         background: transparent;
         border: none;
         width: auto;
         height: auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       
       .p-timeline-event-connector {
-        background: var(--surface-d);
+        background: var(--surface-border);
+        width: 2px;
+      }
+      
+      .p-timeline-event-content {
+        padding: 0 0 1rem 1rem;
       }
     }
     
@@ -121,15 +106,18 @@ interface TimelineEvent {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       background: var(--surface-b);
-      border: 2px solid var(--surface-d);
+      border: 2px solid var(--surface-border);
+      position: relative;
+      z-index: 1;
       
       &.current {
         background: var(--primary-color);
         border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.2);
         
         .pi {
           color: white;
@@ -137,20 +125,23 @@ interface TimelineEvent {
       }
       
       .pi {
-        font-size: 0.8rem;
+        font-size: 0.7rem;
         color: var(--text-color-secondary);
       }
     }
     
-    :host ::ng-deep .timeline-card {
+    .timeline-card {
+      background: var(--surface-b);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--border-radius);
+      padding: 0.75rem;
       margin-bottom: 0.5rem;
+      transition: all 0.2s ease;
       
-      .p-card-body {
-        padding: 0.75rem;
-      }
-      
-      .p-card-content {
-        padding: 0;
+      &:hover {
+        background: var(--surface-hover);
+        border-color: var(--primary-color);
+        transform: translateX(2px);
       }
     }
     
@@ -163,6 +154,7 @@ interface TimelineEvent {
       color: var(--text-color-secondary);
       margin-bottom: 0.25rem;
       font-weight: 500;
+      font-family: var(--font-family-monospace);
     }
     
     .timeline-action {
@@ -171,11 +163,16 @@ interface TimelineEvent {
       .action-link {
         color: var(--primary-color);
         text-decoration: none;
-        font-weight: 500;
+        font-weight: 600;
         
         &:hover {
           text-decoration: underline;
         }
+      }
+      
+      .action-text {
+        color: var(--text-color);
+        font-weight: 600;
       }
     }
     
@@ -183,6 +180,69 @@ interface TimelineEvent {
       color: var(--text-color-secondary);
       font-size: 0.8rem;
       line-height: 1.4;
+    }
+    
+    .empty-timeline {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      text-align: center;
+      color: var(--text-color-secondary);
+      
+      p {
+        margin: 0;
+        font-size: 0.875rem;
+      }
+    }
+    
+    /* Custom scrollbar */
+    .timeline-wrapper::-webkit-scrollbar {
+      width: 4px;
+    }
+    
+    .timeline-wrapper::-webkit-scrollbar-track {
+      background: var(--surface-ground);
+    }
+    
+    .timeline-wrapper::-webkit-scrollbar-thumb {
+      background: var(--surface-border);
+      border-radius: 2px;
+      
+      &:hover {
+        background: var(--text-color-secondary);
+      }
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .timeline-wrapper {
+        padding: 0.75rem;
+      }
+      
+      .timeline-card {
+        padding: 0.5rem;
+      }
+      
+      .timeline-content {
+        font-size: 0.8rem;
+      }
+      
+      .timeline-time {
+        font-size: 0.7rem;
+      }
+    }
+    
+    /* Accessibility */
+    @media (prefers-reduced-motion: reduce) {
+      .timeline-card {
+        transition: none;
+        
+        &:hover {
+          transform: none;
+        }
+      }
     }
   `]
 })
@@ -195,46 +255,54 @@ export class TransactionTimelineComponent {
   private filtersService = inject(FiltersService);
   private configService = inject(ConfigService);
 
-  public timelineKey = computed(() => {
-    const items = this.timelineData;
-    if (items.length > 0) {
-      return items[0].l || 'Transaction';
-    }
-    return 'Transaction';
-  });
-
   public timelineEvents = computed((): TimelineEvent[] => {
     const items = this.timelineData;
-    const timezone = this.filtersService.filters()?.timezone || 'UTC';
     const baseApi = this.configService.get('api.baseUrl');
-
-    return items.map(item => ({
-      status: item.current ? 'current' : 'normal',
-      time: this.formatTimeInTimezone(item.time, timezone),
-      action: item.action,
-      actionLink: `${baseApi}/gettxndetails/${this.appName}/${this.environment}/${this.location}/${item.id}`,
-      description: item.e,
-      id: item.id,
-      isCurrent: item.current || false
-    }));
+    
+    return items.map(item => {
+      // Format the time
+      const formattedTime = this.formatTime(item.time);
+      
+      // Generate action link if applicable
+      const actionLink = this.generateActionLink(item, baseApi);
+      
+      return {
+        status: item.current ? 'current' : 'completed',
+        date: item.time,
+        time: formattedTime,
+        action: item.action,
+        actionLink: actionLink,
+        description: item.e,
+        id: item.id,
+        isCurrent: item.current || false
+      };
+    }).sort((a, b) => {
+      // Sort by date to ensure chronological order
+      return new Date(a.date || '').getTime() - new Date(b.date || '').getTime();
+    });
   });
 
-  private formatTimeInTimezone(timeString: string, timezone: string): string {
+  private formatTime(timeString: string): string {
     try {
       const date = new Date(timeString);
-      return date.toLocaleString('en-US', { 
-        timeZone: timezone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
+      return date.toLocaleTimeString('en-US', {
+        hour12: false,
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
-        hour12: false
+        fractionalSecondDigits: 3
       });
     } catch (error) {
-      console.error('Error formatting time:', error);
       return timeString;
     }
+  }
+
+  private generateActionLink(item: TransactionTimelineItem, baseApi: string): string | null {
+    // Generate link to transaction details if we have enough info
+    if (baseApi && this.appName && this.environment && this.location) {
+      // Example: /logs/transaction/{app}/{env}/{location}/{transactionId}
+      return `${baseApi}/logs/transaction/${this.appName}/${this.environment}/${this.location}/${item.id}`;
+    }
+    return null;
   }
 }

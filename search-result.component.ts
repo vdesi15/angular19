@@ -169,6 +169,14 @@ export class SearchResultComponent {
     return this.search.searchMetadata?.searchStrategy || null;
   });
 
+  public isTransactionSearch = computed(() => {
+    return this.search.type === 'transaction';
+  });
+
+  public isSSESearch = computed(() => {
+    return this.search.type === 'browse' || this.search.type === 'error';
+  });
+
   constructor() {
     effect(() => {
       const allColumns = this.allColumnsForViewType();
@@ -243,16 +251,6 @@ export class SearchResultComponent {
       title: `Transaction: ${query}`,
       appName: this.search.appName
     });
-  }
-
-  onBatchRefresh(): void {
-    console.log(`[SearchResult] Refreshing batch: ${this.search.title}`);
-    this.orchestrator.fetchDataFor(this.search);
-  }
-
-  onJiraRefresh(): void {
-    console.log(`[SearchResult] Refreshing JIRA: ${this.search.title}`);
-    this.orchestrator.fetchDataFor(this.search);
   }
 
   stopStreaming(event: MouseEvent): void {

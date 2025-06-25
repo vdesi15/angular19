@@ -1,276 +1,179 @@
+<!-- transaction-details.component.html -->
 <p-accordion 
-      [multiple]="true" 
-      [activeIndex]="search.isExpanded ? [0] : []" 
-      styleClass="transaction-accordion"
-      (onOpen)="onAccordionOpen($event)"
-      (onClose)="onAccordionClose($event)">
-      <p-accordion-panel>
-        <p-accordion-header>
-          <div class="transaction-header">
-            <div class="header-left">
-              <!-- Transaction Type Icon and Badge -->
-              <div class="transaction-type-indicator">
-                <i [class]="getTransactionIcon() + ' text-lg mr-2'"></i>
+  [multiple]="true" 
+  [activeIndex]="search.isExpanded ? [0] : []" 
+  styleClass="transaction-accordion"
+  (onOpen)="onAccordionOpen($event)"
+  (onClose)="onAccordionClose($event)">
+  
+  <p-accordion-panel>
+    <p-accordion-header>
+      <div class="transaction-header">
+        <div class="header-left">
+          <!-- Transaction Type Icon and Badge -->
+          <div class="transaction-type-indicator">
+            <i [class]="getTransactionIcon() + ' text-lg mr-2'"></i>
+            <p-badge 
+              [value]="getTransactionTypeBadge().label" 
+              [severity]="getTransactionTypeBadge().severity"
+              styleClass="transaction-type-badge">
+            </p-badge>
+          </div>
+          
+          <!-- Title and Query Info -->
+          <div class="title-section">
+            <span class="font-bold text-lg transaction-title">{{ search.title }}</span>
+            <div class="transaction-metadata">
+              <span class="text-sm text-color-secondary">{{ getTransactionDescription() }}</span>
+            </div>
+          </div>
+          
+          <!-- Transaction Summary -->
+          @if (transactionSummary()) {
+            <div class="transaction-summary">
+              <div class="summary-item">
+                <span class="label">Status:</span>
                 <p-badge 
-                  [value]="getTransactionTypeBadge().label" 
-                  [severity]="getTransactionTypeBadge().severity"
-                  styleClass="transaction-type-badge">
+                  [value]="transactionSummary()?.status" 
+                  [severity]="getStatusSeverity(transactionSummary()?.status || '')"
+                  styleClass="ml-1">
                 </p-badge>
               </div>
-              
-              <!-- Title and Query Info -->
-              <div class="title-section">
-                <span class="font-bold text-lg transaction-title">{{ search.title }}</span>
-                <div class="transaction-metadata">
-                  <span class="text-sm text-color-secondary">{{ getTransactionDescription() }}</span>
-                  @if (search.searchMetadata?.originalQuery && search.searchMetadata.originalQuery !== search.query) {
-                    <span class="text-xs text-color-secondary ml-2">
-                      (Original: "{{ search.searchMetadata.originalQuery }}")
-                    </span>
-                  }
-                </div>
-              </div>
-              
-              <!-- Transaction Summary -->
-              @if (getTransactionSummary()) {
-                <div class="transaction-summary">
-                  <span class="text-sm text-color-secondary">{{ getTransactionSummary() }}</span>
+              @if (transactionSummary()?.duration) {
+                <div class="summary-item">
+                  <span class="label">Duration:</span>
+                  <span class="value">{{ transactionSummary()?.duration }}ms</span>
                 </div>
               }
+            </div>
+          }
+        </div>
+        
+        <div class="header-right">
+          <!-- Status and Progress -->
+          @if (search.isLoading) {
+            <div class="status-section">
+              <p-progressBar 
+                mode="indeterminate" 
+                styleClass="compact-progress">
+              </p-progressBar>
+              <p-badge 
+                value="Loading" 
+                severity="info"
+                styleClass="status-badge">
+              </p-badge>
+            </div>
+          }
+
+          <!-- Refresh Button -->
+          <button 
+            pButton 
+            type="button" 
+            icon="pi pi-refresh" 
+            class="p-button-sm p-button-rounded p-button-text"
+            (click)="refreshTransaction($event)"
+            pTooltip="Refresh transaction data"
+            tooltipPosition="top"
+            [disabled]="search.isLoading">
+          </button>
+          
+          <!-- Close Panel Button -->
+          <button 
+            pButton 
+            type="button" 
+            icon="pi pi-times" 
+            class="p-button-text p-button-rounded p-button-danger p-button-sm" 
+            pTooltip="Close transaction details" 
+            (click)="closePanel($event)">
+          </button>
+        </div>
+      </div>
+    </p-accordion-header>
+    
+    <p-accordion-content>
+      <!-- Transaction Toolbar -->
+      @if (!search.error && !showSkeleton()) {
+        <app-transaction-toolbar 
+          [availableViews]="availableViews()" 
+          [selectedViewId]="selectedViewId()"
+          (viewChange)="onViewChange($event)">
+        </app-transaction-toolbar>
+      }
+      
+      <!-- Main Content Area with Bootstrap-like Layout -->
+      <div class="transaction-content-wrapper">
+        @if (showSkeleton()) {
+          <app-table-skeleton 
+            [columns]="allColumnsForViewType()" 
+            [rowCount]="10">
+          </app-table-skeleton>
+        } @else if (search.error) {
+          <div class="error-container">
+            <div class="error-content">
+              <i class="pi pi-exclamation-circle text-4xl text-red-500 mb-3"></i>
+              <h4 class="text-lg font-semibold text-red-700 mb-2">Transaction Search Error</h4>
+              <p class="text-red-600 mb-4">{{ search.error }}</p>
+              
+              <button 
+                pButton 
+                type="button" 
+                label="Retry Search" 
+                icon="pi pi-refresh" 
+                class="p-button-outlined"
+                (click)="retrySearch()">
+              </button>
+            </div>
+          </div>
+        } @else {
+          <!-- Bootstrap-like Row Layout: 80% Log Viewer, 20% Timeline -->
+          <div class="row">
+            <!-- Left Column: Transaction Logs (80%) -->
+            <div class="col-8">
+              <div class="log-viewer-panel">
+                <div class="panel-header">
+                  <h4>Transaction Logs</h4>
+                  <span class="record-count">{{ filteredCount }} records</span>
+                </div>
+                
+                <div class="log-viewer-container">
+                  <app-log-viewer #logViewer
+                    [searchInstance]="search"
+                    [visibleColumns]="finalVisibleColumns()"
+                    (rowDrilldown)="onRelatedTransactionClick($event)"
+                    (filteredCountChange)="updateFilteredCount($event)">
+                  </app-log-viewer>
+                </div>
+              </div>
             </div>
             
-            <div class="header-right">
-              <!-- Status and Progress -->
-              @if (search.isLoading) {
-                <div class="status-section">
-                  <p-progressBar 
-                    mode="indeterminate" 
-                    styleClass="compact-progress">
-                  </p-progressBar>
-                  <p-badge 
-                    value="Loading" 
-                    severity="info"
-                    styleClass="status-badge">
-                  </p-badge>
+            <!-- Right Column: Timeline (20%) -->
+            <div class="col-4">
+              <div class="timeline-panel">
+                <div class="panel-header">
+                  <h4>Transaction Timeline</h4>
+                  <span class="timeline-count">{{ timelineData().length }} events</span>
                 </div>
-              }
-
-              <!-- Confidence Indicator -->
-              @if (getConfidence()) {
-                <div class="confidence-indicator">
-                  <p-badge 
-                    [value]="Math.round(getConfidence()! * 100) + '%'" 
-                    [severity]="getConfidence()! >= 0.8 ? 'success' : getConfidence()! >= 0.6 ? 'warning' : 'danger'"
-                    pTooltip="Detection confidence"
-                    tooltipPosition="top">
-                  </p-badge>
-                </div>
-              }
-
-              <!-- Favorite Toggle -->
-              <button 
-                pButton 
-                type="button" 
-                [icon]="isFavorite() ? 'pi pi-heart-fill' : 'pi pi-heart'"
-                [class]="'p-button-sm p-button-rounded p-button-text favorite-toggle ' + (isFavorite() ? 'favorited' : '')"
-                (click)="toggleFavorite($event)"
-                [pTooltip]="isFavorite() ? 'Remove from favorites' : 'Add to favorites'"
-                tooltipPosition="top">
-              </button>
-
-              <!-- Refresh Button -->
-              <button 
-                pButton 
-                type="button" 
-                icon="pi pi-refresh" 
-                class="p-button-sm p-button-rounded p-button-text"
-                (click)="refreshTransaction($event)"
-                pTooltip="Refresh transaction data"
-                tooltipPosition="top"
-                [disabled]="search.isLoading">
-              </button>
-              
-              <!-- Close Panel Button -->
-              <button 
-                pButton 
-                type="button" 
-                icon="pi pi-times" 
-                class="p-button-text p-button-rounded p-button-danger p-button-sm" 
-                pTooltip="Close transaction details" 
-                (click)="closePanel($event)">
-              </button>
-            </div>
-          </div>
-        </p-accordion-header>
-        
-        <p-accordion-content>
-          <!-- Transaction Toolbar -->
-          @if (!search.error && !showSkeleton()) {
-            <app-transaction-toolbar 
-              [availableViews]="availableViews()" 
-              [selectedViewId]="selectedViewId()"
-              (viewChange)="selectedViewId.set($event)">
-            </app-transaction-toolbar>
-          }
-          
-          <div class="transaction-content-wrapper">
-            @if (showSkeleton()) {
-              <app-table-skeleton 
-                [columns]="allColumnsForViewType()" 
-                [rowCount]="10">
-              </app-table-skeleton>
-            } @else if (search.error) {
-              <div class="error-container">
-                <div class="error-content">
-                  <i class="pi pi-exclamation-circle text-4xl text-red-500 mb-3"></i>
-                  <h4 class="text-lg font-semibold text-red-700 mb-2">Transaction Search Error</h4>
-                  <p class="text-red-600 mb-4">{{ search.error }}</p>
-                  
-                  @if (getConfidence() && getConfidence()! < 0.8) {
-                    <div class="low-confidence-warning">
-                      <p class="text-sm text-orange-600 mb-2">
-                        <i class="pi pi-exclamation-triangle mr-1"></i>
-                        Low detection confidence ({{ Math.round(getConfidence()! * 100) }}%). 
-                        The transaction ID might not have been interpreted correctly.
-                      </p>
+                
+                <div class="timeline-container">
+                  @if (timelineData().length > 0) {
+                    <app-transaction-timeline
+                      [timelineData]="timelineData()"
+                      [appName]="search.appName"
+                      [environment]="filtersService.filters()?.environment?.[0] || ''"
+                      [location]="filtersService.filters()?.location?.[0] || ''">
+                    </app-transaction-timeline>
+                  } @else {
+                    <div class="no-timeline-message">
+                      <i class="pi pi-info-circle text-2xl text-color-secondary mb-2"></i>
+                      <p class="text-color-secondary">No timeline data available for this transaction</p>
                     </div>
                   }
-                  
-                  <div class="error-actions">
-                    <button 
-                      pButton 
-                      type="button" 
-                      label="Retry" 
-                      icon="pi pi-refresh" 
-                      class="p-button-sm p-button-outlined"
-                      (click)="retrySearch()">
-                    </button>
-                  </div>
                 </div>
               </div>
-            } @else {
-              <!-- Transaction Details Tabs -->
-              <p-tabView styleClass="transaction-tabs">
-                <!-- Main Data Tab -->
-                <p-tabPanel header="Transaction Data" leftIcon="pi pi-table">
-                  @if (search.data.length > 0) {
-                    <!-- Transaction Summary Card -->
-                    @if (getTransactionDetails()) {
-                      <p-card header="Transaction Summary" styleClass="mb-3 transaction-summary-card">
-                        <div class="transaction-details-grid">
-                          @if (getTransactionDetails()?.transactionId) {
-                            <div class="detail-item">
-                              <label>Transaction ID:</label>
-                              <span class="font-mono">{{ getTransactionDetails()?.transactionId }}</span>
-                            </div>
-                          }
-                          @if (getTransactionDetails()?.status) {
-                            <div class="detail-item">
-                              <label>Status:</label>
-                              <p-badge 
-                                [value]="getTransactionDetails()?.status" 
-                                [severity]="getStatusSeverity(getTransactionDetails()?.status)"
-                                styleClass="ml-2">
-                              </p-badge>
-                            </div>
-                          }
-                          @if (getTransactionDetails()?.duration) {
-                            <div class="detail-item">
-                              <label>Duration:</label>
-                              <span>{{ getTransactionDetails()?.duration }}ms</span>
-                            </div>
-                          }
-                          @if (getTransactionDetails()?.startTime) {
-                            <div class="detail-item">
-                              <label>Start Time:</label>
-                              <span>{{ getTransactionDetails()?.startTime | date:'medium' }}</span>
-                            </div>
-                          }
-                        </div>
-                      </p-card>
-                    }
-
-                    <!-- Data Table -->
-                    <app-log-viewer #logViewer
-                      [searchInstance]="search"
-                      [visibleColumns]="finalVisibleColumns()"
-                      (rowDrilldown)="onRelatedTransactionClick($event)"
-                      (filteredCountChange)="updateFilteredCount($event)">
-                    </app-log-viewer>
-                  } @else {
-                    <div class="no-data-message">
-                      <i class="pi pi-info-circle text-2xl text-color-secondary mb-2"></i>
-                      <p class="text-color-secondary">No transaction data found for this ID</p>
-                    </div>
-                  }
-                </p-tabPanel>
-
-                <!-- Spans/Traces Tab -->
-                <p-tabPanel header="Spans & Traces" leftIcon="pi pi-sitemap">
-                  @if (getSpansData().length > 0) {
-                    <div class="spans-container">
-                      @for (span of getSpansData(); track span.spanId) {
-                        <p-card styleClass="mb-2 span-card">
-                          <div class="span-header">
-                            <div class="span-info">
-                              <h6 class="span-name">{{ span.operationName || span.name || 'Unknown Operation' }}</h6>
-                              <span class="span-id font-mono text-sm">{{ span.spanId }}</span>
-                            </div>
-                            <div class="span-duration">
-                              <p-badge 
-                                [value]="span.duration + 'ms'" 
-                                severity="info">
-                              </p-badge>
-                            </div>
-                          </div>
-                          @if (span.tags) {
-                            <div class="span-tags">
-                              @for (tag of getSpanTags(span.tags); track tag.key) {
-                                <small class="tag-item">
-                                  <strong>{{ tag.key }}:</strong> {{ tag.value }}
-                                </small>
-                              }
-                            </div>
-                          }
-                        </p-card>
-                      }
-                    </div>
-                  } @else {
-                    <div class="no-data-message">
-                      <i class="pi pi-info-circle text-2xl text-color-secondary mb-2"></i>
-                      <p class="text-color-secondary">No span data available for this transaction</p>
-                    </div>
-                  }
-                </p-tabPanel>
-
-                <!-- Related Transactions Tab -->
-                <p-tabPanel header="Related" leftIcon="pi pi-link">
-                  <div class="related-transactions">
-                    @if (getRelatedTransactions().length > 0) {
-                      @for (related of getRelatedTransactions(); track related.id) {
-                        <p-card styleClass="mb-2 related-card clickable" (click)="onRelatedTransactionClick(related.id)">
-                          <div class="related-header">
-                            <div class="related-info">
-                              <span class="related-id font-mono">{{ related.id }}</span>
-                              <span class="related-type text-sm text-color-secondary">{{ related.type || 'Transaction' }}</span>
-                            </div>
-                            <div class="related-time">
-                              <span class="text-sm">{{ related.timestamp | date:'short' }}</span>
-                            </div>
-                          </div>
-                        </p-card>
-                      }
-                    } @else {
-                      <div class="no-data-message">
-                        <i class="pi pi-info-circle text-2xl text-color-secondary mb-2"></i>
-                        <p class="text-color-secondary">No related transactions found</p>
-                      </div>
-                    }
-                  </div>
-                </p-tabPanel>
-              </p-tabView>
-            }
+            </div>
           </div>
-        </p-accordion-content>
-      </p-accordion-panel>
-    </p-accordion>
+        }
+      </div>
+    </p-accordion-content>
+  </p-accordion-panel>
+</p-accordion>

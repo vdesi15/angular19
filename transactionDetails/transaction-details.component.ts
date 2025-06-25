@@ -1,11 +1,12 @@
 // components/transaction-details/transaction-details.component.ts
-import { Component, Input, inject, signal, computed, WritableSignal, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, inject, signal, computed, WritableSignal, ViewChild, ChangeDetectorRef, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 // Models
 import { ActiveSearch } from '../../models/search.model';
 import { ColumnDefinition } from 'src/app/core/models/column-definition.model';
 import { ViewDefinition } from 'src/app/core/models/view-definition.model';
+import { TransactionTimelineItem } from '../models/transaction-details.model';
 
 // Services
 import { ColumnDefinitionService } from 'src/app/core/services/column-definition.service';
@@ -20,23 +21,31 @@ import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { BadgeModule } from 'primeng/badge';
 import { ProgressBarModule } from 'primeng/progressbar';
-import { CardModule } from 'primeng/card';
-import { DividerModule } from 'primeng/divider';
-import { TabViewModule } from 'primeng/tabview';
+import { SplitterModule } from 'primeng/splitter';
 
 // Components
 import { TransactionToolbarComponent } from '../transaction-toolbar/transaction-toolbar.component';
 import { LogViewerComponent } from '../log-viewer/log-viewer.component';
+import { TransactionTimelineComponent } from '../transaction-timeline/transaction-timeline.component';
 import { TableSkeletonComponent } from 'src/app/shared/components/table-skeleton/table-skeleton.component';
 
 @Component({
   selector: 'app-transaction-details',
   standalone: true,
   imports: [
-    CommonModule, AccordionModule, ButtonModule, TooltipModule, BadgeModule, 
-    ProgressBarModule, CardModule, DividerModule, TabViewModule,
-    TransactionToolbarComponent, LogViewerComponent, TableSkeletonComponent
-  ]
+    CommonModule, 
+    AccordionModule, 
+    ButtonModule, 
+    TooltipModule, 
+    BadgeModule, 
+    ProgressBarModule,
+    TransactionToolbarComponent, 
+    LogViewerComponent, 
+    TransactionTimelineComponent,
+    TableSkeletonComponent
+  ],
+  templateUrl: './transaction-details.component.html',
+  styleUrls: ['./transaction-details.component.scss']
 })
 export class TransactionDetailsComponent {
   @Input({ required: true }) search!: ActiveSearch;
@@ -55,10 +64,11 @@ export class TransactionDetailsComponent {
   public selectedViewId: WritableSignal<string> = signal('');
   public filteredCount = 0;
 
-  // Computed signals
+  // Computed signals for column definitions - uses TransactionDetailsCols
   public allColumnsForViewType = computed(() => {
     const app = this.search.appName;
-    return this.colDefService.getColumnsFor(app, 'browse'); // Use browse columns for transactions
+    // Use TransactionDetailsCols for transaction details
+    return this.colDefService.getColumnsFor(app, 'TransactionDetailsCols');
   });
   
   public availableViews = computed(() => {
@@ -67,7 +77,7 @@ export class TransactionDetailsComponent {
 
   public finalVisibleColumns = computed(() => {
     const selectedViewId = this.selectedViewId();
-    if (!selectedViewId) return [];
+    if (!selectedViewId) return this.allColumnsForViewType();
     
     return this.allColumnsForViewType().filter(col => {
       if (!col.views) return true;
@@ -75,22 +85,46 @@ export class TransactionDetailsComponent {
     });
   });
 
-  public isFavorite = computed(() => {
-    const currentGlobalFilters = this.filtersService.filters();
-    if (!currentGlobalFilters) return false;
-    const searchSignature = this.createSearchSignature();
-    return this.searchHistoryService.isFavorite(searchSignature);
-  });
-
   public showSkeleton = computed(() => {
     return this.search.isLoading && this.search.data.length === 0;
+  });
+
+  // Transaction-specific computed properties
+  public transactionData = computed(() => {
+    return this.search.data || [];
+  });
+
+  public timelineData = computed((): TransactionTimelineItem[] => {
+    const data = this.search.data;
+    if (!data || !Array.isArray(data)) return [];
+    
+    // Extract timeline from response
+    const response = data[0]?.TRANSACTION_TIMELINE || [];
+    return Array.isArray(response) ? response : [];
+  });
+
+  public transactionSummary = computed(() => {
+    const data = this.transactionData();
+    if (data.length === 0) return null;
+    
+    const firstItem = data[0];
+    const source = firstItem?._source;
+    
+    return {
+      transactionId: this.search.query,
+      status: source?.['response.status'] || source?.['http.status_code'] || 'Unknown',
+      duration: source?.['response.time'] || source?.duration || 0,
+      startTime: source?.['@timestamp'] || source?.timestamp,
+      service: source?.['service.name'] || 'Unknown Service',
+      endpoint: source?.['http.url'] || source?.endpoint || 'Unknown Endpoint'
+    };
   });
 
   constructor() {
     // Initialize view selection
     effect(() => {
       const available = this.availableViews();
-      if (available.length > 0) {
+      if (available.length > 0 && !this.selectedViewId()) {
         const defaultView = available.find(v => v.default) ?? available[0];
         if (defaultView) {
           this.selectedViewId.set(defaultView.viewId);
@@ -99,93 +133,38 @@ export class TransactionDetailsComponent {
     });
   }
 
-  // Header methods
+  // Helper Methods
   public getTransactionIcon(): string {
-    const type = this.search.searchMetadata?.detectionResult?.type;
-    switch (type) {
-      case 'transaction': return 'pi pi-sitemap';
-      case 'jira': return 'pi pi-ticket';
-      case 'batch': return 'pi pi-clone';
-      default: return 'pi pi-sitemap';
-    }
+    return 'pi pi-sitemap';
   }
 
   public getTransactionTypeBadge(): { label: string; severity: string } {
-    const type = this.search.searchMetadata?.detectionResult?.type;
-    switch (type) {
-      case 'transaction': return { label: 'TXN', severity: 'info' };
-      case 'jira': return { label: 'JIRA', severity: 'warning' };
-      case 'batch': return { label: 'BATCH', severity: 'success' };
-      default: return { label: 'TXN', severity: 'info' };
-    }
-  }
-
-  public getTransactionDescription(): string {
-    const confidence = this.getConfidence();
-    const type = this.search.searchMetadata?.detectionResult?.type || 'transaction';
-    
-    if (confidence) {
-      return `${type.charAt(0).toUpperCase() + type.slice(1)} Details (${Math.round(confidence * 100)}% confidence)`;
-    }
-    return `${type.charAt(0).toUpperCase() + type.slice(1)} Details`;
-  }
-
-  public getTransactionSummary(): string {
-    const totalRecords = this.search.data.length;
-    if (totalRecords === 0) return '';
-    
-    return `${totalRecords} record${totalRecords !== 1 ? 's' : ''} found`;
-  }
-
-  public getConfidence(): number | null {
-    return this.search.searchMetadata?.confidence || null;
-  }
-
-  // Transaction data extraction
-  public getTransactionDetails(): any {
-    if (this.search.data.length === 0) return null;
-    
-    const firstRecord = this.search.data[0]._source;
     return {
-      transactionId: firstRecord.transactionId || firstRecord.trace?.id || this.search.query,
-      status: firstRecord.status || firstRecord.transaction?.result,
-      duration: firstRecord.duration || firstRecord.transaction?.duration?.us,
-      startTime: firstRecord.timestamp || firstRecord['@timestamp'],
-      endTime: firstRecord.endTime,
-      spans: firstRecord.spans || [],
-      tags: firstRecord.tags || firstRecord.labels
+      label: 'Transaction',
+      severity: 'info'
     };
   }
 
-  public getSpansData(): any[] {
-    const details = this.getTransactionDetails();
-    return details?.spans || [];
-  }
-
-  public getSpanTags(tags: any): Array<{key: string; value: any}> {
-    if (!tags) return [];
-    return Object.entries(tags).map(([key, value]) => ({ key, value }));
-  }
-
-  public getRelatedTransactions(): any[] {
-    // Extract related transactions from data
-    return this.search.data
-      .filter(item => item._source.transactionId !== this.search.query)
-      .map(item => ({
-        id: item._source.transactionId || item._source.trace?.id,
-        type: item._source.type || 'Transaction',
-        timestamp: item._source.timestamp || item._source['@timestamp']
-      }))
-      .filter(item => item.id)
-      .slice(0, 10); // Limit to 10 related transactions
+  public getTransactionDescription(): string {
+    const summary = this.transactionSummary();
+    if (!summary) return 'Transaction Details';
+    
+    return `${summary.service} - ${summary.endpoint}`;
   }
 
   public getStatusSeverity(status: string): string {
     if (!status) return 'secondary';
-    const s = status.toLowerCase();
-    if (s.includes('success') || s.includes('ok') || s.includes('completed')) return 'success';
-    if (s.includes('error') || s.includes('failed') || s.includes('failure')) return 'danger';
-    if (s.includes('warning') || s.includes('timeout')) return 'warning';
+    const s = status.toString().toLowerCase();
+    
+    if (s.includes('200') || s.includes('success') || s.includes('ok') || s.includes('completed')) {
+      return 'success';
+    }
+    if (s.includes('error') || s.includes('failed') || s.includes('failure') || s.includes('500') || s.includes('4')) {
+      return 'danger';
+    }
+    if (s.includes('warning') || s.includes('timeout') || s.includes('3')) {
+      return 'warning';
+    }
     return 'info';
   }
 
@@ -218,13 +197,6 @@ export class TransactionDetailsComponent {
     this.orchestrator.closeSearch(this.search.id);
   }
 
-  public toggleFavorite(event: MouseEvent): void {
-    event.stopPropagation();
-    event.preventDefault();
-    const searchSignature = this.createSearchSignature();
-    this.searchHistoryService.toggleFavorite(searchSignature);
-  }
-
   public onAccordionOpen(event: any): void {
     this.orchestrator.updateSearchState(this.search.id, { isExpanded: true });
   }
@@ -237,33 +209,16 @@ export class TransactionDetailsComponent {
     this.orchestrator.fetchDataFor(this.search);
   }
 
-  // Utility methods
-  private createSearchSignature(): string {
-    const globalFilters = this.filtersService.filters();
-    if (!globalFilters) return '';
+  public onViewChange(viewId: string): void {
+    this.selectedViewId.set(viewId);
+  }
 
-    const signature = {
-      type: this.search.type,
-      appName: this.search.appName,
-      query: this.search.query,
-      preFilter: this.search.preFilter,
-      globalFilters: {
-        application: globalFilters.application,
-        environment: globalFilters.environment,
-        location: globalFilters.location,
-        dateRange: globalFilters.dateRange
-      },
-      streamFilters: this.search.streamFilters || []
-    };
-
-    const signatureString = JSON.stringify(signature);
-    let hash = 0;
-    for (let i = 0; i < signatureString.length; i++) {
-      const char = signatureString.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
+  // Timeline helpers
+  public getTimelineKey(): string {
+    const timeline = this.timelineData();
+    if (timeline.length > 0) {
+      return timeline[0].l || 'Transaction Flow';
     }
-    
-    return Math.abs(hash).toString(36);
+    return 'Transaction Flow';
   }
 }
