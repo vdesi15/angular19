@@ -7,15 +7,17 @@ export interface TransactionDetailsRequest {
   location: string;
 }
 
-export interface TransactionHit {
-  _index: string;
-  _id: string;
-  _source: any;
-}
-
-export interface TransactionHitsResponse {
+export interface TransactionHitsPayload {
+    
+  hits: ElkHit[];
   total: number;
-  hits: TransactionHit[];
+}
+export interface TransactionDetailsResponse {
+  hits: TransactionHitsPayload;
+  overflow: boolean;
+  call_count: number;
+  FORMATTED_PAYLOADS: any[];
+  TRANSACTION_TIMELINE: TransactionTimelineItem[];
 }
 
 export interface TransactionTimelineItem {
@@ -27,13 +29,7 @@ export interface TransactionTimelineItem {
   current?: boolean; // indicates if this is the current/active step
 }
 
-export interface TransactionDetailsResponse {
-  hits: TransactionHitsResponse;
-  overflow: boolean;
-  call_count: number;
-  FORMATTED_PAYLOADS: any[];
-  TRANSACTION_TIMELINE: TransactionTimelineItem[];
-}
+
 
 export interface TransactionSummary {
   transactionId: string;

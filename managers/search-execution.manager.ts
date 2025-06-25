@@ -121,12 +121,13 @@ export class SearchExecutionManager {
         const executionTime = Date.now() - startTime;
         console.log(`[ExecutionManager] HTTP search completed in ${executionTime}ms for: ${search.title}`, response);
         
-        if (this.isTransactionDetailsResponse(response)) {
-          this.handleTransactionDetailsResponse(search.id, response, executionTime);
-        } else {
-          // Handle regular response (your existing logic)
-          this.handleRegularResponse(search.id, response, executionTime);
-        }
+        // Check if this is a TransactionDetailsResponse
+      if (this.isTransactionDetailsResponse(response)) {
+        this.handleTransactionDetailsResponse(search, response, globalFilters, executionTime);
+      } else {
+        // Handle regular response (your existing logic)
+        this.handleRegularResponse(search, response, globalFilters, executionTime);
+      }
       },
       error: (error) => {
         const executionTime = Date.now() - startTime;
@@ -144,82 +145,70 @@ export class SearchExecutionManager {
     });
   }
 
-  private isTransactionDetailsResponse(response: any): response is TransactionDetailsResponse {
-    return response && 
-           typeof response === 'object' &&
-           'hits' in response &&
-           'overflow' in response &&
-           'call_count' in response &&
-           ('FORMATTED_PAYLOADS' in response || 'TRANSACTION_TIMELINE' in response);
-  }
-
-  // NEW: Handle TransactionDetailsResponse specifically
   private handleTransactionDetailsResponse(
-    searchId: string, 
-    response: TransactionDetailsResponse, 
-    executionTime: number
-  ): void {
-    // Map hits to normalized ElkHit format
-    const normalizedHits = this.normalizeTransactionHits(response.hits);
-    
-    // Create transaction details data
-    const transactionDetails: TransactionDetailsData = {
-      overflow: response.overflow,
-      call_count: response.call_count,
-      formattedPayloads: response.FORMATTED_PAYLOADS || [],
-      transactionTimeline: response.TRANSACTION_TIMELINE || []
-    };
+  search: ActiveSearch,
+  response: TransactionDetailsResponse, 
+  globalFilters: SearchFilterModel,
+  executionTime: number
+): void {
+  this.updateSearchState(search.id, {
+          isLoading: false,
+          data: response.hits.hits, // Direct mapping!
+          totalRecords: response.hits.total,
+          transactionDetails: response, // Store the whole thing!
+          aggregatedFilterValues: this.aggregateFilterValues(
+            new Map(),
+            response.hits.hits,
+            this.resolveAppName(search, globalFilters)
+          ),
+          searchMetadata: {
+            ...search.searchMetadata,
+            executionTime,
+            searchStrategy: 'TransactionDetails'
+          }
+        });
+}
 
-    // Resolve appName for aggregation
-    const appName = this.resolveAppName(search, globalFilters);
+// NEW: Handle regular response (your existing logic)
+private handleRegularResponse(
+  search: ActiveSearch,
+  response: any, 
+  globalFilters: SearchFilterModel,
+  executionTime: number
+): void {
+ 
+  this.updateSearchState(search.id, {
+          isLoading: false,
+          data: response.hits || [],
+          totalRecords: response.total || 0,
+          aggregatedFilterValues: this.aggregateFilterValues(
+            new Map(),
+            response.hits || [],
+            this.resolveAppName(search, globalFilters)
+          ),
+          searchMetadata: {
+            ...search.searchMetadata,
+            executionTime
+          }
+        });
+}
 
-    // Update search state with both normalized data and transaction details
-    this.updateSearchState(searchId, {
-      isLoading: false,
-      data: normalizedHits, // <- This goes to ActiveSearch.data
-      totalRecords: response.hits?.total || normalizedHits.length,
-      transactionDetails, // <- This goes to ActiveSearch.transactionDetails
-      aggregatedFilterValues: this.aggregateFilterValues(
-        new Map(),
-        normalizedHits,
-        appName
-      ),
-      searchMetadata: {
-        executionTime,
-        searchStrategy: 'TransactionDetails'
-      }
-    });
-  }
+private isTransactionDetailsResponse(response: any): response is TransactionDetailsResponse {
+  return response && 
+         typeof response === 'object' &&
+         'hits' in response &&
+         'overflow' in response &&
+         'call_count' in response;
+}
 
-  // NEW: Handle regular response (your existing logic)
-  private handleRegularResponse(
-    searchId: string, 
-    response: any, 
-    executionTime: number
-  ): void {
-    // Resolve appName for aggregation
-    const appName = this.resolveAppName(search, globalFilters);
-    this.updateSearchState(searchId, {
-      isLoading: false,
-      data: response.hits || [],
-      totalRecords: response.total || 0,
-      aggregatedFilterValues: this.aggregateFilterValues(
-        new Map(),
-        response.hits || [],
-        appName
-      ),
-      searchMetadata: {
-        executionTime
-      }
-    });
-  }
-
-  private resolveAppName(search: ActiveSearch, globalFilters: SearchFilterModel): string {
-  
+// NEW: Resolve appName based on your requirements
+private resolveAppName(search: ActiveSearch, globalFilters: SearchFilterModel): string {
+  // Priority 1: Use the search's appName if it exists
   if (search.appName && search.appName.trim()) {
     return search.appName;
   }
 
+  // Priority 2: Use global filter applications
   const applications = globalFilters.application || [];
   
   if (applications.length === 0) {
@@ -232,6 +221,7 @@ export class SearchExecutionManager {
     return 'generic'; // More than 2 apps selected, use generic
   }
 }
+
 
   // ================================
   // SSE STREAMING EXECUTION
