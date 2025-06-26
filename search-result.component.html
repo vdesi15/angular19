@@ -1,4 +1,4 @@
-<!-- Enhanced search-result.component.html -->
+<!-- Clean search-result.component.html - No favorites -->
 <p-accordion [multiple]="true" [activeIndex]="search.isExpanded ? [0] : []" styleClass="result-accordion compact"
     (onOpen)="onAccordionOpen($event)" (onClose)="onAccordionClose($event)">
     <p-accordion-panel>
@@ -6,24 +6,35 @@
         <div class="accordion-header">
           <div class="header-left">
             <span class="font-bold text-lg mr-3">{{ search.title }}</span>
-            <!-- NEW: Show transaction details badge if available -->
             @if (hasTransactionDetails()) {
               <p-tag value="Transaction Details" severity="info" size="small" class="mr-2"></p-tag>
             }
             <span class="text-sm text-color-secondary ml-2">{{ recordsSummary() }}</span>
           </div>
           <div class="header-right">
-            <!-- Keep your existing favorite, streaming, close buttons -->
-            <button pButton type="button" [icon]="isFavorite() ? 'pi pi-heart-fill' : 'pi pi-heart'"
-              [class]="'p-button-sm p-button-rounded p-button-text favorite-toggle ' + (isFavorite() ? 'favorited' : '')"
-              (click)="toggleFavorite($event)" [pTooltip]="isFavorite() ? 'Remove from favorites' : 'Add to favorites'"
-              tooltipPosition="top">
-            </button>
-
+            <!-- Streaming Control Button -->
             @if(search.isStreaming) {
-              <!-- Your existing streaming button -->
+              <button pButton type="button" class="p-button-sm streaming-control-btn" [ngClass]="{
+                  'p-button-success': !isStopButtonHovered(),
+                  'p-button-danger': isStopButtonHovered()
+                }" (mouseenter)="isStopButtonHovered.set(true)" (mouseleave)="isStopButtonHovered.set(false)"
+                (click)="stopStreaming($event)" pTooltip="Stop the live data stream" tooltipPosition="top">
+
+                @if (isStopButtonHovered()) {
+                  <span class="flex align-items-center gap-2">
+                    <i class="pi pi-stop-circle"></i>
+                    <span>Stop</span>
+                  </span>
+                } @else {
+                  <span class="flex align-items-center gap-2">
+                    <i class="pi pi-spin pi-spinner"></i>
+                    <span>Streaming...</span>
+                  </span>
+                }
+              </button>
             }
 
+            <!-- Close Panel Button -->
             <button pButton type="button" icon="pi pi-times"
               class="p-button-text p-button-rounded p-button-danger p-button-sm" pTooltip="Close this result panel"
               (click)="closePanel($event)">
@@ -33,17 +44,53 @@
       </p-accordion-header>
 
       <p-accordion-content>
-        <!-- Keep your existing toolbar -->
-        <app-streaming-toolbar [allAvailableColumns]="allColumnsForViewType()"
-          [currentlyVisibleColumns]="streamingVisibleColumns()"
-          (visibleColumnsChange)="onStreamingColumnsChange($event)" (resetColumns)="resetStreamingColumns()"
-          [availableFilterValues]="search.aggregatedFilterValues" [appliedFilters]="search.streamFilters ?? []"
-          (filtersChange)="onStreamFiltersChange($event)">
-        </app-streaming-toolbar>
+        <!-- Show different toolbars based on search type -->
+        @if (shouldShowToolbar()) {
+          
+          <!-- Streaming Toolbar for SSE searches -->
+          @if (shouldShowStreamingToolbar()) {
+            <app-streaming-toolbar 
+              [allAvailableColumns]="allColumnsForViewType()"
+              [currentlyVisibleColumns]="streamingVisibleColumns()"
+              (visibleColumnsChange)="onStreamingColumnsChange($event)" 
+              (resetColumns)="resetStreamingColumns()"
+              [availableFilterValues]="search.aggregatedFilterValues" 
+              [appliedFilters]="search.streamFilters ?? []"
+              (filtersChange)="onStreamFiltersChange($event)">
+            </app-streaming-toolbar>
+          }
+
+          <!-- Transaction Toolbar for transaction searches -->
+          @if (shouldShowTransactionToolbar()) {
+            <app-transaction-toolbar 
+              [views]="availableViews()" 
+              [selectedView]="selectedViewId()"
+              (viewChange)="onViewChange($event)">
+            </app-transaction-toolbar>
+          }
+
+          <!-- Batch Toolbar for batch searches -->
+          @if (shouldShowBatchToolbar()) {
+            <app-batch-toolbar 
+              [search]="search">
+            </app-batch-toolbar>
+          }
+
+          <!-- JIRA Toolbar for JIRA searches -->
+          @if (shouldShowJiraToolbar()) {
+            <app-jira-toolbar 
+              [search]="search">
+            </app-jira-toolbar>
+          }
+
+        }
 
         <div class="result-content-wrapper">
           @if (search.isLoading && search.data.length === 0) {
-            <app-table-skeleton [columns]="allColumnsForViewType()" [rowCount]="10"></app-table-skeleton>
+            <app-table-skeleton 
+              [columns]="finalVisibleColumns()" 
+              [rowCount]="10">
+            </app-table-skeleton>
           } @else if (search.error) {
             <div class="error-container">
               <p class="p-3 text-red-500 font-bold">
@@ -55,10 +102,10 @@
             </div>
           } @else {
             
-            <!-- NEW: Split layout for transaction details -->
             @if (hasTransactionDetails()) {
+              <!-- Split layout for transaction details -->
               <div class="transaction-details-layout">
-                <!-- 80% - Log Viewer (your existing component) -->
+                <!-- 80% - Log Viewer -->
                 <div class="log-viewer-section">
                   <app-log-viewer #logViewer 
                     [searchInstance]="search" 
@@ -68,7 +115,7 @@
                   </app-log-viewer>
                 </div>
                 
-                <!-- 20% - Transaction Timeline (NEW) -->
+                <!-- 20% - Transaction Timeline -->
                 <div class="timeline-section">
                   <app-transaction-timeline 
                     [transactionDetails]="search.transactionDetails"
@@ -78,13 +125,31 @@
                 </div>
               </div>
             } @else {
-              <!-- Regular layout - just the log viewer (your existing logic) -->
-              <app-log-viewer #logViewer 
-                [searchInstance]="search" 
-                [visibleColumns]="finalVisibleColumns()"
-                (rowDrilldown)="onDrilldown($event)" 
-                (filteredCountChange)="updateFilteredCount($event)">
-              </app-log-viewer>
+              <!-- Regular layout - just the appropriate viewer -->
+              
+              @if (shouldShowLogViewer()) {
+                <app-log-viewer #logViewer 
+                  [searchInstance]="search" 
+                  [visibleColumns]="finalVisibleColumns()"
+                  (rowDrilldown)="onDrilldown($event)" 
+                  (filteredCountChange)="updateFilteredCount($event)">
+                </app-log-viewer>
+              }
+
+              @if (shouldShowBatchViewer()) {
+                <app-batch-viewer #batchViewer 
+                  [search]="search"
+                  class="batch-viewer-container">
+                </app-batch-viewer>
+              }
+
+              @if (shouldShowJiraViewer()) {
+                <app-jira-viewer #jiraViewer 
+                  [search]="search"
+                  class="jira-viewer-container">
+                </app-jira-viewer>
+              }
+
             }
             
           }
