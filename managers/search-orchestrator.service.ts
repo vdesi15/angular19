@@ -57,6 +57,13 @@ export class SearchOrchestratorService {
     
     // Use state manager to create and track search
     const activeSearch = this.stateManager.createActiveSearch(enhancedRequest);
+
+    if (activeSearch.type === 'transaction') {
+      activeSearch.isExpanded = true;
+      // Collapse SSE searches when transaction search is added
+      this.collapseSSESearches();
+    }
+
     this.stateManager.addSearch(activeSearch);
     
     // Use history manager to save
@@ -129,6 +136,39 @@ export class SearchOrchestratorService {
   // Utility
   public getSearchById(id: string): ActiveSearch | undefined {
     return this.stateManager.getSearchById(id);
+  }
+
+  public expandSearch(searchId: string): void {
+    const targetSearch = this.stateManager.getSearchById(searchId);
+    if (!targetSearch) return;
+
+    // Expand the target search
+    this.stateManager.updateSearch(searchId, { isExpanded: true });
+    
+    // If this is a transaction search triggered by drilldown, collapse SSE searches
+    if (targetSearch.type === 'transaction') {
+      this.collapseSSESearches();
+    }
+  }
+
+  /**
+   * Collapse a specific search
+   */
+  public collapseSearch(searchId: string): void {
+    this.stateManager.updateSearch(searchId, { isExpanded: false });
+  }
+
+  /**
+   * Collapse all SSE searches (browse/error) when transaction search opens
+   */
+  private collapseSSESearches(): void {
+    const searches = this.activeSearches();
+    searches.forEach(search => {
+      if (search.type === 'browse' || search.type === 'error') {
+        this.stateManager.updateSearch(search.id, { isExpanded: false });
+      }
+    });
+    console.log('[SearchOrchestrator] Collapsed SSE searches for transaction drilldown');
   }
 
   // ================================

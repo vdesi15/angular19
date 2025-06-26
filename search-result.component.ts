@@ -1,3 +1,5 @@
+// Clean search-result.component.ts - Remove skeleton/showSkeleton references
+
 import { Component, Input, computed, inject, WritableSignal, signal, Signal, effect, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -11,8 +13,6 @@ import { StreamFilter } from 'src/app/core/models/stream-filter.model';
 import { ColumnDefinitionService } from 'src/app/core/services/column-definition.service';
 import { ViewDefinitionService } from 'src/app/core/services/view-definition.service';
 import { SearchOrchestratorService } from '../../services/search-orchestrator.service';
-import { SearchHistoryService } from 'src/app/core/services/search-history.service';
-import { FiltersService } from 'src/app/core/services/filters.service';
 
 // Child Components & Modules
 import { AccordionModule } from 'primeng/accordion';
@@ -21,6 +21,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { BadgeModule } from 'primeng/badge';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { ChipModule } from 'primeng/chip';
+import { TagModule } from 'primeng/tag';
 
 // Toolbars
 import { TransactionToolbarComponent } from '../transaction-toolbar/transaction-toolbar.component';
@@ -32,6 +33,7 @@ import { JiraToolbarComponent } from '../jira-toolbar/jira-toolbar.component';
 import { LogViewerComponent } from '../log-viewer/log-viewer.component';
 import { BatchViewerComponent } from '../batch-viewer/batch-viewer.component';
 import { JiraViewerComponent } from '../jira-viewer/jira-viewer.component';
+import { TransactionTimelineComponent } from '../transaction-timeline/transaction-timeline.component';
 import { TableSkeletonComponent } from 'src/app/shared/components/table-skeleton/table-skeleton.component';
 
 @Component({
@@ -39,9 +41,10 @@ import { TableSkeletonComponent } from 'src/app/shared/components/table-skeleton
   standalone: true,
   imports: [
     CommonModule, AccordionModule, ButtonModule, TooltipModule, BadgeModule, 
-    ProgressBarModule, ChipModule,
+    ProgressBarModule, ChipModule, TagModule,
     TransactionToolbarComponent, StreamingToolbarComponent, BatchToolbarComponent, JiraToolbarComponent,
-    LogViewerComponent, BatchViewerComponent, JiraViewerComponent, TableSkeletonComponent
+    LogViewerComponent, BatchViewerComponent, JiraViewerComponent, TransactionTimelineComponent, 
+    TableSkeletonComponent
   ],
   templateUrl: './search-result.component.html',
   styleUrls: ['./search-result.component.scss']
@@ -62,14 +65,19 @@ export class SearchResultComponent {
   public orchestrator = inject(SearchOrchestratorService);
   private colDefService = inject(ColumnDefinitionService);
   private viewDefService = inject(ViewDefinitionService);
-  private searchHistoryService = inject(SearchHistoryService);
-  private filtersService = inject(FiltersService);
   private cdr = inject(ChangeDetectorRef);
 
   // State Signals
   public selectedViewId: WritableSignal<string> = signal('');
   public streamingVisibleColumns: WritableSignal<ColumnDefinition[]> = signal([]);
   public streamFilters: WritableSignal<StreamFilter[]> = signal([]);
+
+  // Computed signals for transaction details
+  public hasTransactionDetails = computed(() => {
+    return this.search.type === 'transaction' && 
+           this.search.transactionDetails && 
+           this.search.transactionDetails.TRANSACTION_TIMELINE?.length > 0;
+  });
 
   // Derived Signals
   public allColumnsForViewType: Signal<ColumnDefinition[]> = computed(() => {
@@ -83,61 +91,27 @@ export class SearchResultComponent {
   });
 
   public finalVisibleColumns: Signal<ColumnDefinition[]> = computed(() => {
-    if (this.search.type === 'transaction' || this.search.type === 'jira') {
-      const selectedViewId = this.selectedViewId();
-      if (!selectedViewId) return [];
-      
-      return this.allColumnsForViewType().filter(col => {
-        if (!col.views) return true;
-        return col.views.split(',').map(v => v.trim()).includes(selectedViewId);
-      });
+  if (this.search.type === 'transaction' || this.search.type === 'jira') {
+    const available = this.availableViews();
+    const selected = this.selectedViewId();
+    
+    // If no view is selected, or selected view doesn't exist, use first available
+    let viewIdToUse = selected;
+    if (!viewIdToUse || !available.find(v => v.viewId === viewIdToUse)) {
+      viewIdToUse = available.length > 0 ? available[0].viewId : '';
     }
-    return this.streamingVisibleColumns();
-  });  
+    
+    if (!viewIdToUse) return [];
+    
+    return this.allColumnsForViewType().filter(col => {
+      if (!col.views) return true;
+      return col.views.split(',').map(v => v.trim()).includes(viewIdToUse);
+    });
+  }
+  return this.streamingVisibleColumns();
+});
 
-  public isFavorite = computed(() => {
-    const currentGlobalFilters = this.filtersService.filters();
-    if (!currentGlobalFilters) return false;
-
-    const searchSignature = this.createSearchSignature();
-    return this.searchHistoryService.isFavorite(searchSignature);
-  });
-
-  // Computed signal to determine if we should show skeleton
-  public showSkeleton = computed(() => {
-    return this.search.isLoading && this.search.data.length === 0;
-  });
-
-  // Computed signal to determine if we should show the content
-  public showContent = computed(() => {
-    return !this.showSkeleton() && !this.search.error;
-  });
-
-  // Search type-specific computed properties
-  public searchTypeIcon = computed(() => {
-    switch (this.search.type) {
-      case 'transaction': return 'pi pi-sitemap';
-      case 'jira': return 'pi pi-ticket';
-      case 'batch': return 'pi pi-clone';
-      case 'browse': return 'pi pi-list';
-      case 'error': return 'pi pi-exclamation-triangle';
-      case 'natural': return 'pi pi-comment';
-      default: return 'pi pi-search';
-    }
-  });
-
-  public searchTypeBadge = computed(() => {
-    switch (this.search.type) {
-      case 'transaction': return { label: 'TXN', severity: 'info' as const };
-      case 'jira': return { label: 'JIRA', severity: 'warning' as const };
-      case 'batch': return { label: 'BATCH', severity: 'success' as const };
-      case 'browse': return { label: 'LIVE', severity: 'info' as const };
-      case 'error': return { label: 'ERROR', severity: 'danger' as const };
-      case 'natural': return { label: 'AI', severity: 'secondary' as const };
-      default: return { label: 'SEARCH', severity: 'secondary' as const };
-    }
-  });
-
+  // Records summary for display
   public recordsSummary = computed(() => {
     const totalLoaded = this.search.data.length;
     const totalRecords = this.search.totalRecords;
@@ -161,22 +135,6 @@ export class SearchResultComponent {
     }
   });
 
-  public searchConfidence = computed(() => {
-    return this.search.searchMetadata?.confidence || null;
-  });
-
-  public searchStrategy = computed(() => {
-    return this.search.searchMetadata?.searchStrategy || null;
-  });
-
-  public isTransactionSearch = computed(() => {
-    return this.search.type === 'transaction';
-  });
-
-  public isSSESearch = computed(() => {
-    return this.search.type === 'browse' || this.search.type === 'error';
-  });
-
   constructor() {
     effect(() => {
       const allColumns = this.allColumnsForViewType();
@@ -184,39 +142,21 @@ export class SearchResultComponent {
         this.resetStreamingColumns();
       }
 
+      // For transaction/jira searches, always default to first available view
+    if (this.search.type === 'transaction' || this.search.type === 'jira') {
       const available = this.availableViews();
       if (available.length > 0) {
-        const defaultView = available.find(v => v.default) ?? available[0];
-        if (defaultView) {
-          this.selectedViewId.set(defaultView.viewId);
+        const currentSelected = this.selectedViewId();
+        
+        // If nothing selected or selected view doesn't exist, pick first one
+        if (!currentSelected || !available.find(v => v.viewId === currentSelected)) {
+          console.log('[SearchResult] Auto-selecting first view:', available[0].viewId);
+          this.selectedViewId.set(available[0].viewId);
         }
       }
+    }
     });
   }
-
-  public hasTransactionDetails = computed(() => {
-    return this.search.type === 'transaction' && 
-           this.search.transactionDetails && 
-           this.search.transactionDetails.TRANSACTION_TIMELINE?.length > 0;
-  });
-
-  // Optional: Add transaction summary computed property
-  public transactionSummary = computed(() => {
-    if (!this.hasTransactionDetails()) return null;
-    
-    const details = this.search.transactionDetails!;
-    const firstHit = this.search.data[0];
-    const source = firstHit?._source;
-    
-    return {
-      transactionId: this.search.query,
-      status: source?.['response.status'] || source?.['http.status_code'] || 'Unknown',
-      duration: source?.['response.time'] || source?.duration || 0,
-      callCount: details.call_count,
-      hasOverflow: details.overflow,
-      timelineItems: details.TRANSACTION_TIMELINE?.length || 0
-    };
-  });
 
   // Helper Methods
   private getViewType(): 'browse' | 'error' {
@@ -243,18 +183,10 @@ export class SearchResultComponent {
 
   // Event Handlers
   resetStreamingColumns(): void {
-    console.log('[SearchResult] resetStreamingColumns called');
-    
     const allColumns = this.allColumnsForViewType();
-    console.log('[SearchResult] All columns available:', allColumns.length);
-    
     const defaultVisible = allColumns.filter(c => c.visible === true);
-    console.log('[SearchResult] Default visible columns:', defaultVisible.length);
-    
     this.streamingVisibleColumns.set(defaultVisible);
     this.cdr.markForCheck();
-    
-    console.log('[SearchResult] Columns reset to:', defaultVisible.map(c => c.displayName));
   }
 
   onStreamingColumnsChange(selectedColumns: ColumnDefinition[]): void {
@@ -268,91 +200,51 @@ export class SearchResultComponent {
     this.orchestrator.applyStreamFilters(this.search.id, filters);
   }
 
-  onDrilldown(query: any): void {
+  // Transaction view change handler
+  onViewChange(viewId: string): void {
+    this.selectedViewId.set(viewId);
+    console.log('[SearchResult] Transaction view changed to:', viewId);
+  }
+
+  // Control handlers
+  stopStreaming(event: Event): void {
+    event.stopPropagation();
+    this.orchestrator.stopSearch(this.search.id);
+  }
+
+  closePanel(event: Event): void {
+    event.stopPropagation();
+    this.orchestrator.removeSearch(this.search.id);
+  }
+
+  retrySearch(): void {
+    this.orchestrator.retrySearch(this.search.id);
+  }
+
+  onAccordionOpen(event: any): void {
+  console.log('[SearchResult] Accordion opened for:', this.search.title);
+  this.orchestrator.expandSearch(this.search.id);
+}
+
+onAccordionClose(event: any): void {
+  console.log('[SearchResult] Accordion closed for:', this.search.title);
+  this.orchestrator.collapseSearch(this.search.id);
+}
+
+// Updated drilldown handler to ensure proper accordion management
+onDrilldown(query: any): void {
+  console.log('[SearchResult] Drilldown triggered for:', query);
+  
+    // Perform the transaction search - orchestrator will handle accordion collapse
     this.orchestrator.performSearch({
       type: 'transaction',
-      query: query,
-      title: `Transaction: ${query}`,
+      query: query.query || query,
+      title: `Transaction Details: ${query.query || query}`,
       appName: this.search.appName
     });
   }
 
-  stopStreaming(event: MouseEvent): void {
-    event.stopPropagation();
-    event.preventDefault();
-    this.orchestrator.stopSseStream(this.search.id);
-  }
-
-  closePanel(event: MouseEvent): void {
-    event.stopPropagation();
-    event.preventDefault();
-    this.orchestrator.closeSearch(this.search.id);
-  }
-
-  toggleExpansion(): void {
-    this.orchestrator.updateSearchState(this.search.id, { 
-      isExpanded: !this.search.isExpanded 
-    });
-  }
-
-  // Event Handlers for Accordion
-  onAccordionOpen(event: any): void {
-    console.log('[SearchResult] Accordion opened for:', this.search.title);
-    this.orchestrator.updateSearchState(this.search.id, { isExpanded: true });
-  }
-
-  onAccordionClose(event: any): void {
-    console.log('[SearchResult] Accordion closed for:', this.search.title);
-    this.orchestrator.updateSearchState(this.search.id, { isExpanded: false });
-  }
-
-  retrySearch(): void {
-    console.log(`[SearchResult] Retrying search: ${this.search.title}`);
-    this.orchestrator.fetchDataFor(this.search);
-  }
-
-  toggleFavorite(event: MouseEvent): void {
-    event.stopPropagation();
-    event.preventDefault();
-    const searchSignature = this.createSearchSignature();
-    this.searchHistoryService.toggleFavorite(searchSignature);
-  }
-
-  // Search signature for favorites
-  private createSearchSignature(): string {
-    const globalFilters = this.filtersService.filters();
-    if (!globalFilters) return '';
-
-    const signature = {
-      type: this.search.type,
-      appName: this.search.appName,
-      query: this.search.query,
-      preFilter: this.search.preFilter,
-      globalFilters: {
-        application: globalFilters.application,
-        environment: globalFilters.environment,
-        location: globalFilters.location,
-        dateRange: globalFilters.dateRange
-      },
-      streamFilters: this.search.streamFilters || []
-    };
-
-    const signatureString = JSON.stringify(signature);
-    let hash = 0;
-    for (let i = 0; i < signatureString.length; i++) {
-      const char = signatureString.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    
-    return Math.abs(hash).toString(36);
-  }
-
   // Utility methods for different search types
-  public shouldShowToolbar(): boolean {
-    return !this.search.error && !this.showSkeleton();
-  }
-
   public shouldShowStreamingToolbar(): boolean {
     return this.search.type === 'browse' || this.search.type === 'error';
   }
@@ -382,73 +274,5 @@ export class SearchResultComponent {
 
   public shouldShowJiraViewer(): boolean {
     return this.search.type === 'jira';
-  }
-
-  public getSearchTypeDescription(): string {
-    const confidence = this.searchConfidence();
-    const strategy = this.searchStrategy();
-    
-    switch (this.search.type) {
-      case 'transaction':
-        return confidence ? `Transaction Search (${Math.round(confidence * 100)}% confidence)` : 'Transaction Search';
-      case 'jira':
-        return confidence ? `JIRA Ticket Search (${Math.round(confidence * 100)}% confidence)` : 'JIRA Ticket Search';
-      case 'batch':
-        return confidence ? `Batch Processing (${Math.round(confidence * 100)}% confidence)` : 'Batch Processing';
-      case 'browse':
-        return 'Live Log Stream';
-      case 'error':
-        return 'Error Log Stream';
-      case 'natural':
-        return confidence ? `AI Search (${Math.round(confidence * 100)}% confidence)` : 'AI-Powered Search';
-      default:
-        return 'Search Results';
-    }
-  }
-
-  public getProgressValue(): number {
-    if (this.search.type === 'batch' && this.search.data.length > 0) {
-      // For batch searches, calculate progress from batch details
-      const batchData = this.search.data[0]?._source;
-      if (batchData?.processedRecords && batchData?.totalRecords) {
-        return Math.round((batchData.processedRecords / batchData.totalRecords) * 100);
-      }
-    }
-    
-    if (this.search.isStreaming && this.search.totalRecords > 0) {
-      return Math.round((this.search.data.length / this.search.totalRecords) * 100);
-    }
-    
-    return this.search.isLoading ? null : 100;
-  }
-
-  public getStatusSeverity(): string {
-    if (this.search.error) return 'danger';
-    if (this.search.isLoading) return 'info';
-    if (this.search.isStreaming) return 'success';
-    return 'success';
-  }
-
-  public getStatusLabel(): string {
-    if (this.search.error) return 'Error';
-    if (this.search.isLoading) return 'Loading';
-    if (this.search.isStreaming) return 'Streaming';
-    return 'Completed';
-  }
-
-  // Auto-refresh for batch searches
-  public toggleAutoRefresh(): void {
-    if (this.search.type === 'batch') {
-      // Implementation for auto-refresh toggle
-      console.log('[SearchResult] Toggle auto-refresh for batch search');
-    }
-  }
-
-  public setRefreshInterval(interval: number): void {
-    if (this.search.type === 'batch') {
-      this.orchestrator.updateSearchState(this.search.id, { 
-        refreshInterval: interval 
-      });
-    }
   }
 }
