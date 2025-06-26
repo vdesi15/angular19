@@ -1,308 +1,217 @@
-// transaction-timeline.component.ts
+// Simple transaction-timeline.component.ts based on your requirements
 import { Component, Input, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+
+// PrimeNG Components
 import { TimelineModule } from 'primeng/timeline';
 import { CardModule } from 'primeng/card';
-import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
-import { TransactionTimelineItem } from '../models/transaction-details.model';
-import { FiltersService } from 'src/app/core/services/filters.service';
-import { ConfigService } from 'src/app/core/services/config.service';
+import { BadgeModule } from 'primeng/badge';
 
-interface TimelineEvent {
-  status?: string;
-  date?: string;
-  time?: string;
-  action?: string;
-  actionLink?: string;
-  description?: string;
-  id?: string;
-  isCurrent?: boolean;
-}
+import { TransactionDetailsResponse, TransactionTimelineItem } from '../models/transaction-details.model';
+import { FiltersService } from 'src/app/core/services/filters.service';
 
 @Component({
   selector: 'app-transaction-timeline',
   standalone: true,
-  imports: [CommonModule, TimelineModule, CardModule, ButtonModule, TooltipModule],
+  imports: [
+    CommonModule,
+    TimelineModule,
+    CardModule,
+    BadgeModule
+  ],
   template: `
-    <div class="timeline-wrapper">
-      <p-timeline 
-        [value]="timelineEvents()" 
-        layout="vertical" 
-        align="left"
-        styleClass="transaction-timeline">
-        
-        <ng-template pTemplate="marker" let-event>
-          <div class="timeline-marker" [class.current]="event.isCurrent">
-            <i class="pi" [class]="event.isCurrent ? 'pi-circle-fill' : 'pi-circle'"></i>
-          </div>
-        </ng-template>
-        
-        <ng-template pTemplate="content" let-event>
-          <div class="timeline-card">
-            <div class="timeline-content">
-              <div class="timeline-time">
-                {{ event.time }}
-              </div>
-              <div class="timeline-action">
-                @if (event.actionLink) {
-                  <a 
-                    [href]="event.actionLink" 
-                    target="_blank"
-                    class="action-link"
-                    pTooltip="Open transaction details">
-                    {{ event.action }}
-                  </a>
-                } @else {
-                  <span class="action-text">{{ event.action }}</span>
-                }
-              </div>
-              <div class="timeline-description">
-                {{ event.description }}
-              </div>
+    <p-card styleClass="timeline-card h-full">
+      <ng-template pTemplate="header">
+        <div class="p-3">
+          <h5 class="m-0">Timeline for {{ getTimelineGrouping() }}</h5>
+        </div>
+      </ng-template>
+
+      @if (timelineItems().length > 0) {
+        <p-timeline 
+          [value]="timelineItems()" 
+          layout="vertical" 
+          styleClass="simple-timeline">
+          
+          <ng-template pTemplate="marker" let-item>
+            <div 
+              class="timeline-marker"
+              [class.current]="item.current">
+              <i class="pi pi-circle"></i>
             </div>
-          </div>
-        </ng-template>
-      </p-timeline>
-      
-      @if (timelineEvents().length === 0) {
-        <div class="empty-timeline">
-          <i class="pi pi-clock text-2xl text-color-secondary mb-2"></i>
-          <p class="text-color-secondary">No timeline events available</p>
+          </ng-template>
+          
+          <ng-template pTemplate="content" let-item>
+            <div class="timeline-content" [class.current]="item.current">
+              <div class="timeline-time">{{ formatTime(item.time) }}</div>
+              <div class="timeline-action">
+                <a [href]="buildSearchLink(item.action)" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="action-link">
+                  {{ item.action }}
+                </a>
+              </div>
+              <div class="timeline-description">{{ item.e }}</div>
+            </div>
+          </ng-template>
+        </p-timeline>
+      } @else {
+        <div class="no-timeline text-center p-4">
+          <p class="text-600">No timeline data available</p>
         </div>
       }
-    </div>
+    </p-card>
   `,
   styles: [`
-    .timeline-wrapper {
+    .timeline-card {
       height: 100%;
-      padding: 1rem;
-      overflow-y: auto;
-      background: var(--surface-a);
-    }
-    
-    :host ::ng-deep .transaction-timeline {
-      .p-timeline-event-marker {
-        background: transparent;
-        border: none;
-        width: auto;
-        height: auto;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+      border: 1px solid var(--surface-300);
+      
+      :host ::ng-deep .p-card-header {
+        padding: 0;
+        border-bottom: 1px solid var(--surface-200);
+        background: var(--surface-50);
       }
       
-      .p-timeline-event-connector {
-        background: var(--surface-border);
-        width: 2px;
+      :host ::ng-deep .p-card-body {
+        padding: 1rem;
+        height: calc(100% - 60px);
+        overflow-y: auto;
       }
       
-      .p-timeline-event-content {
-        padding: 0 0 1rem 1rem;
+      :host ::ng-deep .p-card-content {
+        padding: 0;
       }
     }
-    
+
+    :host ::ng-deep .simple-timeline {
+      .p-timeline-event {
+        min-height: auto;
+        
+        .p-timeline-event-marker {
+          border: none;
+          width: 1.5rem;
+          height: 1.5rem;
+          margin-left: -0.75rem;
+        }
+        
+        .p-timeline-event-content {
+          padding: 0.5rem 0 1rem 1rem;
+        }
+      }
+    }
+
     .timeline-marker {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--surface-400);
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: var(--surface-b);
-      border: 2px solid var(--surface-border);
-      position: relative;
-      z-index: 1;
+      color: white;
+      font-size: 0.5rem;
       
       &.current {
         background: var(--primary-color);
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.2);
-        
-        .pi {
-          color: white;
-        }
-      }
-      
-      .pi {
-        font-size: 0.7rem;
-        color: var(--text-color-secondary);
+        box-shadow: 0 0 8px rgba(var(--primary-color-rgb), 0.4);
       }
     }
-    
-    .timeline-card {
-      background: var(--surface-b);
-      border: 1px solid var(--surface-border);
-      border-radius: var(--border-radius);
-      padding: 0.75rem;
-      margin-bottom: 0.5rem;
-      transition: all 0.2s ease;
-      
-      &:hover {
-        background: var(--surface-hover);
-        border-color: var(--primary-color);
-        transform: translateX(2px);
-      }
-    }
-    
+
     .timeline-content {
-      font-size: 0.875rem;
-    }
-    
-    .timeline-time {
-      font-size: 0.75rem;
-      color: var(--text-color-secondary);
-      margin-bottom: 0.25rem;
-      font-weight: 500;
-      font-family: var(--font-family-monospace);
-    }
-    
-    .timeline-action {
-      margin-bottom: 0.25rem;
-      
-      .action-link {
-        color: var(--primary-color);
-        text-decoration: none;
-        font-weight: 600;
-        
-        &:hover {
-          text-decoration: underline;
-        }
-      }
-      
-      .action-text {
-        color: var(--text-color);
-        font-weight: 600;
-      }
-    }
-    
-    .timeline-description {
-      color: var(--text-color-secondary);
-      font-size: 0.8rem;
-      line-height: 1.4;
-    }
-    
-    .empty-timeline {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 200px;
-      text-align: center;
-      color: var(--text-color-secondary);
-      
-      p {
-        margin: 0;
-        font-size: 0.875rem;
-      }
-    }
-    
-    /* Custom scrollbar */
-    .timeline-wrapper::-webkit-scrollbar {
-      width: 4px;
-    }
-    
-    .timeline-wrapper::-webkit-scrollbar-track {
-      background: var(--surface-ground);
-    }
-    
-    .timeline-wrapper::-webkit-scrollbar-thumb {
-      background: var(--surface-border);
-      border-radius: 2px;
-      
-      &:hover {
-        background: var(--text-color-secondary);
-      }
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-      .timeline-wrapper {
-        padding: 0.75rem;
-      }
-      
-      .timeline-card {
-        padding: 0.5rem;
-      }
-      
-      .timeline-content {
-        font-size: 0.8rem;
+      &.current {
+        background: var(--primary-50);
+        border-left: 3px solid var(--primary-color);
+        padding-left: 0.5rem;
+        border-radius: 0 4px 4px 0;
       }
       
       .timeline-time {
-        font-size: 0.7rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-color);
+        margin-bottom: 0.25rem;
+        font-family: var(--font-family-mono, 'Courier New', monospace);
       }
-    }
-    
-    /* Accessibility */
-    @media (prefers-reduced-motion: reduce) {
-      .timeline-card {
-        transition: none;
+      
+      .timeline-action {
+        margin-bottom: 0.25rem;
         
-        &:hover {
-          transform: none;
+        .action-link {
+          color: var(--primary-color);
+          text-decoration: none;
+          font-size: 0.875rem;
+          
+          &:hover {
+            text-decoration: underline;
+          }
         }
       }
+      
+      .timeline-description {
+        font-size: 0.75rem;
+        color: var(--text-color-secondary);
+        line-height: 1.3;
+      }
+    }
+
+    .no-timeline {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 150px;
     }
   `]
 })
 export class TransactionTimelineComponent {
-  @Input() timelineData: TransactionTimelineItem[] = [];
-  @Input() appName = '';
-  @Input() environment = '';
-  @Input() location = '';
+  @Input({ required: true }) transactionDetails!: TransactionDetailsResponse | null;
+  @Input() transactionId?: string;
 
   private filtersService = inject(FiltersService);
-  private configService = inject(ConfigService);
 
-  public timelineEvents = computed((): TimelineEvent[] => {
-    const items = this.timelineData;
-    const baseApi = this.configService.get('api.baseUrl');
-    
-    return items.map(item => {
-      // Format the time
-      const formattedTime = this.formatTime(item.time);
-      
-      // Generate action link if applicable
-      const actionLink = this.generateActionLink(item, baseApi);
-      
-      return {
-        status: item.current ? 'current' : 'completed',
-        date: item.time,
-        time: formattedTime,
-        action: item.action,
-        actionLink: actionLink,
-        description: item.e,
-        id: item.id,
-        isCurrent: item.current || false
-      };
-    }).sort((a, b) => {
-      // Sort by date to ensure chronological order
-      return new Date(a.date || '').getTime() - new Date(b.date || '').getTime();
-    });
+  // Simple computed signals
+  public readonly timelineItems = computed(() => {
+    return this.transactionDetails?.TRANSACTION_TIMELINE || [];
   });
 
-  private formatTime(timeString: string): string {
+  // Get the timeline grouping (l field) from first item
+  getTimelineGrouping(): string {
+    const items = this.timelineItems();
+    return items.length > 0 ? items[0].l : 'Unknown';
+  }
+
+  // Format time to HH:mm:ss AM/PM
+  formatTime(time: string): string {
     try {
-      const date = new Date(timeString);
-      return date.toLocaleTimeString('en-US', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        fractionalSecondDigits: 3
+      const date = new Date(time);
+      return date.toLocaleTimeString('en-US', { 
+        hour12: true, 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        second: '2-digit'
       });
-    } catch (error) {
-      return timeString;
+    } catch {
+      return time;
     }
   }
 
-  private generateActionLink(item: TransactionTimelineItem, baseApi: string): string | null {
-    // Generate link to transaction details if we have enough info
-    if (baseApi && this.appName && this.environment && this.location) {
-      // Example: /logs/transaction/{app}/{env}/{location}/{transactionId}
-      return `${baseApi}/logs/transaction/${this.appName}/${this.environment}/${this.location}/${item.id}`;
-    }
-    return null;
+  // Build search link for action
+  buildSearchLink(action: string): string {
+    const filters = this.filtersService.filters();
+    if (!filters) return '#';
+
+    const baseUrl = window.location.origin;
+    const currentApp = filters.application?.[0] || '';
+    const currentEnv = filters.environment || '';
+    const currentLoc = filters.location || '';
+
+    // URL encode all parameters
+    const encodedApp = encodeURIComponent(currentApp);
+    const encodedEnv = encodeURIComponent(currentEnv);
+    const encodedLoc = encodeURIComponent(currentLoc);
+    const encodedAction = encodeURIComponent(action);
+
+    return `${baseUrl}/logs/search?applications=${encodedApp}&env=${encodedEnv}&location=${encodedLoc}&searchText=${encodedAction}`;
   }
 }

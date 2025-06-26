@@ -1,4 +1,4 @@
-<!-- Clean search-result.component.html - No favorites -->
+<!-- Clean search-result.component.html - Direct conditions, no skeleton refs -->
 <p-accordion [multiple]="true" [activeIndex]="search.isExpanded ? [0] : []" styleClass="result-accordion compact"
     (onOpen)="onAccordionOpen($event)" (onClose)="onAccordionClose($event)">
     <p-accordion-panel>
@@ -45,7 +45,7 @@
 
       <p-accordion-content>
         <!-- Show different toolbars based on search type -->
-        @if (shouldShowToolbar()) {
+        @if (!search.error) {
           
           <!-- Streaming Toolbar for SSE searches -->
           @if (shouldShowStreamingToolbar()) {
@@ -69,29 +69,17 @@
             </app-transaction-toolbar>
           }
 
-          <!-- Batch Toolbar for batch searches -->
-          @if (shouldShowBatchToolbar()) {
-            <app-batch-toolbar 
-              [search]="search">
-            </app-batch-toolbar>
-          }
-
-          <!-- JIRA Toolbar for JIRA searches -->
-          @if (shouldShowJiraToolbar()) {
-            <app-jira-toolbar 
-              [search]="search">
-            </app-jira-toolbar>
-          }
-
         }
 
         <div class="result-content-wrapper">
           @if (search.isLoading && search.data.length === 0) {
+            <!-- Loading skeleton with visible columns only -->
             <app-table-skeleton 
               [columns]="finalVisibleColumns()" 
               [rowCount]="10">
             </app-table-skeleton>
           } @else if (search.error) {
+            <!-- Error state -->
             <div class="error-container">
               <p class="p-3 text-red-500 font-bold">
                 <i class="pi pi-exclamation-circle mr-2"></i>{{ search.error }}
@@ -100,58 +88,36 @@
                 (click)="retrySearch()">
               </button>
             </div>
-          } @else {
-            
-            @if (hasTransactionDetails()) {
-              <!-- Split layout for transaction details -->
-              <div class="transaction-details-layout">
-                <!-- 80% - Log Viewer -->
-                <div class="log-viewer-section">
-                  <app-log-viewer #logViewer 
-                    [searchInstance]="search" 
-                    [visibleColumns]="finalVisibleColumns()"
-                    (rowDrilldown)="onDrilldown($event)" 
-                    (filteredCountChange)="updateFilteredCount($event)">
-                  </app-log-viewer>
-                </div>
-                
-                <!-- 20% - Transaction Timeline -->
-                <div class="timeline-section">
-                  <app-transaction-timeline 
-                    [transactionDetails]="search.transactionDetails"
-                    [transactionId]="search.query"
-                    class="transaction-timeline">
-                  </app-transaction-timeline>
-                </div>
-              </div>
-            } @else {
-              <!-- Regular layout - just the appropriate viewer -->
-              
-              @if (shouldShowLogViewer()) {
+          } @else if (hasTransactionDetails()) {
+            <!-- Split layout for transaction details -->
+            <div class="transaction-details-layout">
+              <!-- 80% - Log Viewer -->
+              <div class="log-viewer-section">
                 <app-log-viewer #logViewer 
                   [searchInstance]="search" 
                   [visibleColumns]="finalVisibleColumns()"
                   (rowDrilldown)="onDrilldown($event)" 
                   (filteredCountChange)="updateFilteredCount($event)">
                 </app-log-viewer>
-              }
-
-              @if (shouldShowBatchViewer()) {
-                <app-batch-viewer #batchViewer 
-                  [search]="search"
-                  class="batch-viewer-container">
-                </app-batch-viewer>
-              }
-
-              @if (shouldShowJiraViewer()) {
-                <app-jira-viewer #jiraViewer 
-                  [search]="search"
-                  class="jira-viewer-container">
-                </app-jira-viewer>
-              }
-
-            }
-            
+              </div>
+              
+              <!-- 20% - Transaction Timeline -->
+              <div class="timeline-section">
+                <app-transaction-timeline 
+                  [transactionDetails]="search.transactionDetails"
+                  [transactionId]="search.query"
+                  class="transaction-timeline">
+                </app-transaction-timeline>
+              </div>
+            </div>
+          } @else if (shouldShowLogViewer()) {
+            <!-- Regular log viewer -->
+            <app-log-viewer #logViewer 
+              [searchInstance]="search" 
+              [visibleColumns]="finalVisibleColumns()"
+              (rowDrilldown)="onDrilldown($event)" 
+              (filteredCountChange)="updateFilteredCount($event)">
+            </app-log-viewer>
           }
         </div>
       </p-accordion-content>
