@@ -194,6 +194,30 @@ export class SearchResultComponent {
     });
   }
 
+  public hasTransactionDetails = computed(() => {
+    return this.search.type === 'transaction' && 
+           this.search.transactionDetails && 
+           this.search.transactionDetails.TRANSACTION_TIMELINE?.length > 0;
+  });
+
+  // Optional: Add transaction summary computed property
+  public transactionSummary = computed(() => {
+    if (!this.hasTransactionDetails()) return null;
+    
+    const details = this.search.transactionDetails!;
+    const firstHit = this.search.data[0];
+    const source = firstHit?._source;
+    
+    return {
+      transactionId: this.search.query,
+      status: source?.['response.status'] || source?.['http.status_code'] || 'Unknown',
+      duration: source?.['response.time'] || source?.duration || 0,
+      callCount: details.call_count,
+      hasOverflow: details.overflow,
+      timelineItems: details.TRANSACTION_TIMELINE?.length || 0
+    };
+  });
+
   // Helper Methods
   private getViewType(): 'browse' | 'error' {
     switch (this.search.type) {

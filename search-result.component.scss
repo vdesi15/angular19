@@ -1,189 +1,89 @@
-// search-result.component.scss - Fix accordion overflow and scrolling
-:host {
-  display: block;
-  margin-bottom: 1rem;
-}
+/* Add to search-result.component.scss */
 
-// Fix accordion overflow and ensure proper scrolling
-:host ::ng-deep .result-accordion.compact {
-  .p-accordion-header-link {
-    padding: 0.5rem 1rem !important;
-    min-height: auto;
-    transition: background-color 0.2s;
-    &:hover {
-      background-color: var(--surface-c);
-    }
-  }
+.transaction-details-layout {
+  display: flex;
+  gap: 1rem;
+  height: 600px; // Fixed height for the split view
   
-  .p-accordion-content {
-    padding: 0;
-    overflow: visible; // Don't clip content
+  .log-viewer-section {
+    flex: 0 0 80%; // 80% width, no grow/shrink
+    min-width: 0; // Allow shrinking
+    overflow: hidden;
     
-    .p-accordion-content-wrapper {
-      // Remove max-height constraint that was causing issues
-      // max-height: calc(100vh - 200px); // REMOVED
-      overflow: visible; // Allow content to flow naturally
-      display: flex;
-      flex-direction: column;
-    }
-  }
-}
-
-.accordion-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  .favorite-toggle {
-    transition: all 0.3s ease;
-    
-    &:hover {
-      color: var(--pink-500) !important;
-      transform: scale(1.1);
-    }
-    
-    &.favorited {
-      color: var(--pink-500) !important;
-    }
-  }
-
-  .streaming-control-btn {
-    width: 120px;
-    justify-content: center;
-  }
-}
-
-// Better result content wrapper with flexible height
-.result-content-wrapper {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 400px; // Minimum height to ensure usability
-  
-  // Use flexible height that adapts to content
-  height: auto; // Let content determine height
-  max-height: 80vh; // But don't exceed 80% of viewport
-  
-  // Ensure table container manages its own scrolling
-  app-log-viewer {
-    flex: 1;
-    min-height: 400px; // Ensure minimum usable height
-    display: flex;
-    flex-direction: column;
-    
-    // Let the log viewer handle its own height
-    .table-container {
+    app-log-viewer {
       height: 100%;
-      min-height: 400px;
+      display: block;
     }
   }
   
-  app-table-skeleton {
-    flex: 1;
-    min-height: 400px;
-  }
-  
-  .error-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    padding: 2rem;
-    text-align: center;
-    min-height: 200px;
-    justify-content: center;
-  }
-}
-
-// Enhanced animations for buttons
-.header-right button {
-  transition: all 0.2s ease;
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-}
-
-// Responsive height adjustments - more flexible
-@media (max-height: 768px) {
-  .result-content-wrapper {
-    max-height: 70vh; // Reduce max height on smaller screens
-    min-height: 300px;
+  .timeline-section {
+    flex: 0 0 20%; // 20% width, no grow/shrink
+    min-width: 250px; // Minimum width for timeline
+    border-left: 1px solid var(--surface-300);
+    padding-left: 1rem;
+    overflow-y: auto;
     
-    app-log-viewer .table-container {
-      min-height: 300px;
-    }
-  }
-}
-
-@media (max-height: 600px) {
-  .result-content-wrapper {
-    max-height: 60vh; // Further reduce on very small screens
-    min-height: 250px;
-    
-    app-log-viewer .table-container {
-      min-height: 250px;
-    }
-  }
-}
-
-// Ensure pagination is always visible and accessible
-:host ::ng-deep {
-  .result-content-wrapper {
-    .p-datatable {
-      display: flex;
-      flex-direction: column;
+    app-transaction-timeline {
       height: 100%;
-      min-height: 400px; // Ensure minimum height
-      
-      .p-datatable-wrapper {
-        flex: 1;
-        min-height: 0;
-        overflow: auto;
-      }
-      
-      .p-paginator {
-        flex-shrink: 0;
-        border-top: 1px solid var(--surface-d);
-        background: var(--surface-a);
-        position: relative; // Changed from sticky to relative
-        bottom: auto; // Remove bottom positioning
-        z-index: 10;
-        
-        // Ensure pagination is always visible
-        visibility: visible !important;
-        display: flex !important;
-        
-        // Make sure dropdown opens upward
-        .p-dropdown {
-          .p-dropdown-panel {
-            bottom: 100% !important;
-            top: auto !important;
-            transform-origin: bottom;
-            margin-bottom: 2px;
-          }
-        }
-      }
+      display: block;
+    }
+  }
+  
+  // Responsive behavior
+  @media (max-width: 1200px) {
+    flex-direction: column;
+    height: auto;
+    
+    .log-viewer-section {
+      flex: none;
+      height: 400px; // Fixed height for mobile
+    }
+    
+    .timeline-section {
+      flex: none;
+      height: 300px; // Fixed height for mobile
+      border-left: none;
+      border-top: 1px solid var(--surface-300);
+      padding-left: 0;
+      padding-top: 1rem;
+      min-width: unset;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    gap: 0.5rem;
+    
+    .log-viewer-section {
+      height: 350px;
+    }
+    
+    .timeline-section {
+      height: 250px;
+      padding-top: 0.5rem;
     }
   }
 }
 
-// Global fix for dropdowns in constrained spaces
-:host ::ng-deep .p-dropdown-panel {
-  z-index: 1200 !important;
-  position: fixed !important; // Use fixed positioning
+// Optional: Add a resize handle between the sections
+.transaction-details-layout {
+  position: relative;
+  
+  .resize-handle {
+    position: absolute;
+    top: 0;
+    right: 20%;
+    width: 4px;
+    height: 100%;
+    background: var(--surface-300);
+    cursor: col-resize;
+    z-index: 10;
+    
+    &:hover {
+      background: var(--primary-color);
+    }
+    
+    @media (max-width: 1200px) {
+      display: none;
+    }
+  }
 }

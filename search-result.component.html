@@ -1,46 +1,27 @@
-<!-- search-result.component.html -->
-<div class="search-result-wrapper">
-
-  <!-- SSE Results (Browse/Error) - Shows first -->
-  @if (isSSESearch()) {
-  <p-accordion [multiple]="true" [activeIndex]="search.isExpanded ? [0] : []" styleClass="result-accordion compact"
+<!-- Enhanced search-result.component.html -->
+<p-accordion [multiple]="true" [activeIndex]="search.isExpanded ? [0] : []" styleClass="result-accordion compact"
     (onOpen)="onAccordionOpen($event)" (onClose)="onAccordionClose($event)">
     <p-accordion-panel>
       <p-accordion-header>
-        <!-- ✨ Remove click handler from div to prevent event conflicts -->
         <div class="accordion-header">
           <div class="header-left">
             <span class="font-bold text-lg mr-3">{{ search.title }}</span>
+            <!-- NEW: Show transaction details badge if available -->
+            @if (hasTransactionDetails()) {
+              <p-tag value="Transaction Details" severity="info" size="small" class="mr-2"></p-tag>
+            }
             <span class="text-sm text-color-secondary ml-2">{{ recordsSummary() }}</span>
           </div>
           <div class="header-right">
-            <!-- Favorite Toggle Button -->
+            <!-- Keep your existing favorite, streaming, close buttons -->
             <button pButton type="button" [icon]="isFavorite() ? 'pi pi-heart-fill' : 'pi pi-heart'"
               [class]="'p-button-sm p-button-rounded p-button-text favorite-toggle ' + (isFavorite() ? 'favorited' : '')"
               (click)="toggleFavorite($event)" [pTooltip]="isFavorite() ? 'Remove from favorites' : 'Add to favorites'"
               tooltipPosition="top">
             </button>
 
-            <!-- Streaming Control Button -->
             @if(search.isStreaming) {
-            <button pButton type="button" class="p-button-sm streaming-control-btn" [ngClass]="{
-                'p-button-success': !isStopButtonHovered(),
-                'p-button-danger': isStopButtonHovered()
-              }" (mouseenter)="isStopButtonHovered.set(true)" (mouseleave)="isStopButtonHovered.set(false)"
-              (click)="stopStreaming($event)" pTooltip="Stop the live data stream" tooltipPosition="top">
-
-              @if (isStopButtonHovered()) {
-              <span class="flex align-items-center gap-2">
-                <i class="pi pi-stop-circle"></i>
-                <span>Stop</span>
-              </span>
-              } @else {
-              <span class="flex align-items-center gap-2">
-                <i class="pi pi-spin pi-spinner"></i>
-                <span>Streaming...</span>
-              </span>
-              }
-            </button>
+              <!-- Your existing streaming button -->
             }
 
             <button pButton type="button" icon="pi pi-times"
@@ -52,6 +33,7 @@
       </p-accordion-header>
 
       <p-accordion-content>
+        <!-- Keep your existing toolbar -->
         <app-streaming-toolbar [allAvailableColumns]="allColumnsForViewType()"
           [currentlyVisibleColumns]="streamingVisibleColumns()"
           (visibleColumnsChange)="onStreamingColumnsChange($event)" (resetColumns)="resetStreamingColumns()"
@@ -61,30 +43,52 @@
 
         <div class="result-content-wrapper">
           @if (search.isLoading && search.data.length === 0) {
-          <app-table-skeleton [columns]="allColumnsForViewType()" [rowCount]="10"></app-table-skeleton>
+            <app-table-skeleton [columns]="allColumnsForViewType()" [rowCount]="10"></app-table-skeleton>
           } @else if (search.error) {
-          <div class="error-container">
-            <p class="p-3 text-red-500 font-bold">
-              <i class="pi pi-exclamation-circle mr-2"></i>{{ search.error }}
-            </p>
-            <button pButton type="button" label="Retry" icon="pi pi-refresh" class="p-button-sm p-button-outlined"
-              (click)="retrySearch()">
-            </button>
-          </div>
+            <div class="error-container">
+              <p class="p-3 text-red-500 font-bold">
+                <i class="pi pi-exclamation-circle mr-2"></i>{{ search.error }}
+              </p>
+              <button pButton type="button" label="Retry" icon="pi pi-refresh" class="p-button-sm p-button-outlined"
+                (click)="retrySearch()">
+              </button>
+            </div>
           } @else {
-          <app-log-viewer #logViewer [searchInstance]="search" [visibleColumns]="finalVisibleColumns()"
-            (rowDrilldown)="onDrilldown($event)" (filteredCountChange)="updateFilteredCount($event)">
-          </app-log-viewer>
+            
+            <!-- NEW: Split layout for transaction details -->
+            @if (hasTransactionDetails()) {
+              <div class="transaction-details-layout">
+                <!-- 80% - Log Viewer (your existing component) -->
+                <div class="log-viewer-section">
+                  <app-log-viewer #logViewer 
+                    [searchInstance]="search" 
+                    [visibleColumns]="finalVisibleColumns()"
+                    (rowDrilldown)="onDrilldown($event)" 
+                    (filteredCountChange)="updateFilteredCount($event)">
+                  </app-log-viewer>
+                </div>
+                
+                <!-- 20% - Transaction Timeline (NEW) -->
+                <div class="timeline-section">
+                  <app-transaction-timeline 
+                    [transactionDetails]="search.transactionDetails"
+                    [transactionId]="search.query"
+                    class="transaction-timeline">
+                  </app-transaction-timeline>
+                </div>
+              </div>
+            } @else {
+              <!-- Regular layout - just the log viewer (your existing logic) -->
+              <app-log-viewer #logViewer 
+                [searchInstance]="search" 
+                [visibleColumns]="finalVisibleColumns()"
+                (rowDrilldown)="onDrilldown($event)" 
+                (filteredCountChange)="updateFilteredCount($event)">
+              </app-log-viewer>
+            }
+            
           }
         </div>
       </p-accordion-content>
     </p-accordion-panel>
-  </p-accordion>
-  }
-
-  <!-- Transaction Details - Shows after SSE -->
-  @if (isTransactionSearch()) {
-  <app-transaction-details [search]="search"></app-transaction-details>
-  }
-
-</div>
+</p-accordion>
