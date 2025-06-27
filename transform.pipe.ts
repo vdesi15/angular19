@@ -18,8 +18,8 @@ export class TransformPipe implements PipeTransform {
       return value;
     }
 
-    // NEW: Handle multiple transforms separated by commas
-    if (transformStr.includes(',')) {
+    // NEW: Handle multiple transforms separated by pipes
+    if (transformStr.includes('|')) {
       return this.applyMultipleTransforms(value, transformStr, context);
     }
 
@@ -28,57 +28,17 @@ export class TransformPipe implements PipeTransform {
   }
 
   /**
-   * Apply multiple transforms in sequence, separated by commas
+   * Apply multiple transforms in sequence, separated by pipes
    */
   private applyMultipleTransforms(value: any, transformStr: string, context?: any): any {
-    // Split by comma but be careful with regex patterns that might contain commas
-    const transforms = this.parseTransforms(transformStr);
+    const transforms = transformStr.split('|').map(t => t.trim());
     
     let result = value;
     for (const transform of transforms) {
-      result = this.applySingleTransform(result, transform.trim(), context);
+      result = this.applySingleTransform(result, transform, context);
     }
     
     return result;
-  }
-
-  /**
-   * Parse transforms while respecting regex patterns that contain commas
-   */
-  private parseTransforms(transformStr: string): string[] {
-    const transforms: string[] = [];
-    let current = '';
-    let insideRegex = false;
-    
-    for (let i = 0; i < transformStr.length; i++) {
-      const char = transformStr[i];
-      const nextChar = transformStr[i + 1];
-      
-      if (char === 's' && nextChar === '/' && !insideRegex) {
-        insideRegex = true;
-        current += char;
-      } else if (char === '/' && insideRegex) {
-        // Count slashes to know when regex ends (s/pattern/replacement/flags)
-        const slashCount = (current.match(/\//g) || []).length;
-        current += char;
-        if (slashCount >= 2) { // Third slash means end of regex
-          insideRegex = false;
-        }
-      } else if (char === ',' && !insideRegex) {
-        if (current.trim()) {
-          transforms.push(current.trim());
-          current = '';
-        }
-      } else {
-        current += char;
-      }
-    }
-    
-    if (current.trim()) {
-      transforms.push(current.trim());
-    }
-    
-    return transforms;
   }
 
   /**
@@ -109,12 +69,12 @@ export class TransformPipe implements PipeTransform {
       }
     }
 
-    // Link generation
+    // NEW: Link generation
     if (transformStr.startsWith('link:')) {
       return this.generateLink(value, transformStr);
     }
 
-    // Regex-based concatenation
+    // ENHANCED: Regex-based concatenation
     if (transformStr.includes('+') && transformStr.includes('regex:')) {
       return this.regexConcatenation(value, transformStr, context);
     }
@@ -143,7 +103,7 @@ export class TransformPipe implements PipeTransform {
   }
 
   /**
-   * REGEX CONCATENATION: Handle regex patterns in concatenation
+   * 1. REGEX CONCATENATION: Handle regex patterns in concatenation
    * Example: regex:^(\w+) + '.' + regex:(\w+)$
    */
   private regexConcatenation(value: any, transformStr: string, context?: any): string {
@@ -182,7 +142,7 @@ export class TransformPipe implements PipeTransform {
   }
 
   /**
-   * LINK GENERATION: Create clickable links
+   * 3. LINK GENERATION: Create clickable links
    * Example: link:activity creates a search link
    */
   private generateLink(value: any, transformStr: string): SafeHtml {
@@ -213,15 +173,18 @@ export class TransformPipe implements PipeTransform {
 /**
  * USAGE EXAMPLES:
  * 
- * 1. Multiple string replacements (your requirement):
- * transform: "s/op(.+?)output file is in/$1 output file/g, s/op(.+?)input file is in/$1 input file/g"
+ * 1. Multiple string replacements:
+ * transform: "s/op(.+?)output file is in/$1 output file/g | s/op(.+?)input file is in/$1 input file/g"
  * 
- * 2. Cleanup then add link:
- * transform: "s/op(.+?)output file is in/$1 output file/g, link:activity"
+ * 2. String concatenation with comma then link:
+ * transform: "_source.user.firstname + ',' + _source.user.lastname | link:profile"
  * 
- * 3. Multiple regex + period:
- * transform: "regex:^(\\w+) + '.' + regex:(\\w+)$, link:transaction"
+ * 3. Cleanup then add link:
+ * transform: "s/op(.+?)output file is in/$1 output file/g | link:activity"
  * 
- * 4. Chain multiple operations:
- * transform: "s/op(.+?)output file is in/$1 output file/g, s/op(.+?)input file is in/$1 input file/g, link:activity"
+ * 4. Regex concatenation then link:
+ * transform: "regex:^(\\w+) + '.' + regex:(\\w+)$ | link:transaction"
+ * 
+ * 5. Multiple operations chained:
+ * transform: "s/op(.+?)output file is in/$1 output file/g | s/op(.+?)input file is in/$1 input file/g | link:activity"
  */
