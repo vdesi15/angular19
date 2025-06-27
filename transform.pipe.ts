@@ -187,4 +187,8 @@ export class TransformPipe implements PipeTransform {
  * 
  * 5. Multiple operations chained:
  * transform: "s/op(.+?)output file is in/$1 output file/g | s/op(.+?)input file is in/$1 input file/g | link:activity"
+ * 
+ * // If you need more flexibility for special characters:
+*  "s/op\\s+([^o]+?)\\s+output file is in/$1 output file/g"
+*   "s/op\\s+([^i]+?)\\s+input file is in/$1 input file/g"
  */
