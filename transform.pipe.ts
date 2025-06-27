@@ -61,7 +61,26 @@ export class TransformPipe implements PipeTransform {
 
     if (transformStr.startsWith('s/')) {
       try {
-        const [, pattern, replacement, flags] = transformStr.split('/');
+        // Parse s/pattern/replacement/flags properly
+        const parts = transformStr.slice(2); // Remove 's/'
+        const firstSlash = parts.indexOf('/');
+        if (firstSlash === -1) throw new Error('Invalid s/ format');
+        
+        const pattern = parts.slice(0, firstSlash);
+        const remaining = parts.slice(firstSlash + 1);
+        const lastSlash = remaining.lastIndexOf('/');
+        
+        let replacement, flags;
+        if (lastSlash === -1) {
+          // No flags, just s/pattern/replacement
+          replacement = remaining;
+          flags = '';
+        } else {
+          // Has flags: s/pattern/replacement/flags
+          replacement = remaining.slice(0, lastSlash);
+          flags = remaining.slice(lastSlash + 1);
+        }
+        
         return String(value).replace(new RegExp(pattern, flags), replacement);
       } catch (e) {
         console.error('Invalid regex transform:', transformStr, e);
