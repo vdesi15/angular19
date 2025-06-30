@@ -2,6 +2,7 @@
 import { Injectable, signal, WritableSignal, inject } from '@angular/core';
 import { ColumnDefinition, TransactionDetailsResponse } from '../models/column-definition.model';
 import { SearchOrchestratorService } from '../../features/search/services/search-orchestrator.service';
+import { ActiveSearch } from './search.model';
 
 export interface EditorTab {
   title: string;
@@ -18,7 +19,8 @@ export interface CellClickContext {
   columnDef: ColumnDefinition;
   rowData: any;
   cellValue: any;
-  transactionDetails?: TransactionDetailsResponse; // For actions that need full transaction context
+  transactionDetails?: TransactionDetailsResponse;
+  activeSearch: ActiveSearch // For actions that need full transaction context
 }
 
 @Injectable({
@@ -50,7 +52,7 @@ export class CellClickActionService {
       // Handle different action types
       switch (action) {
         case 'OpenTransactionComponent':
-          this.handleOpenTransactionComponent(rowData, cellValue);
+          this.handleOpenTransactionComponent(rowData, cellValue, context.activeSearch);
           break;
           
         case 'ShowRawJSON':
@@ -72,58 +74,17 @@ export class CellClickActionService {
   /**
    * Handle opening transaction component (drill-down)
    */
-  private handleOpenTransactionComponent(rowData: any, cellValue: any): void {
-    const identifier = this.extractTransactionIdentifier(rowData, cellValue);
-    if (identifier) {
+  private handleOpenTransactionComponent(rowData: any, cellValue: any, activeSearch: ActiveSearch): void {
+    if (cellValue) {
       console.log(`[CellClickActionService] Opening transaction component for: ${identifier}`);
       
       this.searchOrchestrator.performSearch({
         type: 'transaction',
-        query: identifier,
-        title: `Transaction Details: ${identifier}`,
-        appName: this.extractAppName(rowData)
+        query: cellValue,
+        title: `Transaction Details: ${cellValue}`,
+        appName: activeSearch.appName
       });
     }
-  }
-
-  /**
-   * Extract transaction identifier from row data or cell value
-   */
-  private extractTransactionIdentifier(rowData: any, cellValue: any): string | null {
-    // First try the cell value itself
-    if (cellValue && typeof cellValue === 'string') {
-      return cellValue;
-    }
-
-    // Try common transaction identifier fields
-    const identifierFields = [
-      '_source.transactionId',
-      '_source.event.payload.transactionId',
-      '_source.traceId',
-      '_source.correlationId',
-      '_source.event.payload.correlation_id',
-      'transactionId',
-      'id'
-    ];
-    
-    for (const field of identifierFields) {
-      const value = this.getNestedValue(rowData, field);
-      if (value) {
-        return String(value);
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Extract app name from row data
-   */
-  private extractAppName(rowData: any): string {
-    return this.getNestedValue(rowData, '_source.application') || 
-           this.getNestedValue(rowData, '_source.app') || 
-           this.getNestedValue(rowData, 'application') || 
-           '';
   }
 
   /**
@@ -177,8 +138,8 @@ export class CellClickActionService {
     const tabs: EditorTab[] = [];
     
     // Get correlation ID and direction from row data
-    const correlationId = this.getNestedValue(rowData, '_source.event.payload.correlation_id');
-    const direction = this.getNestedValue(rowData, '_source.event.payload.direction');
+    const correlationId = get(rowData._original, '_source.event.payload.correlation_id');
+    const direction = get(rowData._original, '_source.event.payload.direction');
     
     console.log(`[CellClickActionService] Looking for correlation data - ID: ${correlationId}, Direction: ${direction}`);
 
@@ -225,10 +186,8 @@ export class CellClickActionService {
 
     // Fallback: show row data payload if no additional data found
     if (tabs.length === 0) {
-      const payloadData = this.getNestedValue(rowData, '_source.event.payload') || 
-                          this.getNestedValue(rowData, '_source.payload') ||
-                          rowData._source || 
-                          rowData;
+      const payloadData = get(rowData._original, '_source.event.payload') || 
+                          get(rowData._original, '_source.payload');
 
       tabs.push({
         title: 'Row Data',
@@ -271,13 +230,43 @@ export class CellClickActionService {
    */
   private prettyXML(xml: string): string {
     try {
+      // First, preserve CDATA sections by replacing them with placeholders
+      const cdataPlaceholders: { [key: string]: string } = {};
+      let cdataCounter = 0;
+      
+      // Extract and preserve CDATA sections
+      xml = xml.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, (match, content) => {
+        const placeholder = `__CDATA_PLACEHOLDER_${cdataCounter}__`;
+        cdataPlaceholders[placeholder] = match;
+        cdataCounter++;
+        return placeholder;
+      });
+
+      // Parse and format the XML without CDATA
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xml, 'text/xml');
-      const serializer = new XMLSerializer();
       
-      return serializer.serializeToString(xmlDoc)
-        .replace(/></g, '>\n<')
-        .replace(/^\s*\n/gm, '');
+      // Check for parsing errors
+      const parseError = xmlDoc.querySelector('parsererror');
+      if (parseError) {
+        console.warn('[CellClickActionService] XML parsing failed, using manual formatting');
+        return this.manualXMLFormat(xml, cdataPlaceholders);
+      }
+
+      // Serialize the formatted XML
+      const serializer = new XMLSerializer();
+      let formattedXML = serializer.serializeToString(xmlDoc);
+      
+      // Restore CDATA placeholders with proper formatting
+      Object.entries(cdataPlaceholders).forEach(([placeholder, cdataContent]) => {
+        // Format CDATA content with proper indentation and line breaks
+        const formattedCDATA = this.formatCDATAContent(cdataContent);
+        formattedXML = formattedXML.replace(placeholder, formattedCDATA);
+      });
+
+      // Apply basic XML formatting
+      return this.applyXMLIndentation(formattedXML);
+      
     } catch (error) {
       console.warn('[CellClickActionService] XML formatting failed, returning original:', error);
       return xml;
@@ -285,23 +274,91 @@ export class CellClickActionService {
   }
 
   /**
-   * Get nested value from object using dot notation
+   * Manual XML formatting for cases where DOMParser fails
    */
-  private getNestedValue(obj: any, path: string): any {
-    if (!obj || !path) return null;
+  private manualXMLFormat(xml: string, cdataPlaceholders: { [key: string]: string }): string {
+    // Restore CDATA sections first
+    Object.entries(cdataPlaceholders).forEach(([placeholder, cdataContent]) => {
+      xml = xml.replace(placeholder, cdataContent);
+    });
 
-    const keys = path.split('.');
-    let value = obj;
+    // Apply basic XML formatting
+    return this.applyXMLIndentation(xml);
+  }
 
-    for (const key of keys) {
-      if (value && typeof value === 'object' && key in value) {
-        value = value[key];
+  /**
+   * Format CDATA content with proper structure for Monaco folding
+   */
+  private formatCDATAContent(cdataContent: string): string {
+    const match = cdataContent.match(/<!\[CDATA\[([\s\S]*?)\]\]>/);
+    if (!match) return cdataContent;
+
+    const innerContent = match[1];
+    
+    // If CDATA content is empty or whitespace only
+    if (!innerContent.trim()) {
+      return '<![CDATA[]]>';
+    }
+
+    // If CDATA content is short (single line), keep it inline
+    if (innerContent.length < 100 && !innerContent.includes('\n')) {
+      return `<![CDATA[${innerContent.trim()}]]>`;
+    }
+
+    // For longer content, format with line breaks for proper folding
+    const trimmedContent = innerContent.trim();
+    return `<![CDATA[\n${trimmedContent}\n]]>`;
+  }
+
+  /**
+   * Apply proper XML indentation
+   */
+  private applyXMLIndentation(xml: string): string {
+    let formatted = '';
+    let indent = 0;
+    const indentSize = 4; // Use 4 spaces to match our editor settings
+    
+    // Split by tags while preserving CDATA sections
+    const parts = xml.split(/(<[^>]*>)/);
+    
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i].trim();
+      if (!part) continue;
+
+      if (part.startsWith('</')) {
+        // Closing tag - decrease indent before adding
+        indent = Math.max(0, indent - indentSize);
+        formatted += ' '.repeat(indent) + part + '\n';
+      } else if (part.startsWith('<![CDATA[')) {
+        // CDATA section - handle specially
+        const cdataLines = part.split('\n');
+        for (let j = 0; j < cdataLines.length; j++) {
+          if (j === 0) {
+            formatted += ' '.repeat(indent) + cdataLines[j];
+          } else {
+            formatted += '\n' + ' '.repeat(indent + indentSize) + cdataLines[j].trim();
+          }
+        }
+        formatted += '\n';
+      } else if (part.startsWith('<') && !part.endsWith('/>')) {
+        // Opening tag
+        formatted += ' '.repeat(indent) + part + '\n';
+        // Only increase indent if it's not a self-closing tag or CDATA
+        if (!part.includes('CDATA') && !part.endsWith('/>')) {
+          indent += indentSize;
+        }
+      } else if (part.startsWith('<') && part.endsWith('/>')) {
+        // Self-closing tag
+        formatted += ' '.repeat(indent) + part + '\n';
       } else {
-        return null;
+        // Text content
+        if (part.length > 0) {
+          formatted += ' '.repeat(indent) + part + '\n';
+        }
       }
     }
 
-    return value;
+    return formatted.trim();
   }
 
   /**
