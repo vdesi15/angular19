@@ -9,19 +9,29 @@ export interface ColumnDefinition {
   transform?: string;
   views?: string; // Comma-separated list of view IDs where this column should appear
   width?: string; // CSS width value (e.g., '150px', '20%', '10rem')
-  minWidth?: string; // Minimum width
-  maxWidth?: string; // Maximum width
-  isClickable?: boolean;
-  clickTarget?: 'TransactionDetailsGrid' | 'Editor' | string;
   sortable?: boolean;
   filterable?: boolean;
-  dataType?: 'text' | 'number' | 'date' | 'boolean';
-  alignment?: 'left' | 'center' | 'right';
+  onClick?: OnClick; // New property for click actions
 }
 
-export interface CellClickEvent {
-  column: ColumnDefinition;
-  rowData: any;
-  originalData: any;
-  clickTarget: string;
+// Transaction Details Response interface
+export interface CorrelationTabData {
+  [correlationId: string]: {
+    input?: any;
+    output?: any;
+  };
+}
+
+export interface TransactionDetailsResponse {
+  hits: any; // TransactionHitsPayload
+  overflow: boolean;
+  call_count: number;
+  FORMATTED_PAYLOADS: any[];
+  TRANSACTION_TIMELINE: any[]; // TransactionTimelineItem[]
+  ADDITIONAL_TAB_DATA_BY_CORRID: CorrelationTabData[];
+}
+
+export interface OnClick {
+  action: 'ShowRawJSON' | 'ShowSourceInputOutputMessageinXML' | 'OpenTransactionComponent' | string;
+  format: 'xml' | 'json' | 'text' | 'yaml';
 }
