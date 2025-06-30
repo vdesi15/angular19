@@ -1,4 +1,4 @@
-// transaction-timeline.component.ts - Simple PrimeNG Timeline with Search Links
+// transaction-timeline.component.ts - Fixed positioning timeline
 import { Component, Input, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TimelineModule } from 'primeng/timeline';
@@ -30,8 +30,8 @@ import { FiltersService } from 'src/app/core/services/filters.service';
           
           <ng-template #content let-event>
             <div 
-              class="timeline-event"
-              [class.current]="event.isCurrent">
+              class="timeline-event-wrapper"
+              [class.current-transaction]="event.isCurrent">
               <div class="event-time">{{ event.formattedTime }}</div>
               <div class="event-action">
                 <a [href]="event.searchLink" 
@@ -94,21 +94,77 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       padding: 1rem;
     }
 
-    /* Simple marker styling - just override the current transaction color */
-    .timeline-marker.current ::ng-deep i {
-      color: #22c55e !important; /* Green color for current transaction */
+    /* Fixed positioning for timeline structure */
+    ::ng-deep .p-timeline-event {
+      position: relative !important;
+      margin-bottom: 1rem !important;
     }
 
-    /* Timeline Event Content */
-    .timeline-event {
-      padding: 0.5rem 0;
+    /* Fixed timeline connector line */
+    ::ng-deep .p-timeline-event-connector {
+      position: absolute !important;
+      left: 20px !important; /* Fixed 20px from left */
+      top: 0 !important;
+      width: 2px !important;
+      background: var(--surface-300) !important;
+    }
+
+    /* Fixed marker position */
+    ::ng-deep .p-timeline-event-marker {
+      position: absolute !important;
+      left: 20px !important; /* Fixed 20px from left */
+      top: 0.5rem !important;
+      width: 12px !important;
+      height: 12px !important;
+      margin: 0 !important;
+      transform: translateX(-50%) !important; /* Center the marker on the line */
+      border: none !important;
+      padding: 0 !important;
+      z-index: 2 !important;
+    }
+
+    /* Timeline marker styling */
+    .timeline-marker {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--surface-400);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      
+      i {
+        font-size: 8px;
+        color: white;
+      }
       
       &.current {
-        background: rgba(34, 197, 94, 0.1);
-        border-left: 3px solid #22c55e;
-        padding-left: 0.75rem;
-        border-radius: 0 4px 4px 0;
-        margin-left: -0.5rem;
+        background: #22c55e; /* Green for current transaction */
+        
+        i {
+          color: white;
+        }
+      }
+    }
+
+    /* Fixed content positioning with text wrapping */
+    ::ng-deep .p-timeline-event-content {
+      margin-left: 40px !important; /* Content starts 40px from left (20px line + 20px spacing) */
+      padding: 0 !important;
+      width: calc(100% - 40px) !important; /* Take remaining width */
+      word-wrap: break-word !important;
+      overflow-wrap: break-word !important;
+    }
+
+    /* Timeline event content wrapper */
+    .timeline-event-wrapper {
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      transition: background-color 0.2s ease;
+      
+      &.current-transaction {
+        background: rgba(34, 197, 94, 0.1); /* Light green background */
+        border: 1px solid rgba(34, 197, 94, 0.3);
       }
     }
 
@@ -118,6 +174,7 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       font-family: var(--font-family-mono, 'Courier New', monospace);
       margin-bottom: 0.25rem;
       font-weight: 600;
+      line-height: 1.2;
     }
 
     .event-action {
@@ -128,6 +185,8 @@ import { FiltersService } from 'src/app/core/services/filters.service';
         text-decoration: none;
         font-size: 0.875rem;
         font-weight: 600;
+        line-height: 1.3;
+        word-break: break-word; /* Allow long URLs to wrap */
         
         &:hover {
           text-decoration: underline;
@@ -143,7 +202,9 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     .event-description {
       font-size: 0.75rem;
       color: var(--text-color-secondary);
-      line-height: 1.3;
+      line-height: 1.4;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
 
     .no-events {
@@ -177,9 +238,13 @@ import { FiltersService } from 'src/app/core/services/filters.service';
         background: var(--surface-700);
       }
       
-      .timeline-event.current {
+      .timeline-event-wrapper.current-transaction {
         background: rgba(34, 197, 94, 0.2);
-        border-left-color: #22c55e;
+        border-color: rgba(34, 197, 94, 0.4);
+      }
+
+      ::ng-deep .p-timeline-event-connector {
+        background: var(--surface-600) !important;
       }
     }
 
@@ -199,6 +264,22 @@ import { FiltersService } from 'src/app/core/services/filters.service';
 
     .timeline-content::-webkit-scrollbar-thumb:hover {
       background: var(--primary-color);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 480px) {
+      ::ng-deep .p-timeline-event-content {
+        margin-left: 35px !important;
+        width: calc(100% - 35px) !important;
+      }
+      
+      .event-action .action-link {
+        font-size: 0.8rem;
+      }
+      
+      .event-description {
+        font-size: 0.7rem;
+      }
     }
   `]
 })
