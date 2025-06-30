@@ -1,10 +1,11 @@
-// transaction-timeline.component.ts - Simple PrimeNG Timeline
-import { Component, Input, computed } from '@angular/core';
+// transaction-timeline.component.ts - Simple PrimeNG Timeline with Search Links
+import { Component, Input, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TimelineModule } from 'primeng/timeline';
 import { CardModule } from 'primeng/card';
 
 import { TransactionDetailsResponse, TransactionTimelineItem } from '../models/transaction-details.model';
+import { FiltersService } from 'src/app/core/services/filters.service';
 
 @Component({
   selector: 'app-transaction-timeline',
@@ -19,10 +20,27 @@ import { TransactionDetailsResponse, TransactionTimelineItem } from '../models/t
       
       @if (events().length > 0) {
         <p-timeline [value]="events()" class="timeline-content">
+          <ng-template #marker let-event>
+            <div 
+              class="timeline-marker"
+              [class.current]="isCurrentTransaction(event)">
+              <i class="pi pi-circle"></i>
+            </div>
+          </ng-template>
+          
           <ng-template #content let-event>
-            <div class="timeline-event">
+            <div 
+              class="timeline-event"
+              [class.current]="isCurrentTransaction(event)">
               <div class="event-time">{{ formatTime(event.time) }}</div>
-              <div class="event-action">{{ event.action }}</div>
+              <div class="event-action">
+                <a [href]="buildSearchLink(event.action)" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="action-link">
+                  {{ event.action }}
+                </a>
+              </div>
               <div class="event-description">{{ event.e }}</div>
             </div>
           </ng-template>
@@ -76,27 +94,77 @@ import { TransactionDetailsResponse, TransactionTimelineItem } from '../models/t
       padding: 1rem;
     }
 
+    /* Timeline Marker Styling */
+    ::ng-deep .p-timeline-event-marker {
+      border: none !important;
+      width: 1.5rem !important;
+      height: 1.5rem !important;
+      margin-left: -0.75rem !important;
+      padding: 0 !important;
+    }
+
+    .timeline-marker {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--surface-400);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.5rem;
+      
+      &.current {
+        background: var(--primary-color);
+        box-shadow: 0 0 8px rgba(var(--primary-color-rgb), 0.4);
+      }
+    }
+
+    /* Timeline Event Content */
     .timeline-event {
       padding: 0.5rem 0;
+      
+      &.current {
+        background: var(--primary-50);
+        border-left: 3px solid var(--primary-color);
+        padding-left: 0.75rem;
+        border-radius: 0 4px 4px 0;
+        margin-left: -0.5rem;
+      }
     }
 
     .event-time {
       font-size: 0.75rem;
       color: var(--text-color-secondary);
-      font-family: monospace;
+      font-family: var(--font-family-mono, 'Courier New', monospace);
       margin-bottom: 0.25rem;
+      font-weight: 600;
     }
 
     .event-action {
-      font-weight: 600;
-      color: var(--text-color);
       margin-bottom: 0.25rem;
+      
+      .action-link {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 600;
+        
+        &:hover {
+          text-decoration: underline;
+          color: var(--primary-color-text);
+        }
+        
+        &:visited {
+          color: var(--primary-color);
+        }
+      }
     }
 
     .event-description {
-      font-size: 0.875rem;
+      font-size: 0.75rem;
       color: var(--text-color-secondary);
-      line-height: 1.4;
+      line-height: 1.3;
     }
 
     .no-events {
@@ -129,6 +197,11 @@ import { TransactionDetailsResponse, TransactionTimelineItem } from '../models/t
       .event-count {
         background: var(--surface-700);
       }
+      
+      .timeline-event.current {
+        background: var(--primary-900);
+        border-left-color: var(--primary-color);
+      }
     }
 
     /* Custom scrollbar */
@@ -154,23 +227,67 @@ export class TransactionTimelineComponent {
   @Input({ required: true }) transactionDetails!: TransactionDetailsResponse | null;
   @Input() transactionId?: string;
 
+  private filtersService = inject(FiltersService);
+
   // Simple computed for timeline events
   public readonly events = computed(() => {
-    return this.transactionDetails?.TRANSACTION_TIMELINE || [];
+    const timeline = this.transactionDetails?.TRANSACTION_TIMELINE || [];
+    
+    // If we have a transactionId input, mark the matching event as current
+    if (this.transactionId) {
+      return timeline.map(event => ({
+        ...event,
+        current: event.action.includes(this.transactionId) || event.id === this.transactionId || event.current
+      }));
+    }
+    
+    return timeline;
   });
 
-  // Format time to HH:mm:ss.SSS
+  // Check if this event represents the current transaction
+  isCurrentTransaction(event: TransactionTimelineItem): boolean {
+    if (event.current) return true;
+    
+    if (this.transactionId) {
+      return event.action.includes(this.transactionId) || 
+             event.id === this.transactionId ||
+             event.action.toLowerCase().includes(this.transactionId.toLowerCase());
+    }
+    
+    return false;
+  }
+
+  // Format time to HH:mm:ss.SSS (matching your existing format)
   formatTime(time: string): string {
     try {
       const date = new Date(time);
       return date.toLocaleTimeString('en-US', { 
-        hour12: false,
-        hour: '2-digit', 
+        hour12: true,
+        hour: 'numeric', 
         minute: '2-digit', 
         second: '2-digit'
-      }) + '.' + date.getMilliseconds().toString().padStart(3, '0');
+      });
     } catch {
       return time;
     }
+  }
+
+  // Build search link for action (from your existing implementation)
+  buildSearchLink(action: string): string {
+    const filters = this.filtersService.filters();
+    if (!filters) return '#';
+
+    const baseUrl = window.location.origin;
+    const currentApp = filters.application?.[0] || '';
+    const currentEnv = filters.environment || '';
+    const currentLoc = filters.location || '';
+
+    // URL encode all parameters
+    const encodedApp = encodeURIComponent(currentApp);
+    const encodedEnv = encodeURIComponent(currentEnv);
+    const encodedLoc = encodeURIComponent(currentLoc);
+    const encodedAction = encodeURIComponent(action);
+
+    return `${baseUrl}/logs/search?applications=${encodedApp}&env=${encodedEnv}&location=${encodedLoc}&searchText=${encodedAction}`;
   }
 }
