@@ -1,89 +1,434 @@
-/* Add to search-result.component.scss */
+// search-result.component.scss
+// Enhanced styles for Angular 19 with proper spacing, dark mode, and layout optimization
 
-.transaction-details-layout {
-  display: flex;
-  gap: 1rem;
-  height: 600px; // Fixed height for the split view
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  // ================================
+  // CSS VARIABLES FOR THEMING
+  // ================================
+  --accordion-header-bg: #f8f9fa;
+  --accordion-header-bg-hover: #e9ecef;
+  --accordion-header-border: #dee2e6;
+  --accordion-content-bg: #ffffff;
+  --timeline-bg: #ffffff;
+  --timeline-border: #dee2e6;
+  --layout-gap: 5px;
   
-  .log-viewer-section {
-    flex: 0 0 80%; // 80% width, no grow/shrink
-    min-width: 0; // Allow shrinking
-    overflow: hidden;
+  // Dark mode variables (triggered by .app-dark class)
+  :host-context(.app-dark) & {
+    --accordion-header-bg: #2d3748;
+    --accordion-header-bg-hover: #4a5568;
+    --accordion-header-border: #4a5568;
+    --accordion-content-bg: #1a202c;
+    --timeline-bg: #1a202c;
+    --timeline-border: #4a5568;
+  }
+
+  // ================================
+  // TRANSACTION DETAILS LAYOUT
+  // ================================
+  .transaction-details-layout {
+    display: flex;
+    height: 100%;
+    gap: var(--layout-gap);
+    min-height: 600px; // Ensure minimum height for proper display
     
-    app-log-viewer {
+    .log-viewer-section {
+      flex: 0 0 80%;
+      min-width: 0; // Prevent flex item from overflowing
+      display: flex;
+      flex-direction: column;
       height: 100%;
-      display: block;
+      
+      app-log-viewer {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        
+        ::ng-deep {
+          .log-viewer-container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            
+            // Ensure table container takes full height
+            .p-datatable-wrapper {
+              flex: 1;
+              overflow: auto;
+            }
+            
+            // Ensure paginator stays at bottom
+            .p-paginator {
+              flex-shrink: 0;
+            }
+          }
+        }
+      }
+    }
+    
+    .timeline-section {
+      flex: 0 0 20%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: var(--timeline-bg);
+      border: 1px solid var(--timeline-border);
+      border-radius: 8px;
+      overflow: hidden;
+      
+      app-transaction-timeline {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        
+        ::ng-deep {
+          .timeline-container {
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1rem;
+            
+            // Custom scrollbar for better UX
+            &::-webkit-scrollbar {
+              width: 6px;
+            }
+            
+            &::-webkit-scrollbar-track {
+              background: var(--surface-ground);
+              border-radius: 3px;
+            }
+            
+            &::-webkit-scrollbar-thumb {
+              background: var(--text-color-secondary);
+              border-radius: 3px;
+              
+              &:hover {
+                background: var(--primary-color);
+              }
+            }
+          }
+          
+          // Timeline component specific styles
+          .p-timeline {
+            .p-timeline-event {
+              padding-bottom: 1rem;
+              
+              &:last-child {
+                padding-bottom: 0;
+              }
+            }
+            
+            .p-timeline-event-content {
+              padding: 0.75rem;
+              background: var(--surface-card);
+              border: 1px solid var(--surface-border);
+              border-radius: 6px;
+              font-size: 0.875rem;
+            }
+            
+            .p-timeline-event-marker {
+              border: 2px solid var(--primary-color);
+              background: var(--primary-color);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // ================================
+  // ACCORDION ENHANCEMENTS
+  // ================================
+  ::ng-deep {
+    .result-accordion {
+      
+      &.compact {
+        .p-accordion-panel {
+          margin-bottom: 0;
+          border: none;
+          border-radius: 0;
+        }
+        
+        .p-accordion-header {
+          
+          a {
+            padding: 1rem 1.5rem;
+            background: var(--accordion-header-bg) !important;
+            border: 1px solid var(--accordion-header-border) !important;
+            border-radius: 8px 8px 0 0;
+            color: var(--text-color) !important;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            
+            &:hover {
+              background: var(--accordion-header-bg-hover) !important;
+              transform: none; // Remove any transform effects
+            }
+            
+            &:focus {
+              box-shadow: 0 0 0 2px var(--primary-color) !important;
+              outline: none;
+            }
+            
+            // Ensure accordion header is visually distinct
+            &::before {
+              content: '';
+              position: absolute;
+              left: 0;
+              top: 0;
+              bottom: 0;
+              width: 4px;
+              background: var(--primary-color);
+              border-radius: 2px 0 0 2px;
+            }
+          }
+          
+          // Icon styling
+          .p-accordion-toggle-icon {
+            color: var(--primary-color) !important;
+            transition: transform 0.2s ease;
+          }
+        }
+        
+        .p-accordion-content {
+          background: var(--accordion-content-bg) !important;
+          border: 1px solid var(--accordion-header-border) !important;
+          border-top: none !important;
+          border-radius: 0 0 8px 8px;
+          padding: 0 !important;
+          
+          .p-accordion-content-container {
+            padding: 0 !important;
+            
+            // Ensure content fits within accordion height
+            .accordion-content {
+              max-height: 70vh; // Limit height to prevent page scroll
+              overflow-y: auto;
+              
+              // Custom scrollbar
+              &::-webkit-scrollbar {
+                width: 8px;
+              }
+              
+              &::-webkit-scrollbar-track {
+                background: var(--surface-ground);
+              }
+              
+              &::-webkit-scrollbar-thumb {
+                background: var(--text-color-secondary);
+                border-radius: 4px;
+                
+                &:hover {
+                  background: var(--primary-color);
+                }
+              }
+            }
+          }
+        }
+        
+        // When accordion is expanded
+        .p-accordion-panel-active {
+          .p-accordion-header a {
+            border-radius: 8px 8px 0 0;
+            border-bottom-color: transparent !important;
+          }
+        }
+      }
+    }
+    
+    // ================================
+    // ENHANCED ACCORDION HEADER
+    // ================================
+    .accordion-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      position: relative;
+      
+      .header-content {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+        
+        .search-info {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+          
+          .search-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text-color);
+          }
+          
+          .search-meta {
+            font-size: 0.875rem;
+            color: var(--text-color-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            
+            .meta-item {
+              display: flex;
+              align-items: center;
+              gap: 0.25rem;
+              
+              i {
+                font-size: 0.75rem;
+                opacity: 0.7;
+              }
+            }
+          }
+        }
+      }
+      
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-left: auto;
+        
+        .status-badge {
+          padding: 0.25rem 0.75rem;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          
+                      &.searching {
+            background: var(--blue-100);
+            color: var(--blue-800);
+          }
+          
+          &.completed {
+            background: var(--green-100);
+            color: var(--green-800);
+          }
+          
+          &.error {
+            background: var(--red-100);
+            color: var(--red-800);
+          }
+          
+          // Dark mode status badges
+          :host-context(.app-dark) & {
+            &.searching {
+              background: var(--blue-900);
+              color: var(--blue-200);
+            }
+            
+            &.completed {
+              background: var(--green-900);
+              color: var(--green-200);
+            }
+            
+            &.error {
+              background: var(--red-900);
+              color: var(--red-200);
+            }
+          }
+        }
+      }
     }
   }
   
-  .timeline-section {
-    flex: 0 0 20%; // 20% width, no grow/shrink
-    min-width: 250px; // Minimum width for timeline
-    border-left: 1px solid var(--surface-300);
-    padding-left: 1rem;
-    overflow-y: auto;
-    
-    app-transaction-timeline {
-      height: 100%;
-      display: block;
-    }
-  }
-  
-  // Responsive behavior
+  // ================================
+  // RESPONSIVE DESIGN
+  // ================================
   @media (max-width: 1200px) {
-    flex-direction: column;
-    height: auto;
-    
-    .log-viewer-section {
-      flex: none;
-      height: 400px; // Fixed height for mobile
-    }
-    
-    .timeline-section {
-      flex: none;
-      height: 300px; // Fixed height for mobile
-      border-left: none;
-      border-top: 1px solid var(--surface-300);
-      padding-left: 0;
-      padding-top: 1rem;
-      min-width: unset;
+    .transaction-details-layout {
+      .log-viewer-section {
+        flex: 0 0 75%;
+      }
+      
+      .timeline-section {
+        flex: 0 0 25%;
+      }
     }
   }
   
-  @media (max-width: 768px) {
-    gap: 0.5rem;
-    
-    .log-viewer-section {
-      height: 350px;
+  @media (max-width: 960px) {
+    .transaction-details-layout {
+      flex-direction: column;
+      gap: var(--layout-gap);
+      
+      .log-viewer-section,
+      .timeline-section {
+        flex: 1 1 auto;
+        height: 50%;
+      }
+      
+      .timeline-section {
+        min-height: 300px;
+      }
     }
-    
-    .timeline-section {
-      height: 250px;
-      padding-top: 0.5rem;
+  }
+  
+  @media (max-width: 600px) {
+    ::ng-deep .accordion-header {
+      .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      
+      .header-actions {
+        margin-left: 0;
+        margin-top: 0.5rem;
+      }
     }
   }
 }
 
-// Optional: Add a resize handle between the sections
-.transaction-details-layout {
-  position: relative;
-  
-  .resize-handle {
-    position: absolute;
-    top: 0;
-    right: 20%;
-    width: 4px;
-    height: 100%;
-    background: var(--surface-300);
-    cursor: col-resize;
-    z-index: 10;
-    
-    &:hover {
-      background: var(--primary-color);
+// ================================
+// DARK MODE SUPPORT (.app-dark class)
+// ================================
+:host-context(.app-dark) {
+  ::ng-deep {
+    .p-accordion {
+      .p-accordion-header a {
+        color: var(--text-color) !important;
+      }
+      
+      .p-accordion-content {
+        color: var(--text-color) !important;
+      }
     }
     
-    @media (max-width: 1200px) {
-      display: none;
+    // Ensure proper contrast in dark mode
+    .transaction-details-layout {
+      .timeline-section {
+        border-color: var(--surface-border);
+      }
+    }
+  }
+}
+
+// ================================
+// PRINT STYLES
+// ================================
+@media print {
+  :host {
+    .transaction-details-layout {
+      flex-direction: column;
+      
+      .timeline-section {
+        page-break-inside: avoid;
+      }
+    }
+    
+    ::ng-deep .result-accordion {
+      .p-accordion-header a {
+        background: #f8f9fa !important;
+        color: #000 !important;
+      }
     }
   }
 }

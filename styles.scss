@@ -80,91 +80,24 @@ body {
           }
         }
       }
-      
-      // Hide PrimeNG's clear filter icon
-      .p-column-filter-clear-button {
-        display: none !important;
-      }
     }
   }
 }
 
 // ================================
-// FORCE EXACT COLUMN WIDTHS - CRITICAL FIX
+// TOOLTIP STYLING
 // ================================
-.p-datatable {
-  table-layout: fixed !important; // Force fixed layout
-  width: 100% !important;
-  
-  th, td {
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-  }
-  
-  // Force width inheritance for filter inputs
-  .p-datatable-thead tr.p-filter-row th {
-    .p-column-filter .p-column-filter-element .p-inputtext {
-      // Calculate width based on column header width
-      width: calc(100% - 4px) !important; // Account for borders
-      min-width: calc(100% - 4px) !important;
-      max-width: calc(100% - 4px) !important;
-    }
-  }
+.p-tooltip {
+  max-width: 300px !important;
+  word-wrap: break-word !important;
+  white-space: normal !important;
+  z-index: 9999 !important;
 }
 
 // ================================
-// SPECIFIC COLUMN WIDTH ENFORCEMENT
+// DIALOG POSITIONING FIX
 // ================================
-.p-datatable th[style*="width"],
-.p-datatable td[style*="width"] {
-  // Force the width from inline styles to be respected
-  box-sizing: border-box !important;
-}
-
-// ================================
-// ACCORDION COMPACT STYLING
-// ================================
-.p-accordion {
-  margin-bottom: 0.5rem !important;
-  
-  .p-accordion-panel {
-    margin-bottom: 0.25rem !important;
-    
-    .p-accordion-header {
-      .p-accordion-header-link {
-        padding: 0.5rem 1rem !important;
-        font-size: 0.95rem !important;
-        font-weight: 600 !important;
-      }
-    }
-    
-    .p-accordion-content {
-      padding: 0 !important;
-      
-      .p-accordion-content-wrapper {
-        padding: 0.75rem !important;
-      }
-    }
-  }
-}
-
-// ================================
-// DROPDOWN PANEL Z-INDEX FIXES
-// ================================
-.p-dropdown-panel,
-.p-multiselect-panel,
-.p-calendar-panel {
-  z-index: 1300 !important;
-  position: fixed !important;
-}
-
-// Pagination dropdown fix
-.p-paginator .p-dropdown-panel {
-  bottom: 100% !important;
-  top: auto !important;
-  transform-origin: bottom !important;
-  margin-bottom: 2px !important;
+.p-dialog {
   z-index: 1400 !important;
 }
 
@@ -226,10 +159,8 @@ body {
   }
 }
 
-// global-styles.scss - Professional theme overrides for light and dark modes
-
 // ================================
-// GLOBAL BUTTON TEXT COLORS
+// GLOBAL PROFESSIONAL THEME VARIABLES
 // ================================
 
 :root {
@@ -241,6 +172,10 @@ body {
   --button-text-light: #2c3e50;
   --button-text-dark: #ecf0f1;
 }
+
+// ================================
+// GLOBAL BUTTON TEXT COLORS
+// ================================
 
 // Light mode button text
 .p-button {
@@ -254,35 +189,12 @@ body {
     
     &:hover {
       color: var(--button-text-light) !important;
-      background-color: rgba(44, 62, 80, 0.1) !important;
-    }
-  }
-  
-  // Success buttons (Add Filter)
-  &.p-button-success {
-    background-color: #27ae60 !important;
-    border-color: #27ae60 !important;
-    color: white !important;
-    
-    &:hover {
-      background-color: #219a52 !important;
-      border-color: #219a52 !important;
-    }
-    
-    &.p-button-outlined {
-      color: #27ae60 !important;
-      background-color: transparent !important;
-      
-      &:hover {
-        background-color: #27ae60 !important;
-        color: white !important;
-      }
     }
   }
 }
 
 // Dark mode button text
-html.p-dark {
+.app-dark {
   .p-button {
     &.p-button-text,
     &.p-button-outlined {
@@ -290,72 +202,178 @@ html.p-dark {
       
       &:hover {
         color: var(--button-text-dark) !important;
-        background-color: rgba(236, 240, 241, 0.1) !important;
-      }
-    }
-    
-    // Success buttons in dark mode
-    &.p-button-success {
-      background-color: #2ecc71 !important;
-      border-color: #2ecc71 !important;
-      
-      &:hover {
-        background-color: #27ae60 !important;
-        border-color: #27ae60 !important;
-      }
-      
-      &.p-button-outlined {
-        color: #2ecc71 !important;
-        
-        &:hover {
-          background-color: #2ecc71 !important;
-          color: white !important;
-        }
       }
     }
   }
 }
 
 // ================================
-// TABLE HEADER STYLING
+// TABLE HEADER STYLING - Light Gray Professional
 // ================================
 
-.p-datatable {
-  .p-datatable-thead {
-    > tr {
-      // Main header row
-      &:first-child > th {
-        background-color: var(--table-header-bg) !important;
-        color: #2c3e50 !important;
-        font-weight: 600 !important;
-        border-bottom: 2px solid #a8a8a8 !important;
-      }
-      
-      // Filter row
-      &.filter-row > th,
-      &:nth-child(2) > th {
-        background-color: var(--table-header-bg) !important;
-        border-bottom: 1px solid #a8a8a8 !important;
-      }
-    }
-  }
+.p-datatable .p-datatable-thead > tr > th {
+  background-color: var(--table-header-bg) !important;
+  color: #2c3e50 !important;
+  font-weight: 600 !important;
+  border-bottom: 2px solid #a8a8a8 !important;
 }
 
 // Dark mode table headers
-html.p-dark {
-  :root {
-    --table-header-bg: #4a5568;
-    --accordion-header-bg: #3a4553;
-  }
-  
-  .p-datatable .p-datatable-thead > tr:first-child > th {
+.app-dark {
+  .p-datatable .p-datatable-thead > tr > th {
+    background-color: #2d3748 !important;
     color: #e2e8f0 !important;
     border-bottom-color: #2d3748 !important;
   }
 }
 
 // ================================
-// ACCORDION HEADER STYLING
+// ENHANCED ACCORDION STYLING (.app-dark compatible)
+// ================================
+
+.p-accordion {
+  
+  // Ensure accordion panels have proper spacing and borders
+  .p-accordion-panel {
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  // Enhanced header styling for better visibility
+  .p-accordion-header {
+    position: relative;
+    
+    a,
+    .p-accordion-header-link {
+      position: relative;
+      padding: 1rem 1.5rem !important;
+      background: var(--surface-50) !important; // Light gray background
+      border: 1px solid var(--surface-200) !important;
+      border-radius: 8px 8px 0 0 !important;
+      color: var(--text-color) !important;
+      font-weight: 500 !important;
+      transition: all 0.2s ease !important;
+      display: flex !important;
+      align-items: center !important;
+      text-decoration: none !important;
+      
+      // Professional hover effect
+      &:hover {
+        background: var(--surface-100) !important;
+        border-color: var(--primary-color) !important;
+        transform: none !important; // Remove any unwanted transforms
+      }
+      
+      &:focus {
+        outline: none !important;
+        box-shadow: 0 0 0 2px var(--primary-color) !important;
+        border-color: var(--primary-color) !important;
+      }
+      
+      // Visual indicator on the left edge
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: var(--primary-color);
+        border-radius: 0 2px 2px 0;
+        opacity: 0.8;
+      }
+      
+      // Enhanced toggle icon
+      .p-accordion-toggle-icon {
+        color: var(--primary-color) !important;
+        transition: transform 0.2s ease !important;
+        margin-left: auto !important;
+        font-size: 1rem !important;
+      }
+    }
+  }
+  
+  // Content area styling
+  .p-accordion-content {
+    background: var(--surface-card) !important;
+    border: 1px solid var(--surface-200) !important;
+    border-top: none !important;
+    border-radius: 0 0 8px 8px !important;
+    padding: 0 !important;
+    
+    .p-accordion-content-container {
+      padding: 0 !important;
+    }
+  }
+  
+  // Active (expanded) state
+  .p-accordion-panel-active {
+    .p-accordion-header a,
+    .p-accordion-header .p-accordion-header-link {
+      background: var(--surface-100) !important;
+      border-bottom-color: transparent !important;
+      
+      .p-accordion-toggle-icon {
+        transform: rotate(180deg) !important;
+      }
+      
+      &::before {
+        opacity: 1;
+        width: 6px;
+      }
+    }
+  }
+}
+
+// ================================
+// DARK MODE ACCORDION SUPPORT (.app-dark)
+// ================================
+
+.app-dark {
+  .p-accordion {
+    .p-accordion-panel {
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    .p-accordion-header a,
+    .p-accordion-header .p-accordion-header-link {
+      background: var(--surface-800) !important; // Dark gray background
+      border-color: var(--surface-600) !important;
+      color: var(--text-color) !important;
+      
+      &:hover {
+        background: var(--surface-700) !important;
+        border-color: var(--primary-color) !important;
+      }
+      
+      &:focus {
+        border-color: var(--primary-color) !important;
+      }
+    }
+    
+    .p-accordion-content {
+      background: var(--surface-900) !important;
+      border-color: var(--surface-600) !important;
+      color: var(--text-color) !important;
+    }
+    
+    .p-accordion-panel-active {
+      .p-accordion-header a,
+      .p-accordion-header .p-accordion-header-link {
+        background: var(--surface-700) !important;
+      }
+    }
+  }
+}
+
+// ================================
+// LEGACY ACCORDION HEADER STYLING (Your existing styles)
 // ================================
 
 .p-accordion {
@@ -373,8 +391,8 @@ html.p-dark {
   }
 }
 
-// Dark mode accordion headers
-html.p-dark {
+// Dark mode accordion headers (legacy support)
+.app-dark {
   .p-accordion .p-accordion-header .p-accordion-header-link {
     color: #e2e8f0 !important;
     border-color: #2d3748 !important;
@@ -433,91 +451,101 @@ html.p-dark {
           background-color: rgba(255, 255, 255, 0.15) !important;
         }
       }
-      
-      .p-chip {
-        background-color: rgba(255, 255, 255, 0.2) !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-      }
     }
   }
 }
 
 // ================================
-// IMPROVED DARK MODE CONTRAST
+// COMPACT ACCORDION VARIANT
 // ================================
 
-html.p-dark {
-  .p-toolbar.streaming-toolbar {
-    background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%) !important;
-    box-shadow: 0 2px 8px rgba(26, 54, 93, 0.3) !important;
+.p-accordion.compact {
+  .p-accordion-panel {
+    margin-bottom: 0.25rem;
     
-    .p-toolbar-group-left,
-    .p-toolbar-group-right {
-      .p-multiselect {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border-color: rgba(255, 255, 255, 0.2) !important;
+    .p-accordion-header a,
+    .p-accordion-header .p-accordion-header-link {
+      padding: 0.75rem 1rem !important;
+      font-size: 0.95rem !important;
+    }
+  }
+}
+
+// ================================
+// RESULT ACCORDION SPECIFIC
+// ================================
+
+.result-accordion {
+  .p-accordion-panel {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--surface-border);
+    
+    .p-accordion-header a,
+    .p-accordion-header .p-accordion-header-link {
+      background: var(--surface-ground) !important;
+      
+      &:hover {
+        background: var(--surface-hover) !important;
       }
     }
   }
 }
 
 // ================================
-// PAGINATION DROPDOWN FIXES
+// ACCESSIBILITY ENHANCEMENTS
 // ================================
 
-.p-paginator .p-dropdown.dropdown-up {
-  .p-dropdown-panel {
-    bottom: 100% !important;
-    top: auto !important;
-    transform-origin: bottom !important;
-    margin-bottom: 2px !important;
-    position: fixed !important;
-    z-index: 1300 !important;
+.p-accordion {
+  .p-accordion-header a,
+  .p-accordion-header .p-accordion-header-link {
+    // Enhanced focus states for accessibility
+    &:focus-visible {
+      outline: 2px solid var(--primary-color) !important;
+      outline-offset: 2px !important;
+    }
+    
+    // Better keyboard navigation
+    &[aria-expanded="true"] {
+      .p-accordion-toggle-icon {
+        transform: rotate(180deg) !important;
+      }
+    }
   }
 }
 
 // ================================
-// ACCORDION OVERFLOW FIXES
+// RESPONSIVE ACCORDION
 // ================================
 
-.p-accordion .p-accordion-content {
-  overflow: visible !important;
-  
-  .p-accordion-content-wrapper {
-    overflow: visible !important;
+@media (max-width: 768px) {
+  .p-accordion {
+    .p-accordion-header a,
+    .p-accordion-header .p-accordion-header-link {
+      padding: 0.75rem 1rem !important;
+      font-size: 0.9rem !important;
+      
+      &::before {
+        width: 3px !important;
+      }
+    }
   }
 }
 
 // ================================
-// TABLE PAGINATION VISIBILITY
+// ANIMATION ENHANCEMENTS
 // ================================
 
-.p-datatable .p-paginator {
-  visibility: visible !important;
-  display: flex !important;
-  flex-shrink: 0 !important;
-}
-
-// ================================
-// DROPDOWN PANEL Z-INDEX
-// ================================
-
-.p-datatable .p-dropdown-panel {
-  z-index: 1200 !important;
-  position: fixed !important;
-}
-
-// ================================
-// COLUMN FILTER INPUTS
-// ================================
-
-.p-datatable .p-column-filter .p-column-filter-element {
-  width: 100% !important;
+.p-accordion {
+  .p-accordion-content {
+    transition: all 0.3s ease !important;
+  }
   
-  .p-inputtext {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
+  .p-accordion-header a,
+  .p-accordion-header .p-accordion-header-link {
+    transition: all 0.2s ease !important;
+    
+    .p-accordion-toggle-icon {
+      transition: transform 0.3s ease !important;
+    }
   }
 }
