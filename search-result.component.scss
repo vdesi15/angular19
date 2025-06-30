@@ -37,7 +37,7 @@
     min-height: 600px; // Ensure minimum height for proper display
     
     .log-viewer-section {
-      flex: 0 0 80%;
+      flex: 0 0 calc(80% - 2.5px); // 80% minus half the gap
       min-width: 0; // Prevent flex item from overflowing
       display: flex;
       flex-direction: column;
@@ -70,72 +70,17 @@
     }
     
     .timeline-section {
-      flex: 0 0 20%;
+      flex: 0 0 calc(20% - 2.5px); // 20% minus half the gap
       min-width: 0;
       display: flex;
       flex-direction: column;
       height: 100%;
-      background: var(--timeline-bg);
-      border: 1px solid var(--timeline-border);
-      border-radius: 8px;
-      overflow: hidden;
       
       app-transaction-timeline {
         height: 100%;
-        display: flex;
-        flex-direction: column;
+        display: block;
         
-        ::ng-deep {
-          .timeline-container {
-            height: 100%;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 1rem;
-            
-            // Custom scrollbar for better UX
-            &::-webkit-scrollbar {
-              width: 6px;
-            }
-            
-            &::-webkit-scrollbar-track {
-              background: var(--surface-ground);
-              border-radius: 3px;
-            }
-            
-            &::-webkit-scrollbar-thumb {
-              background: var(--text-color-secondary);
-              border-radius: 3px;
-              
-              &:hover {
-                background: var(--primary-color);
-              }
-            }
-          }
-          
-          // Timeline component specific styles
-          .p-timeline {
-            .p-timeline-event {
-              padding-bottom: 1rem;
-              
-              &:last-child {
-                padding-bottom: 0;
-              }
-            }
-            
-            .p-timeline-event-content {
-              padding: 0.75rem;
-              background: var(--surface-card);
-              border: 1px solid var(--surface-border);
-              border-radius: 6px;
-              font-size: 0.875rem;
-            }
-            
-            .p-timeline-event-marker {
-              border: 2px solid var(--primary-color);
-              background: var(--primary-color);
-            }
-          }
-        }
+        // No need for complex ng-deep styles - the component handles its own layout
       }
     }
   }
@@ -345,11 +290,11 @@
   @media (max-width: 1200px) {
     .transaction-details-layout {
       .log-viewer-section {
-        flex: 0 0 75%;
+        flex: 0 0 calc(75% - 2.5px);
       }
       
       .timeline-section {
-        flex: 0 0 25%;
+        flex: 0 0 calc(25% - 2.5px);
       }
     }
   }
