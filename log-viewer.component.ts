@@ -31,111 +31,207 @@ import { TransformPipe } from 'src/app/core/pipes/transform.pipe';
   styleUrls: ['./log-viewer.component.scss']
 })
 export class LogViewerComponent implements OnChanges {
-  @Input() data: any[] = [];
-  @Input() loading = false;
-  @Input() searchType: string = 'streaming';
-  @Input() appName: string = '';
-  @Input() filters: StreamFilter[] = [];
-  @Input() transactionDetails?: TransactionDetailsResponse; // For actions that need full context
-
+  @Input({ required: true }) searchInstance!: ActiveSearch;
+  @Input({ required: true }) visibleColumns: ColumnDefinition[] = [];
+  @Input() selectedViewFilter?: string;  
   @Output() rowDrilldown = new EventEmitter<any>();
+  @Output() filteredCountChange = new EventEmitter<number>();
   
+  // ✨ New output for cell clicks
+  @Output() cellClick = new EventEmitter<CellClickEvent>();
+
   @ViewChild('logTable') logTable!: Table;
+  @ViewChild('tableContainer', { static: true }) tableContainer!: ElementRef;
+  
+  // Simple properties
+  public tableData: any[] = [];
+  public totalRecords: number = 0;
+  public isLoading: boolean = false;
 
-  // Injected services
-  private columnDefinitionService = inject(ColumnDefinitionService);
-  private viewDefinitionService = inject(ViewDefinitionService);
+  private viewDefService = inject(ViewDefinitionService);
   private cellClickActionService = inject(CellClickActionService);
-
-  // State signals
-  private _processedData: WritableSignal<any[]> = signal([]);
-  public readonly loadingArray = Array(10).fill(null);
-
-  // Computed signals
-  public readonly displayData = computed(() => 
-    this.loading ? [] : this._processedData()
+  public globalFilterFields = computed(() => 
+    this.visibleColumns.map(c => c.name)
   );
-  
-  public readonly isLoading = computed(() => this.loading);
-  
-  public readonly columnDefinitions = computed(() => 
-    this.columnDefinitionService.getColumnsForSearchType(this.searchType)
-  );
-  
-  public readonly viewDefinition = computed(() => 
-    this.viewDefinitionService.getViewForSearchType(this.searchType)
-  );
-  
-  public readonly visibleColumns = computed(() => {
-    const columns = this.columnDefinitions();
-    const view = this.viewDefinition();
-    
-    if (!view?.visibleColumns?.length) {
-      return columns.filter(col => col.visible);
-    }
-    
-    return columns.filter(col => 
-      col.visible && view.visibleColumns!.includes(col.id)
-    );
-  });
 
-  ngOnInit(): void {
-    this.processData();
+  private cdr = inject(ChangeDetectorRef);
+  
+  constructor() {
+    console.log("[LogViewerComponent] Initialized");
   }
 
-  ngOnChanges(): void {
-    this.processData();
+   ngOnChanges(changes: SimpleChanges): void {
+    let shouldReprocessAll = false;
+
+    // Handle search instance changes
+    if (changes['searchInstance']) {
+      const currentSearch = changes['searchInstance'].currentValue as ActiveSearch;
+      const previousSearch = changes['searchInstance'].previousValue as ActiveSearch | undefined;
+
+      this.isLoading = currentSearch.isLoading;
+
+      // New search - reset everything
+      if (!previousSearch || currentSearch.id !== previousSearch.id) {
+        console.log("[LogViewer] New search detected. Resetting table.");
+        this.resetTableData();
+        shouldReprocessAll = true;
+      }
+      // Same search - check for new data
+      else if (this.hasNewData(currentSearch, previousSearch)) {
+        console.log('[LogViewer] New data detected, will reprocess all data');
+        shouldReprocessAll = true;
+      }
+
+      if (currentSearch.error) {
+        console.error(`[LogViewer] Search error: ${currentSearch.error}`);
+      }
+    }
+
+    // Handle view filter changes
+    if (changes['selectedViewFilter']) {
+      const currentFilter = changes['selectedViewFilter'].currentValue;
+      const previousFilter = changes['selectedViewFilter'].previousValue;
+      
+      if (currentFilter !== previousFilter) {
+        console.log('[LogViewer] View filter changed from', previousFilter, 'to', currentFilter);
+        shouldReprocessAll = true;
+      }
+    }
+
+    // Handle column changes
+    if (changes['visibleColumns']) {
+      console.log("[LogViewer] Visible columns updated:", this.visibleColumns.length);
+      shouldReprocessAll = true;
+    }
+
+    // Reprocess all data if needed (single point of processing)
+    if (shouldReprocessAll) {
+      this.reprocessAllData();
+    }
   }
 
   /**
-   * Process raw data for display
+   * SINGLE METHOD: Process all current data from scratch
+   * This ensures consistent filtering across all data
    */
-  private processData(): void {
-    if (!this.data?.length) {
-      this._processedData.set([]);
+  private reprocessAllData(): void {
+    const allHits = this.searchInstance.data || [];
+    console.log(`[LogViewer] Reprocessing all data: ${allHits.length} hits with view filter: ${this.selectedViewFilter}`);
+    
+    if (allHits.length === 0) {
+      this.resetTableData();
       return;
     }
 
-    const processed = this.data.map((item, index) => ({
-      ...item,
-      _rowId: item.id || `row_${index}`,
-      _index: index
-    }));
+    // Apply view filter first, then transform
+    const filteredAndTransformed = this.processHits(allHits);
+    
+    this.tableData = filteredAndTransformed;
+    this.totalRecords = this.tableData.length;
+    this.cdr.detectChanges();
+    
+    // Notify parent
+    setTimeout(() => {
+      this.filteredCountChange.emit(this.tableData.length);
+    }, 0);
 
-    this._processedData.set(processed);
+    console.log(`[LogViewer] Processed ${allHits.length} → ${this.tableData.length} rows`);
+  }
+  /**
+   * Check if there's new data compared to previous search
+   */
+  private hasNewData(current: ActiveSearch, previous: ActiveSearch): boolean {
+    const currentLength = current.data?.length || 0;
+    const previousLength = previous.data?.length || 0;
+    return currentLength > previousLength;
   }
 
   /**
-   * Handle cell click events
+   * Reset table to empty state
    */
-  public handleCellClick(
-    event: Event, 
-    columnDef: ColumnDefinition, 
-    rowData: any, 
-    cellValue: any
-  ): void {
-    if (columnDef.onClick) {
-      event.stopPropagation();
-      
-      console.log(`[LogViewer] Cell clicked on column: ${columnDef.field}`, {
-        action: columnDef.onClick.action,
-        format: columnDef.onClick.format,
-        cellValue,
-        rowData
-      });
-
-      this.cellClickActionService.handleCellClick({
-        columnDef,
-        rowData,
-        cellValue,
-        transactionDetails: this.transactionDetails
-      });
+  private resetTableData(): void {
+    this.tableData = [];
+    this.totalRecords = 0;
+    
+    setTimeout(() => {
+      this.filteredCountChange.emit(0);
+    }, 0);
+    
+    if (this.logTable) {
+      this.logTable.first = 0;
     }
   }
 
   /**
-   * Handle row click for drill-down functionality
+   * Public method for external reprocessing (if needed)
    */
+  public reprocessCurrentData(): void {
+    this.reprocessAllData();
+  }
+
+  private getNewHits(current: ActiveSearch, previous: ActiveSearch | undefined): ElkHit[] {
+    const currentData = current?.data ?? [];
+    if (!previous) { 
+      return currentData; 
+    }
+    
+    const previousLength = previous.data?.length ?? 0;
+    if (currentData.length <= previousLength) { 
+      return []; 
+    }
+    
+    return currentData.slice(previousLength);
+  }
+
+  private processHits(hits: ElkHit[]): any[] {
+    const columns = this.visibleColumns;
+    
+    // Step 1: Apply view filter ONLY for transaction searches
+    let filteredHits = hits;
+    if (this.searchInstance.type === 'transaction' && this.selectedViewFilter) {
+      filteredHits = this.viewDefService.applyViewFilter(hits, this.selectedViewFilter);
+      console.log(`[LogViewer] View filter applied: ${hits.length} → ${filteredHits.length} rows`);
+    }
+    
+    // Step 2: Your existing transformation logic
+    return filteredHits.map(hit => {
+      const row: any = { 
+        _id: hit._id, 
+        _original: hit._source
+      };
+      
+      columns.forEach(col => {
+        const rawValue = get(hit._source, col.field, null);
+        row[col.id] = rawValue;
+        const transformedValue = this.transformPipe.transform(rawValue, col.transform, hit);
+        const filterFieldName = `${col.id}_filter`;
+        row[filterFieldName] = String(transformedValue);
+      });
+      
+      return row;
+    });
+  }
+
+  public applyGlobalFilter(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    if (this.logTable) {
+      this.logTable.filterGlobal(target.value, 'contains');
+      
+      setTimeout(() => {
+        const filteredCount = this.logTable.filteredValue?.length ?? this.tableData.length;
+        this.filteredCountChange.emit(filteredCount);
+      }, 200);
+    }
+  }
+
+  public onFilter(): void {
+    setTimeout(() => {
+      const filteredCount = this.logTable?.filteredValue?.length ?? this.tableData.length;
+      console.log(`[LogViewer] Filter applied, new count: ${filteredCount}`);
+      this.filteredCountChange.emit(filteredCount);
+    }, 200);
+  }
+
   public handleRowClick(rowData: any): void {
     const identifier = this.extractIdentifierFromRow(rowData);
     if (identifier) {
@@ -144,210 +240,29 @@ export class LogViewerComponent implements OnChanges {
     }
   }
 
-  /**
-   * Extract identifier from row data for drill-down
-   */
-  private extractIdentifierFromRow(rowData: any): string | null {
-    const identifierFields = ['transactionId', 'id', 'traceId', 'requestId', 'correlationId'];
-    
-    for (const field of identifierFields) {
-      const value = this.getCellValue(rowData, field);
-      if (value) {
-        return String(value);
-      }
-    }
-
-    const source = rowData._source || rowData;
-    for (const field of identifierFields) {
-      const value = source[field];
-      if (value) {
-        return String(value);
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Get tooltip text for click actions
-   */
-  public getClickTooltip(action: string): string {
-    switch (action) {
-      case 'OpenTransactionComponent':
-        return 'Click to view transaction details';
-      case 'ShowRawJSON':
-        return 'Click to view raw JSON data';
-      case 'ShowSourceInputOutputMessageinXML':
-        return 'Click to view message details';
-      default:
-        return 'Click to perform action';
+  public handleCellClick(column: ColumnDefinition, rowData: any, event: Event, cellValue: string): void {
+    if(this.isCellClickable(column)) {
+       event.stopPropagation(); 
+       this.cellClickActionService.handleCellClick({
+        column,
+        rowData,
+        cellValue,
+        transactionDetails: this.searchInstance.transactionDetails,
+        this.searchInstance
+      });
     }
   }
 
-  /**
-   * Get cell value with support for nested properties
-   */
-  public getCellValue(rowData: any, fieldPath: string): any {
-    if (!rowData || !fieldPath) return null;
-
-    const keys = fieldPath.split('.');
-    let value = rowData;
-
-    for (const key of keys) {
-      if (value && typeof value === 'object') {
-        value = value[key];
-      } else {
-        return null;
-      }
-    }
-
-    return value;
+  // ✨ Updated method to check if cell is clickable
+  public isCellClickable(column: ColumnDefinition): boolean {
+    return column.isClickable === true;
   }
 
-  /**
-   * Format cell value based on column definition
-   */
-  public formatCellValue(value: any, column: ColumnDefinition): string {
-    if (value === null || value === undefined) {
-      return '<span class="text-400">—</span>';
-    }
-
-    // Apply column-specific formatting based on transform property
-    switch (column.transform) {
-      case 'date':
-        return this.formatDate(value);
-      case 'timestamp':
-        return this.formatTimestamp(value);
-      case 'duration':
-        return this.formatDuration(value);
-      case 'status':
-        return this.formatStatus(value);
-      case 'level':
-        return this.formatLogLevel(value);
-      case 'json':
-        return this.formatJson(value);
-      default:
-        return this.formatDefault(value);
-    }
+  public exportData(): void {
+    console.log(`[LogViewer] Export requested for ${this.tableData.length} rows`);
   }
 
-  private formatDate(value: any): string {
-    try {
-      const date = new Date(value);
-      return date.toLocaleDateString();
-    } catch {
-      return String(value);
-    }
-  }
-
-  private formatTimestamp(value: any): string {
-    try {
-      const date = new Date(value);
-      return date.toLocaleString();
-    } catch {
-      return String(value);
-    }
-  }
-
-  private formatDuration(value: any): string {
-    const num = Number(value);
-    if (isNaN(num)) return String(value);
-    
-    if (num < 1000) return `${num}ms`;
-    if (num < 60000) return `${(num / 1000).toFixed(2)}s`;
-    return `${(num / 60000).toFixed(2)}m`;
-  }
-
-  private formatStatus(value: any): string {
-    const status = String(value).toLowerCase();
-    let severity = 'info';
-    
-    if (['error', 'failed', 'failure'].includes(status)) {
-      severity = 'danger';
-    } else if (['warning', 'warn'].includes(status)) {
-      severity = 'warning';
-    } else if (['success', 'completed', 'ok'].includes(status)) {
-      severity = 'success';
-    }
-    
-    return `<p-tag severity="${severity}" value="${value}"></p-tag>`;
-  }
-
-  private formatLogLevel(value: any): string {
-    const level = String(value).toUpperCase();
-    let severity = 'info';
-    
-    switch (level) {
-      case 'ERROR':
-        severity = 'danger';
-        break;
-      case 'WARN':
-      case 'WARNING':
-        severity = 'warning';
-        break;
-      case 'INFO':
-        severity = 'info';
-        break;
-      case 'DEBUG':
-        severity = 'secondary';
-        break;
-    }
-    
-    return `<p-tag severity="${severity}" value="${level}"></p-tag>`;
-  }
-
-  private formatJson(value: any): string {
-    try {
-      if (typeof value === 'string') {
-        JSON.parse(value);
-        return `<code class="json-preview">${this.truncateText(value, 100)}</code>`;
-      } else if (typeof value === 'object') {
-        const jsonStr = JSON.stringify(value, null, 2);
-        return `<code class="json-preview">${this.truncateText(jsonStr, 100)}</code>`;
-      }
-    } catch {
-      // Not valid JSON, treat as string
-    }
-    return this.formatDefault(value);
-  }
-
-  private formatDefault(value: any): string {
-    const str = String(value);
-    return this.truncateText(str, 200);
-  }
-
-  private truncateText(text: string, maxLength: number): string {
-    if (text.length <= maxLength) return text;
-    return `${text.substring(0, maxLength)}...`;
-  }
-
-  public getColumnStyle(column: ColumnDefinition): any {
-    const style: any = {};
-    
-    if (column.width) {
-      style.width = column.width;
-      style.minWidth = column.width;
-    }
-    
-    if (column.onClick) {
-      style.cursor = 'pointer';
-    }
-    
-    return style;
-  }
-
-  public getColumnHeaderStyle(column: ColumnDefinition): any {
-    const style: any = {};
-    
-    if (column.width) {
-      style.width = column.width;
-      style.minWidth = column.width;
-    }
-    
-    return style;
-  }
-
-  public trackByRowId(index: number, item: any): any {
-    return item._rowId || item.id || index;
+  public refresh(): void {
+    console.log("[LogViewer] Manual refresh requested");
   }
 }

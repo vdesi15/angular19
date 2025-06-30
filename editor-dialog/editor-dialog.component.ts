@@ -105,9 +105,10 @@ declare const monaco: any;
             (onClick)="copyToClipboard()" />
           
           <p-button 
-            severity="secondary"
+            severity="danger"
             icon="pi pi-times"
             label="Close"
+            styleClass="close-button"
             (onClick)="closeDialog()" />
         </div>
       </ng-template>
@@ -183,6 +184,34 @@ declare const monaco: any;
       align-items: center;
     }
 
+    /* Professional button styling */
+    :host ::ng-deep .editor-dialog-footer {
+      .p-button.p-button-text {
+        color: var(--text-color);
+        
+        &:hover {
+          background: var(--surface-hover);
+          color: var(--text-color);
+        }
+      }
+      
+      .close-button {
+        background: var(--red-500);
+        border-color: var(--red-500);
+        color: white;
+        
+        &:hover {
+          background: var(--red-600);
+          border-color: var(--red-600);
+          color: white;
+        }
+        
+        &:focus {
+          box-shadow: 0 0 0 1px var(--red-200);
+        }
+      }
+    }
+
     /* Dark mode support */
     :host-context(.app-dark) ::ng-deep .editor-dialog {
       .p-dialog {
@@ -212,7 +241,7 @@ export class EditorDialogComponent implements AfterViewInit, OnDestroy {
     return editors[index] || null;
   });
 
-  constructor() {
+    constructor() {
     // Load Monaco Editor
     this.loadMonacoEditor();
 
@@ -223,6 +252,19 @@ export class EditorDialogComponent implements AfterViewInit, OnDestroy {
         // Small delay to ensure DOM is ready
         setTimeout(() => this.initializeEditors(), 100);
       }
+    });
+
+    // Effect to handle theme changes for existing editors
+    effect(() => {
+      const isDarkMode = document.body.classList.contains('app-dark') || 
+                        document.documentElement.classList.contains('app-dark');
+      
+      // Update theme for existing editors
+      this._monacoEditors().forEach(editor => {
+        if (editor && editor.updateOptions) {
+          monaco.editor.setTheme(isDarkMode ? 'vs-dark' : 'vs');
+        }
+      });
     });
   }
 
@@ -288,6 +330,10 @@ export class EditorDialogComponent implements AfterViewInit, OnDestroy {
     
     const editors: any[] = [];
     const containers = document.querySelectorAll('.monaco-editor-container');
+    
+    // Detect dark mode
+    const isDarkMode = document.body.classList.contains('app-dark') || 
+                      document.documentElement.classList.contains('app-dark');
 
     containers.forEach((container, index) => {
       const tab = config.tabs[index];
@@ -296,7 +342,7 @@ export class EditorDialogComponent implements AfterViewInit, OnDestroy {
       const editor = monaco.editor.create(container as HTMLElement, {
         value: tab.content,
         language: this.getMonacoLanguage(tab.format),
-        theme: document.body.classList.contains('app-dark') ? 'vs-dark' : 'vs',
+        theme: isDarkMode ? 'vs-dark' : 'vs', // Proper dark mode detection
         readOnly: true,
         minimap: { enabled: this._minimapEnabled() },
         wordWrap: this._wordWrapEnabled() ? 'on' : 'off',
@@ -305,7 +351,10 @@ export class EditorDialogComponent implements AfterViewInit, OnDestroy {
         fontSize: 14,
         lineNumbers: 'on',
         folding: true,
-        renderWhitespace: 'selection'
+        renderWhitespace: 'selection',
+        tabSize: 4, // Set tab size to 4 spaces
+        insertSpaces: true, // Use spaces instead of tabs
+        detectIndentation: false // Don't auto-detect, use our settings
       });
 
       editors.push(editor);
