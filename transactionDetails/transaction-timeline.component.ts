@@ -13,44 +13,48 @@ import { FiltersService } from 'src/app/core/services/filters.service';
   imports: [CommonModule, TimelineModule, CardModule],
   template: `
     <div class="timeline-container">
+      <!-- Fixed Header -->
       <div class="timeline-header">
         <h5>Transaction Timeline</h5>
         <span class="event-count">{{ processedEvents().length }} events</span>
       </div>
       
-      @if (processedEvents().length > 0) {
-        <p-timeline [value]="processedEvents()" class="timeline-content" align="left">
-          <ng-template #marker let-event>
-            <div 
-              class="timeline-marker"
-              [class.current]="event.isCurrent">
-              <i class="pi pi-circle"></i>
-            </div>
-          </ng-template>
-          
-          <ng-template #content let-event>
-            <div 
-              class="timeline-event-wrapper"
-              [class.current-transaction]="event.isCurrent">
-              <div class="event-time">{{ event.formattedTime }}</div>
-              <div class="event-action">
-                <a [href]="event.searchLink" 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   class="action-link">
-                  {{ event.action }}
-                </a>
+      <!-- Scrollable Timeline Content -->
+      <div class="timeline-scrollable">
+        @if (processedEvents().length > 0) {
+          <p-timeline [value]="processedEvents()" align="left">
+            <ng-template #marker let-event>
+              <div 
+                class="timeline-marker"
+                [class.current]="event.isCurrent">
+                <i class="pi pi-circle"></i>
               </div>
-              <div class="event-description">{{ event.e }}</div>
-            </div>
-          </ng-template>
-        </p-timeline>
-      } @else {
-        <div class="no-events">
-          <i class="pi pi-info-circle"></i>
-          <p>No timeline events available</p>
-        </div>
-      }
+            </ng-template>
+            
+            <ng-template #content let-event>
+              <div 
+                class="timeline-event-wrapper"
+                [class.current-transaction]="event.isCurrent">
+                <div class="event-time">{{ event.formattedTime }}</div>
+                <div class="event-action">
+                  <a [href]="event.searchLink" 
+                     target="_blank" 
+                     rel="noopener noreferrer"
+                     class="action-link">
+                    {{ event.action }}
+                  </a>
+                </div>
+                <div class="event-description">{{ event.e }}</div>
+              </div>
+            </ng-template>
+          </p-timeline>
+        } @else {
+          <div class="no-events">
+            <i class="pi pi-info-circle"></i>
+            <p>No timeline events available</p>
+          </div>
+        }
+      </div>
     </div>
   `,
   styles: [`
@@ -64,6 +68,7 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       overflow: hidden;
     }
 
+    /* Fixed Header */
     .timeline-header {
       padding: 1rem;
       background: var(--surface-50);
@@ -71,7 +76,10 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-shrink: 0;
+      flex-shrink: 0; /* Prevent header from shrinking */
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
     .timeline-header h5 {
@@ -88,36 +96,47 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       border-radius: 12px;
     }
 
-    .timeline-content {
+    /* Scrollable Timeline Area */
+    .timeline-scrollable {
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 1rem;
+      position: relative;
     }
 
-    /* Fixed positioning for timeline structure */
+    /* Hide the opposite side completely to prevent center alignment */
+    ::ng-deep .p-timeline-event-opposite {
+      display: none !important;
+    }
+
+    /* Force left alignment and proper spacing */
     ::ng-deep .p-timeline-event {
       position: relative !important;
-      margin-bottom: 1rem !important;
+      margin-bottom: 1.5rem !important;
+      display: flex !important;
+      align-items: flex-start !important;
     }
 
-    /* Fixed timeline connector line */
+    /* Fixed timeline connector line - always at 20px */
     ::ng-deep .p-timeline-event-connector {
       position: absolute !important;
-      left: 20px !important; /* Fixed 20px from left */
+      left: 20px !important;
       top: 0 !important;
       width: 2px !important;
       background: var(--surface-300) !important;
+      height: 100% !important;
     }
 
-    /* Fixed marker position */
+    /* Fixed marker position - always at 20px */
     ::ng-deep .p-timeline-event-marker {
       position: absolute !important;
-      left: 20px !important; /* Fixed 20px from left */
+      left: 20px !important;
       top: 0.5rem !important;
       width: 12px !important;
       height: 12px !important;
       margin: 0 !important;
-      transform: translateX(-50%) !important; /* Center the marker on the line */
+      transform: translateX(-50%) !important;
       border: none !important;
       padding: 0 !important;
       z-index: 2 !important;
@@ -147,13 +166,13 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       }
     }
 
-    /* Fixed content positioning with text wrapping */
+    /* Content area - fixed positioning with proper width */
     ::ng-deep .p-timeline-event-content {
-      margin-left: 40px !important; /* Content starts 40px from left (20px line + 20px spacing) */
+      margin-left: 40px !important; /* Start content 40px from left */
       padding: 0 !important;
-      width: calc(100% - 40px) !important; /* Take remaining width */
-      word-wrap: break-word !important;
-      overflow-wrap: break-word !important;
+      width: calc(100% - 50px) !important; /* Take remaining width with some right padding */
+      min-width: 0 !important; /* Allow shrinking */
+      flex: 1 !important;
     }
 
     /* Timeline event content wrapper */
@@ -161,6 +180,8 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       padding: 0.5rem 0.75rem;
       border-radius: 6px;
       transition: background-color 0.2s ease;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
       
       &.current-transaction {
         background: rgba(34, 197, 94, 0.1); /* Light green background */
@@ -186,7 +207,9 @@ import { FiltersService } from 'src/app/core/services/filters.service';
         font-size: 0.875rem;
         font-weight: 600;
         line-height: 1.3;
-        word-break: break-word; /* Allow long URLs to wrap */
+        word-break: break-word;
+        display: inline-block;
+        max-width: 100%;
         
         &:hover {
           text-decoration: underline;
@@ -208,13 +231,13 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     }
 
     .no-events {
-      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       color: var(--text-color-secondary);
       gap: 0.5rem;
+      height: 200px;
     }
 
     .no-events i {
@@ -248,21 +271,21 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       }
     }
 
-    /* Custom scrollbar */
-    .timeline-content::-webkit-scrollbar {
+    /* Custom scrollbar for timeline content only */
+    .timeline-scrollable::-webkit-scrollbar {
       width: 6px;
     }
 
-    .timeline-content::-webkit-scrollbar-track {
+    .timeline-scrollable::-webkit-scrollbar-track {
       background: var(--surface-ground);
     }
 
-    .timeline-content::-webkit-scrollbar-thumb {
+    .timeline-scrollable::-webkit-scrollbar-thumb {
       background: var(--text-color-secondary);
       border-radius: 3px;
     }
 
-    .timeline-content::-webkit-scrollbar-thumb:hover {
+    .timeline-scrollable::-webkit-scrollbar-thumb:hover {
       background: var(--primary-color);
     }
 
@@ -270,7 +293,15 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     @media (max-width: 480px) {
       ::ng-deep .p-timeline-event-content {
         margin-left: 35px !important;
-        width: calc(100% - 35px) !important;
+        width: calc(100% - 45px) !important;
+      }
+      
+      .timeline-header {
+        padding: 0.75rem;
+      }
+      
+      .timeline-scrollable {
+        padding: 0.75rem;
       }
       
       .event-action .action-link {
