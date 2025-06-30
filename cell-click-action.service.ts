@@ -210,12 +210,15 @@ export class CellClickActionService {
         }
 
         // Add current direction tab if we have specific direction data and it matches
-        if (direction && data[direction] !== undefined && data[direction] !== null) {
-          tabs.push({
-            title: `${direction.charAt(0).toUpperCase() + direction.slice(1)} Message (Current)`,
-            content: this.formatContent(data[direction], format),
-            format: format as 'xml' | 'json'
-          });
+        if (direction && (direction === 'input' || direction === 'output')) {
+          const directionData = direction === 'input' ? data.input : data.output;
+          if (directionData !== undefined && directionData !== null) {
+            tabs.push({
+              title: `${direction.charAt(0).toUpperCase() + direction.slice(1)} Message (Current)`,
+              content: this.formatContent(directionData, format),
+              format: format as 'xml' | 'json'
+            });
+          }
         }
       }
     }
