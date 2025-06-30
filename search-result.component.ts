@@ -58,6 +58,7 @@ export class SearchResultComponent {
 
   // State signals
   public isStopButtonHovered = signal(false);
+  private internalIsExpanded = signal<boolean>(false);
   public totalLoadedCount = 0;
   public filteredCount = 0;
 
@@ -88,6 +89,11 @@ export class SearchResultComponent {
   
   public availableViews: Signal<ViewDefinition[]> = computed(() => {
     return this.viewDefService.getViewsForApp(this.search.appName);
+  });
+
+  public accordionActiveIndex = computed(() => {
+    const expanded = this.search?.isExpanded ?? false;
+    return expanded ? [0] : [];
   });
 
   public finalVisibleColumns: Signal<ColumnDefinition[]> = computed(() => {
@@ -156,6 +162,16 @@ export class SearchResultComponent {
       }
     }
     });
+
+    effect(() => {
+      const searchExpanded = this.search?.isExpanded ?? false;
+      const internalExpanded = this.internalIsExpanded();
+      
+      // Only update if there's a mismatch
+      if (searchExpanded !== internalExpanded) {
+        this.internalIsExpanded.set(searchExpanded);
+      }
+    });
   }
 
   // Helper Methods
@@ -209,11 +225,13 @@ export class SearchResultComponent {
   // Control handlers
   stopStreaming(event: Event): void {
     event.stopPropagation();
+    event.preventDefault();
     this.orchestrator.stopSearch(this.search.id);
   }
 
   closePanel(event: Event): void {
     event.stopPropagation();
+    event.preventDefault();
     this.orchestrator.removeSearch(this.search.id);
   }
 
@@ -222,14 +240,43 @@ export class SearchResultComponent {
   }
 
   onAccordionOpen(event: any): void {
-  console.log('[SearchResult] Accordion opened for:', this.search.title);
-  this.orchestrator.expandSearch(this.search.id);
-}
+    console.log('[SearchResult] Accordion opened for:', this.search.title);
+    
+    // Prevent the event from bubbling and causing issues
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    
+    // Update internal state first
+    this.internalIsExpanded.set(true);
+    
+    // Then notify orchestrator
+    this.orchestrator.expandSearch(this.search.id);
+  }
 
-onAccordionClose(event: any): void {
-  console.log('[SearchResult] Accordion closed for:', this.search.title);
-  this.orchestrator.collapseSearch(this.search.id);
-}
+  onAccordionClose(event: any): void {
+    console.log('[SearchResult] Accordion closed for:', this.search.title);
+    
+    // Prevent the event from bubbling and causing issues
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    
+    // Update internal state first
+    this.internalIsExpanded.set(false);
+    
+    // Then notify orchestrator
+    this.orchestrator.collapseSearch(this.search.id);
+  }
+
+  public forceExpand(): void {
+    this.internalIsExpanded.set(true);
+    this.orchestrator.expandSearch(this.search.id);
+  }
+  
+  // Add this method to programmatically collapse accordion if needed
+  public forceCollapse(): void {
+    this.internalIsExpanded.set(false);
+    this.orchestrator.collapseSearch(this.search.id);
+  }
 
 // Updated drilldown handler to ensure proper accordion management
 onDrilldown(query: any): void {

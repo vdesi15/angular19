@@ -60,42 +60,26 @@ export class LogViewerComponent implements OnChanges {
     console.log("[LogViewerComponent] Initialized");
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
+   ngOnChanges(changes: SimpleChanges): void {
+    let shouldReprocessAll = false;
+
+    // Handle search instance changes
     if (changes['searchInstance']) {
       const currentSearch = changes['searchInstance'].currentValue as ActiveSearch;
       const previousSearch = changes['searchInstance'].previousValue as ActiveSearch | undefined;
 
       this.isLoading = currentSearch.isLoading;
 
+      // New search - reset everything
       if (!previousSearch || currentSearch.id !== previousSearch.id) {
         console.log("[LogViewer] New search detected. Resetting table.");
-        this.tableData = [];
-        this.totalRecords = 0;
-        
-        setTimeout(() => {
-          this.filteredCountChange.emit(0);
-        }, 0);
-        
-        if (this.logTable) {
-          this.logTable.first = 0;
-        }
+        this.resetTableData();
+        shouldReprocessAll = true;
       }
-
-      const newHits = this.getNewHits(currentSearch, previousSearch);
-
-      if (newHits.length > 0) {
-        const processedNewRows = this.processHits(newHits);
-        
-        this.tableData = [...this.tableData, ...processedNewRows];
-        this.totalRecords = this.tableData.length;
-        
-        setTimeout(() => {
-          this.filteredCountChange.emit(this.tableData.length);
-        }, 0);
-
-        this.cdr.detectChanges();
-        
-        console.log(`[LogViewer] Appended ${processedNewRows.length} rows. Total now: ${this.tableData.length}`);
+      // Same search - check for new data
+      else if (this.hasNewData(currentSearch, previousSearch)) {
+        console.log('[LogViewer] New data detected, will reprocess all data');
+        shouldReprocessAll = true;
       }
 
       if (currentSearch.error) {
@@ -103,14 +87,86 @@ export class LogViewerComponent implements OnChanges {
       }
     }
 
+    // Handle view filter changes
     if (changes['selectedViewFilter']) {
-      console.log('[LogViewer] View filter changed, re-processing data');
-      this.reprocessCurrentData();
+      const currentFilter = changes['selectedViewFilter'].currentValue;
+      const previousFilter = changes['selectedViewFilter'].previousValue;
+      
+      if (currentFilter !== previousFilter) {
+        console.log('[LogViewer] View filter changed from', previousFilter, 'to', currentFilter);
+        shouldReprocessAll = true;
+      }
     }
 
+    // Handle column changes
     if (changes['visibleColumns']) {
       console.log("[LogViewer] Visible columns updated:", this.visibleColumns.length);
+      shouldReprocessAll = true;
     }
+
+    // Reprocess all data if needed (single point of processing)
+    if (shouldReprocessAll) {
+      this.reprocessAllData();
+    }
+  }
+
+  /**
+   * SINGLE METHOD: Process all current data from scratch
+   * This ensures consistent filtering across all data
+   */
+  private reprocessAllData(): void {
+    const allHits = this.searchInstance.data || [];
+    console.log(`[LogViewer] Reprocessing all data: ${allHits.length} hits with view filter: ${this.selectedViewFilter}`);
+    
+    if (allHits.length === 0) {
+      this.resetTableData();
+      return;
+    }
+
+    // Apply view filter first, then transform
+    const filteredAndTransformed = this.processHits(allHits);
+    
+    this.tableData = filteredAndTransformed;
+    this.totalRecords = this.tableData.length;
+    this.cdr.detectChanges();
+    
+    // Notify parent
+    setTimeout(() => {
+      this.filteredCountChange.emit(this.tableData.length);
+    }, 0);
+
+    console.log(`[LogViewer] Processed ${allHits.length} → ${this.tableData.length} rows`);
+  }
+  /**
+   * Check if there's new data compared to previous search
+   */
+  private hasNewData(current: ActiveSearch, previous: ActiveSearch): boolean {
+    const currentLength = current.data?.length || 0;
+    const previousLength = previous.data?.length || 0;
+    return currentLength > previousLength;
+  }
+
+  /**
+   * Reset table to empty state
+   */
+  private resetTableData(): void {
+    this.tableData = [];
+    this.totalRecords = 0;
+    
+    setTimeout(() => {
+      this.filteredCountChange.emit(0);
+    }, 0);
+    
+    if (this.logTable) {
+      this.logTable.first = 0;
+    }
+  }
+
+  /**
+   * Public method for external reprocessing (if needed)
+   */
+  public reprocessCurrentData(): void {
+    this.reprocessAllData();
   }
 
   private getNewHits(current: ActiveSearch, previous: ActiveSearch | undefined): ElkHit[] {
@@ -125,19 +181,6 @@ export class LogViewerComponent implements OnChanges {
     }
     
     return currentData.slice(previousLength);
-  }
-
-  private reprocessCurrentData(): void {
-    if (this.searchInstance.data.length > 0) {
-      this.tableData = this.processHits(this.searchInstance.data);
-      this.totalRecords = this.tableData.length;
-      this.cdr.detectChanges();
-      
-      // Notify parent of new filtered count
-      setTimeout(() => {
-        this.filteredCountChange.emit(this.tableData.length);
-      }, 0);
-    }
   }
 
   private processHits(hits: ElkHit[]): any[] {

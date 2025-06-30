@@ -1,5 +1,5 @@
 <!-- Clean search-result.component.html - Direct conditions, no skeleton refs -->
-<p-accordion [multiple]="true" [activeIndex]="search.isExpanded ? [0] : []" styleClass="result-accordion compact"
+<p-accordion [activeIndex]="accordionActiveIndex()"  [multiple]="true" [activeIndex]="search.isExpanded ? [0] : []" styleClass="result-accordion compact"
     (onOpen)="onAccordionOpen($event)" (onClose)="onAccordionClose($event)">
     <p-accordion-panel>
       <p-accordion-header>
