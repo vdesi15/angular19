@@ -12,14 +12,25 @@ import { ViewDefinition } from 'src/app/core/models/view-definition.model';
 @Component({
   selector: 'app-transaction-toolbar',
   standalone: true,
-  imports: [CommonModule, FormsModule, ToolbarModule, ButtonModule, TooltipModule, DropdownModule],
-  
+  imports: [CommonModule,
+    FormsModule,
+    ToolbarModule,
+    ButtonModule,
+    TooltipModule,
+    SelectModule,
+    MenuModule,
+    OverlayPanelModule,
+    DialogModule,
+    InputTextModule,
+    ChartModule]
 })
 export class TransactionToolbarComponent {
   @Input() data: any[] = [];
   @Input() searchType: string = '';
   @Input() appName: string = '';
   @Input() currentFilters: any = {};
+  @Input() views: ViewDefinition[] = [];
+  @Input() selectedView: string = '';
 
   @Output() exportTriggered = new EventEmitter<any>();
   @Output() viewModeChanged = new EventEmitter<string>();
@@ -150,10 +161,13 @@ export class TransactionToolbarComponent {
   private extractTransactionId(): string | null {
     if (!this.data?.length) return null;
 
-    // Try to find transaction ID in first row
     const firstRow = this.data[0];
     const identifierFields = [
-      '_source.tifw.txnid'
+      '_source.transactionId',
+      '_source.id',
+      '_source.traceId',
+      'transactionId',
+      'id'
     ];
 
     for (const field of identifierFields) {
