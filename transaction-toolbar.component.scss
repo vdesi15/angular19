@@ -1,58 +1,77 @@
-:host ::ng-deep {
-  // Ensure the toolbar has no bottom border and compact height
-  .p-toolbar {
-    border: none;
-    padding: 0.25rem 0; // Reduced from 0.5rem
-    min-height: auto;
-    
-    .p-toolbar-group-left,
-    .p-toolbar-group-right {
-      gap: 0.5rem; // Reduce gap between items
-    }
-    
-    // Make dropdown more compact
-    .p-dropdown {
-      .p-dropdown-label,
-      .p-dropdown-trigger {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
+:host ::ng-deep .transaction-toolbar {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+      border: none;
+      color: white;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+      
+      .p-toolbar-group-left .toolbar-title {
+        color: white;
+        font-weight: 600;
+        font-size: 1rem;
       }
       
-      .p-dropdown-trigger {
-        width: 2rem;
-      }
-      
-      &.p-inputtext-sm {
-        .p-inputtext {
-          padding: 0.25rem 0.5rem;
-          font-size: 0.875rem;
+      .p-toolbar-group-right {
+        gap: 0.5rem;
+        
+        .p-button {
+          border-color: rgba(255, 255, 255, 0.3);
+          color: white;
+          
+          &:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+          }
+          
+          &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
         }
       }
     }
-    
-    // Compact icon buttons
-    .p-button.p-button-text {
-      width: 2rem;
-      height: 2rem;
-      padding: 0;
-      
-      .p-button-icon {
-        font-size: 0.875rem;
+
+    :host ::ng-deep .metrics-panel {
+      .metrics-content {
+        padding: 1rem;
+        text-align: center;
+        
+        h4 {
+          margin: 0 0 1rem 0;
+          color: var(--text-color);
+        }
+        
+        .no-metrics {
+          color: var(--text-color-secondary);
+          font-style: italic;
+        }
       }
     }
-    
-    // Adjust icon positioning in dropdown
-    .p-input-icon-left {
-      > i {
-        left: 0.5rem;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 0.875rem;
+
+    .jira-dialog-content {
+      .dialog-description {
+        margin-bottom: 1.5rem;
+        color: var(--text-color-secondary);
       }
       
-      .p-dropdown {
-        padding-left: 2rem;
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        
+        label {
+          font-weight: 600;
+          color: var(--text-color);
+        }
       }
     }
-  }
-}
+
+    /* Dark mode support */
+    :host-context(.app-dark) ::ng-deep .transaction-toolbar {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      
+      .p-button {
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.15);
+        }
+      }
+    }

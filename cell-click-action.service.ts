@@ -230,43 +230,37 @@ export class CellClickActionService {
    */
   private prettyXML(xml: string): string {
     try {
-      // First, preserve CDATA sections by replacing them with placeholders
-      const cdataPlaceholders: { [key: string]: string } = {};
-      let cdataCounter = 0;
-      
-      // Extract and preserve CDATA sections
-      xml = xml.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, (match, content) => {
-        const placeholder = `__CDATA_PLACEHOLDER_${cdataCounter}__`;
-        cdataPlaceholders[placeholder] = match;
-        cdataCounter++;
-        return placeholder;
-      });
-
-      // Parse and format the XML without CDATA
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xml, 'text/xml');
-      
-      // Check for parsing errors
-      const parseError = xmlDoc.querySelector('parsererror');
-      if (parseError) {
-        console.warn('[CellClickActionService] XML parsing failed, using manual formatting');
-        return this.manualXMLFormat(xml, cdataPlaceholders);
-      }
-
-      // Serialize the formatted XML
-      const serializer = new XMLSerializer();
-      let formattedXML = serializer.serializeToString(xmlDoc);
-      
-      // Restore CDATA placeholders with proper formatting
-      Object.entries(cdataPlaceholders).forEach(([placeholder, cdataContent]) => {
-        // Format CDATA content with proper indentation and line breaks
-        const formattedCDATA = this.formatCDATAContent(cdataContent);
-        formattedXML = formattedXML.replace(placeholder, formattedCDATA);
-      });
-
-      // Apply basic XML formatting
-      return this.applyXMLIndentation(formattedXML);
-      
+      // Use a simple library approach - vkbeautify or similar would be ideal
+      // For now, use a clean regex-based approach
+      return xml
+        .replace(/></g, '>\n<')
+        .replace(/^\s*\n/gm, '')
+        .split('\n')
+        .map((line, index, arr) => {
+          const trimmed = line.trim();
+          if (!trimmed) return '';
+          
+          let indent = 0;
+          // Count opening tags before this line
+          for (let i = 0; i < index; i++) {
+            const prevLine = arr[i].trim();
+            if (prevLine.match(/<[^\/!][^>]*[^\/]>/) && !prevLine.includes('</')) {
+              indent += 4;
+            }
+            if (prevLine.includes('</')) {
+              indent = Math.max(0, indent - 4);
+            }
+          }
+          
+          // Adjust for closing tags
+          if (trimmed.startsWith('</')) {
+            indent = Math.max(0, indent - 4);
+          }
+          
+          return ' '.repeat(indent) + trimmed;
+        })
+        .filter(line => line.trim())
+        .join('\n');
     } catch (error) {
       console.warn('[CellClickActionService] XML formatting failed, returning original:', error);
       return xml;
