@@ -65,10 +65,10 @@ export class TransactionToolbarComponent {
   });
 
   // ================================
-  // MENU ITEMS
+  // MENU ITEMS (REACTIVE)
   // ================================
 
-  public readonly shareMenuItems: MenuItem[] = [
+  public readonly shareMenuItems = computed((): MenuItem[] => [
     {
       label: 'Copy Transaction ID',
       icon: 'pi pi-copy',
@@ -81,16 +81,16 @@ export class TransactionToolbarComponent {
       command: () => this.copyTransactionLink(),
       disabled: !this.hasTransactionData()
     }
-  ];
+  ]);
 
-  public readonly jiraMenuItems: MenuItem[] = [
+  public readonly jiraMenuItems = computed((): MenuItem[] => [
     {
       label: 'Upload to JIRA',
       icon: 'pi pi-upload',
       command: () => this.showJiraUploadDialog(),
       disabled: !this.hasTransactionData()
     }
-  ];
+  ]);
 
   // ================================
   // PUBLIC METHODS
