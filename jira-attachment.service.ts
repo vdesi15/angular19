@@ -1,127 +1,476 @@
-import { Injectable, inject } from '@angular/core';
+// src/app/features/search-logs/services/enhanced-jira.service.ts
+import { Injectable, inject, signal, computed, WritableSignal } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { MessageService } from 'primeng/api';
 import { firstValueFrom } from 'rxjs';
 import JSZip from 'jszip';
+import { get } from 'lodash-es';
 
-export interface JiraAttachmentResponse {
+// Services
+import { SearchFilterService } from 'src/app/core/services/filters.service';
+import { TransactionDownloadService } from './transaction-download.service';
+
+// Models
+import { TransactionDetailsResponse } from '../models/transactionDetails/transaction-details.model';
+
+// ================================
+// INTERFACES & TYPES
+// ================================
+
+export interface JiraIdDetectionResult {
+  type: 'jira-id' | 'test-case' | 'test-cycle' | 'execution' | 'invalid';
   id: string;
-  filename: string;
-  author: {
-    accountId: string;
-    displayName: string;
-  };
-  created: string;
-  size: number;
-  mimeType: string;
+  appName: string;
+  number: string;
+  isValid: boolean;
+  errorMessage?: string;
 }
 
-export interface JiraIssueResponse {
-  id: string;
+export interface TestCycleExecution {
+  id: number;
+  testCaseKey: string;
+  testcaseUrl: string;
   key: string;
-  fields: {
-    summary: string;
-    status: {
-      name: string;
-    };
-  };
+  keyUrl: string;
+  status: string;
+}
+
+export interface JiraUploadState {
+  isUploading: boolean;
+  uploadProgress: number;
+  successMessage: string;
+  errorMessage: string;
+  showExecutions: boolean;
+  selectedExecutions: number[];
 }
 
 export interface JiraConfig {
   baseUrl: string;
-  username?: string;
-  apiToken?: string;
-  authHeader?: string;
+  apiEndpoint: string;
 }
 
 @Injectable({
   providedIn: 'root'
 })
-export class JiraAttachmentService {
+export class EnhancedJiraService {
   private http = inject(HttpClient);
   private messageService = inject(MessageService);
+  private searchFilterService = inject(SearchFilterService);
+  private downloadService = inject(TransactionDownloadService);
 
-  // Configuration - you can set this from environment or config service
+  // Configuration
   private jiraConfig: JiraConfig = {
-    baseUrl: '/api/jira', // Your backend proxy endpoint
-    // For direct JIRA API (if not using backend proxy):
-    // baseUrl: 'https://your-domain.atlassian.net',
-    // username: 'your-email@company.com',
-    // apiToken: 'your-api-token'
+    baseUrl: '/api', // Your backend API base
+    apiEndpoint: '/jira' // JIRA specific endpoints
   };
 
+  // ================================
+  // STATE SIGNALS
+  // ================================
+
+  private _uploadState: WritableSignal<JiraUploadState> = signal({
+    isUploading: false,
+    uploadProgress: 0,
+    successMessage: '',
+    errorMessage: '',
+    showExecutions: false,
+    selectedExecutions: []
+  });
+
+  private _testCycleExecutions: WritableSignal<TestCycleExecution[]> = signal([]);
+
+  // Public readonly signals
+  public readonly uploadState = this._uploadState.asReadonly();
+  public readonly testCycleExecutions = this._testCycleExecutions.asReadonly();
+
+  // Computed signals
+  public readonly hasSelectedExecutions = computed(() => 
+    this._uploadState().selectedExecutions.length > 0
+  );
+
+  public readonly canUpload = computed(() => 
+    !this._uploadState().isUploading
+  );
+
+  // ================================
+  // JIRA ID DETECTION & PARSING
+  // ================================
+
   /**
-   * Attach transaction data to JIRA ticket
+   * Detect and parse JIRA ID format from string or URL
    */
-  public async attachTransactionToJira(jiraId: string, data: any[]): Promise<JiraAttachmentResponse> {
-    if (!jiraId?.trim()) {
-      throw new Error('JIRA ID is required');
+  public detectJiraId(input: string): JiraIdDetectionResult {
+    if (!input?.trim()) {
+      return {
+        type: 'invalid',
+        id: '',
+        appName: '',
+        number: '',
+        isValid: false,
+        errorMessage: 'Please enter a JIRA ID'
+      };
     }
 
-    if (!data?.length) {
-      throw new Error('No transaction data to attach');
+    const cleanInput = input.trim();
+
+    // Extract from URL patterns
+    const urlResult = this.extractFromUrl(cleanInput);
+    if (urlResult) {
+      return urlResult;
     }
+
+    // Direct ID patterns
+    return this.parseDirectId(cleanInput);
+  }
+
+  /**
+   * Extract JIRA ID from various URL patterns
+   */
+  private extractFromUrl(url: string): JiraIdDetectionResult | null {
+    // Test cycle URL: http://jira/..../testPlayer/App-C111
+    const testCycleMatch = url.match(/\/testPlayer\/([A-Za-z]+)-C(\d+)/i);
+    if (testCycleMatch) {
+      return {
+        type: 'test-cycle',
+        id: `${testCycleMatch[1]}-C${testCycleMatch[2]}`,
+        appName: testCycleMatch[1],
+        number: testCycleMatch[2],
+        isValid: true
+      };
+    }
+
+    // Test case URL: http://jira/..../testcase/App-T111
+    const testCaseMatch = url.match(/\/testcase\/([A-Za-z]+)-T(\d+)/i);
+    if (testCaseMatch) {
+      return {
+        type: 'test-case',
+        id: `${testCaseMatch[1]}-T${testCaseMatch[2]}`,
+        appName: testCaseMatch[1],
+        number: testCaseMatch[2],
+        isValid: true
+      };
+    }
+
+    // Regular JIRA URL: http://jira/..../.../App-111
+    const jiraMatch = url.match(/\/([A-Za-z]+)-(\d+)(?:\?|$|\/)/i);
+    if (jiraMatch) {
+      return {
+        type: 'jira-id',
+        id: `${jiraMatch[1]}-${jiraMatch[2]}`,
+        appName: jiraMatch[1],
+        number: jiraMatch[2],
+        isValid: true
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Parse direct JIRA ID patterns
+   */
+  private parseDirectId(id: string): JiraIdDetectionResult {
+    // Test cycle: App-C123
+    const testCycleMatch = id.match(/^([A-Za-z]+)-C(\d+)$/i);
+    if (testCycleMatch) {
+      return {
+        type: 'test-cycle',
+        id: id.toUpperCase(),
+        appName: testCycleMatch[1],
+        number: testCycleMatch[2],
+        isValid: true
+      };
+    }
+
+    // Test case: App-T123
+    const testCaseMatch = id.match(/^([A-Za-z]+)-T(\d+)$/i);
+    if (testCaseMatch) {
+      return {
+        type: 'test-case',
+        id: id.toUpperCase(),
+        appName: testCaseMatch[1],
+        number: testCaseMatch[2],
+        isValid: true
+      };
+    }
+
+    // Execution: App-E123
+    const executionMatch = id.match(/^([A-Za-z]+)-E(\d+)$/i);
+    if (executionMatch) {
+      return {
+        type: 'execution',
+        id: id.toUpperCase(),
+        appName: executionMatch[1],
+        number: executionMatch[2],
+        isValid: false,
+        errorMessage: 'Direct uploads to Executions not supported. Pick a test cycle to upload to execution'
+      };
+    }
+
+    // Regular JIRA: App-123
+    const jiraMatch = id.match(/^([A-Za-z]+)-(\d+)$/i);
+    if (jiraMatch) {
+      return {
+        type: 'jira-id',
+        id: id.toUpperCase(),
+        appName: jiraMatch[1],
+        number: jiraMatch[2],
+        isValid: true
+      };
+    }
+
+    return {
+      type: 'invalid',
+      id: id,
+      appName: '',
+      number: '',
+      isValid: false,
+      errorMessage: 'Invalid JIRA format. Expected formats: APP-123, APP-C123, APP-T123, or valid JIRA URLs'
+    };
+  }
+
+  // ================================
+  // TEST CYCLE OPERATIONS
+  // ================================
+
+  /**
+   * Get executions for a test cycle
+   */
+  public async getTestCycleExecutions(testCycleId: string): Promise<TestCycleExecution[]> {
+    this._uploadState.update(state => ({
+      ...state,
+      isUploading: true,
+      errorMessage: '',
+      successMessage: ''
+    }));
 
     try {
-      // Step 1: Validate JIRA ticket exists
-      await this.validateJiraTicket(jiraId);
+      const url = `${this.jiraConfig.baseUrl}${this.jiraConfig.apiEndpoint}/getTestCycle/getTestCycleExecutions/${testCycleId}`;
+      const executions = await firstValueFrom(
+        this.http.get<TestCycleExecution[]>(url)
+      );
 
-      // Step 2: Create attachment file
-      const attachmentBlob = await this.createJiraAttachment(data);
-      
-      // Step 3: Upload to JIRA
-      const response = await this.uploadToJiraAPI(jiraId, attachmentBlob);
-      
-      this.showSuccessMessage(`Transaction data attached to JIRA ticket: ${jiraId}`);
-      return response;
-      
+      this._testCycleExecutions.set(executions);
+      this._uploadState.update(state => ({
+        ...state,
+        isUploading: false,
+        showExecutions: true
+      }));
+
+      return executions;
     } catch (error) {
-      this.handleError('Failed to attach to JIRA', error);
+      this._uploadState.update(state => ({
+        ...state,
+        isUploading: false,
+        errorMessage: `Failed to load test cycle executions: ${error}`
+      }));
       throw error;
     }
   }
 
   /**
-   * Validate that JIRA ticket exists and is accessible
+   * Toggle execution selection
    */
-  public async validateJiraTicket(jiraId: string): Promise<JiraIssueResponse> {
-    try {
-      const headers = this.getAuthHeaders();
-      const url = `${this.jiraConfig.baseUrl}/rest/api/3/issue/${jiraId}`;
+  public toggleExecutionSelection(executionId: number): void {
+    this._uploadState.update(state => {
+      const selected = [...state.selectedExecutions];
+      const index = selected.indexOf(executionId);
       
-      const response = await firstValueFrom(
-        this.http.get<JiraIssueResponse>(url, { headers })
-      );
-      
-      console.log(`[JiraService] Ticket ${jiraId} validated:`, response.fields.summary);
-      return response;
-      
-    } catch (error) {
-      if (error instanceof HttpErrorResponse) {
-        if (error.status === 404) {
-          throw new Error(`JIRA ticket ${jiraId} not found`);
-        } else if (error.status === 401 || error.status === 403) {
-          throw new Error('Authentication failed - check JIRA credentials');
-        }
+      if (index === -1) {
+        selected.push(executionId);
+      } else {
+        selected.splice(index, 1);
       }
-      throw new Error(`Failed to validate JIRA ticket: ${error}`);
+
+      return {
+        ...state,
+        selectedExecutions: selected
+      };
+    });
+  }
+
+  /**
+   * Clear execution selection
+   */
+  public clearExecutionSelection(): void {
+    this._uploadState.update(state => ({
+      ...state,
+      selectedExecutions: []
+    }));
+  }
+
+  // ================================
+  // UPLOAD OPERATIONS
+  // ================================
+
+  /**
+   * Upload to JIRA ID (regular ticket)
+   */
+  public async uploadToJiraId(jiraId: string, transactionData: TransactionDetailsResponse | undefined): Promise<void> {
+    await this.performUpload(jiraId, transactionData, `Successfully attached to ${jiraId}`);
+  }
+
+  /**
+   * Upload to test case
+   */
+  public async uploadToTestCase(testCaseId: string, transactionData: TransactionDetailsResponse | undefined): Promise<void> {
+    await this.performUpload(testCaseId, transactionData, `Successfully attached to test case ${testCaseId}`);
+  }
+
+  /**
+   * Upload to test cycle
+   */
+  public async uploadToTestCycle(testCycleId: string, transactionData: TransactionDetailsResponse | undefined): Promise<void> {
+    await this.performUpload(testCycleId, transactionData, `Successfully attached to test cycle ${testCycleId}`);
+  }
+
+  /**
+   * Upload to selected executions
+   */
+  public async uploadToSelectedExecutions(testCycleId: string, transactionData: TransactionDetailsResponse | undefined): Promise<void> {
+    const selectedExecutions = this._uploadState().selectedExecutions;
+    if (selectedExecutions.length === 0) {
+      throw new Error('No executions selected');
+    }
+
+    this._uploadState.update(state => ({
+      ...state,
+      isUploading: true,
+      errorMessage: '',
+      successMessage: '',
+      uploadProgress: 0
+    }));
+
+    try {
+      const attachmentBlob = await this.createTransactionZip(transactionData);
+      const totalUploads = selectedExecutions.length;
+      let completedUploads = 0;
+
+      for (const executionId of selectedExecutions) {
+        const uploadId = `${testCycleId}-${executionId}`;
+        await this.uploadBlobToJira(uploadId, attachmentBlob);
+        
+        completedUploads++;
+        this._uploadState.update(state => ({
+          ...state,
+          uploadProgress: Math.round((completedUploads / totalUploads) * 100)
+        }));
+      }
+
+      this._uploadState.update(state => ({
+        ...state,
+        isUploading: false,
+        successMessage: `Successfully attached to ${completedUploads} executions`,
+        uploadProgress: 100
+      }));
+
+    } catch (error) {
+      this._uploadState.update(state => ({
+        ...state,
+        isUploading: false,
+        errorMessage: `Upload failed: ${error}`
+      }));
+      throw error;
     }
   }
 
   /**
-   * Create JIRA attachment file from transaction data
+   * Generic upload performer
    */
-  private async createJiraAttachment(data: any[]): Promise<Blob> {
+  private async performUpload(jiraId: string, transactionData: TransactionDetailsResponse | undefined, successMessage: string): Promise<void> {
+    this._uploadState.update(state => ({
+      ...state,
+      isUploading: true,
+      errorMessage: '',
+      successMessage: '',
+      uploadProgress: 0
+    }));
+
+    try {
+      const attachmentBlob = await this.createTransactionZip(transactionData);
+      await this.uploadBlobToJira(jiraId, attachmentBlob);
+
+      this._uploadState.update(state => ({
+        ...state,
+        isUploading: false,
+        successMessage,
+        uploadProgress: 100
+      }));
+
+    } catch (error) {
+      this._uploadState.update(state => ({
+        ...state,
+        isUploading: false,
+        errorMessage: `Upload failed: ${error}`
+      }));
+      throw error;
+    }
+  }
+
+  /**
+   * Upload blob to JIRA API
+   */
+  private async uploadBlobToJira(jiraId: string, blob: Blob): Promise<void> {
+    const formData = new FormData();
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+    const filename = `transaction_data_${timestamp}.zip`;
+    
+    formData.append('file', blob, filename);
+
+    const url = `${this.jiraConfig.baseUrl}${this.jiraConfig.apiEndpoint}/uploadAttachments/${jiraId}`;
+    
+    await firstValueFrom(
+      this.http.post(url, formData)
+    );
+  }
+
+  /**
+   * Create ZIP file from transaction data with custom filename
+   */
+  private async createTransactionZip(transactionData: TransactionDetailsResponse | undefined): Promise<Blob> {
+    if (!transactionData?.hits?.hits?.length) {
+      throw new Error('No transaction data found for JIRA attachment');
+    }
+
+    // Extract data for filename generation
+    const hits = transactionData.hits.hits;
+    const firstHit = hits[0];
+    const firstRow = firstHit._source;
+    
+    if (!firstRow) {
+      throw new Error('No transaction data found');
+    }
+
+    // Generate filename components using get() utility
+    const appName = get(firstRow, 'app.name') || 'unknown-app';
+    const env = get(firstRow, 'env') || 'unknown-env';
+    const eid = get(firstRow, 'e.id') || 'unknown-eid';
+    const txnid = get(firstRow, 'id') || 'unknown-txn';
+    const action = get(firstRow, 'action.name') || 'unknown-action';
+    
+    // Get current search filters
+    const searchFilters = this.searchFilterService.filters();
+    const location = searchFilters?.location || 'unknown-location';
+    
+    // Generate epoch timestamp
+    const epochInSeconds = Math.floor(Date.now() / 1000);
+    
+    // Create filename: ${appName}_${env}_${location}_${eid}_${epochInSeconds}_${action}_${txnid}.zip
+    const filename = `${appName}_${env}_${location}_${eid}_${epochInSeconds}_${action}_${txnid}.zip`;
+    
+    console.log(`[JiraService] Creating ZIP with filename: ${filename}`);
+
+    // Reuse existing download service logic for ZIP creation
     const zip = new JSZip();
     let fileCount = 0;
-    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
 
-    // Process each transaction row
-    for (const [index, row] of data.entries()) {
-      const messageBody = this.getNestedValue(row, '_source.message.body');
-      const actionXml = this.getNestedValue(row, '_source.message.action.xml');
-      const transactionId = this.getNestedValue(row, '_source.transactionId') || 
-                           this.getNestedValue(row, '_source.id') || 
+    // Process each transaction row using the same logic as download service
+    for (const [index, hit] of hits.entries()) {
+      const row = hit._source;
+      const messageBody = get(row, 'message.body');
+      const actionXml = get(row, 'message.action.xml');
+      const transactionId = get(row, 'transactionId') || 
+                           get(row, 'id') || 
                            `transaction_${index + 1}`;
       
       if (messageBody || actionXml) {
@@ -132,15 +481,16 @@ export class JiraAttachmentService {
       }
     }
 
-    // Add summary file
-    const summary = this.createSummaryFile(data, fileCount);
+    // Add summary file with transaction statistics
+    const summary = this.createSummaryFile(hits, fileCount);
     zip.file('transaction_summary.txt', summary);
 
     if (fileCount === 0) {
       throw new Error('No message content found for JIRA attachment');
     }
 
-    console.log(`[JiraService] Created attachment with ${fileCount} transaction files`);
+    console.log(`[JiraService] Created ZIP with ${fileCount} transaction files`);
+    
     return await zip.generateAsync({ 
       type: 'blob',
       compression: 'DEFLATE',
@@ -149,65 +499,21 @@ export class JiraAttachmentService {
   }
 
   /**
-   * Upload attachment to JIRA API
-   */
-  private async uploadToJiraAPI(jiraId: string, attachmentBlob: Blob): Promise<JiraAttachmentResponse> {
-    const formData = new FormData();
-    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-    const filename = `transaction_data_${timestamp}.zip`;
-    
-    formData.append('file', attachmentBlob, filename);
-
-    // JIRA API requires specific headers for file upload
-    const headers = new HttpHeaders({
-      'X-Atlassian-Token': 'no-check', // Required by JIRA to prevent CSRF
-      ...this.getAuthHeaders(false) // Don't include Content-Type for FormData
-    });
-
-    const url = `${this.jiraConfig.baseUrl}/rest/api/3/issue/${jiraId}/attachments`;
-
-    try {
-      const response = await firstValueFrom(
-        this.http.post<JiraAttachmentResponse[]>(url, formData, { headers })
-      );
-      
-      if (response && response.length > 0) {
-        console.log(`[JiraService] Successfully uploaded ${filename} to ${jiraId}`);
-        return response[0]; // JIRA returns array of attachments
-      } else {
-        throw new Error('No attachment response received from JIRA');
-      }
-      
-    } catch (error) {
-      if (error instanceof HttpErrorResponse) {
-        console.error('[JiraService] Upload failed:', error.error);
-        
-        if (error.status === 413) {
-          throw new Error('Attachment too large - reduce transaction data size');
-        } else if (error.status === 403) {
-          throw new Error('Permission denied - check JIRA attachment permissions');
-        }
-      }
-      throw new Error(`JIRA upload failed: ${error}`);
-    }
-  }
-
-  /**
-   * Combine message body, action XML, and metadata
+   * Combine message content with metadata (reusing download service logic)
    */
   private combineMessageContent(messageBody: any, actionXml: any, row: any): string {
     let content = '';
     const timestamp = new Date().toISOString();
     
     // Header with metadata
-    content += '=' .repeat(80) + '\n';
+    content += '='.repeat(80) + '\n';
     content += `TRANSACTION DATA EXPORT\n`;
     content += `Generated: ${timestamp}\n`;
-    content += `Transaction ID: ${this.getNestedValue(row, '_source.transactionId') || 'N/A'}\n`;
-    content += `Timestamp: ${this.getNestedValue(row, '_source.timestamp') || 'N/A'}\n`;
-    content += `Application: ${this.getNestedValue(row, '_source.application') || 'N/A'}\n`;
-    content += `Environment: ${this.getNestedValue(row, '_source.environment') || 'N/A'}\n`;
-    content += '=' .repeat(80) + '\n\n';
+    content += `Transaction ID: ${get(row, 'transactionId') || 'N/A'}\n`;
+    content += `Timestamp: ${get(row, 'timestamp') || 'N/A'}\n`;
+    content += `Application: ${get(row, 'application') || 'N/A'}\n`;
+    content += `Environment: ${get(row, 'environment') || 'N/A'}\n`;
+    content += '='.repeat(80) + '\n\n';
     
     // Message Body Section
     if (messageBody) {
@@ -226,37 +532,37 @@ export class JiraAttachmentService {
     // Additional metadata
     content += '=== ADDITIONAL METADATA ===\n';
     const additionalFields = [
-      '_source.status',
-      '_source.duration',
-      '_source.user',
-      '_source.endpoint',
-      '_source.correlationId'
+      'status',
+      'duration',
+      'user',
+      'endpoint',
+      'correlationId'
     ];
 
     for (const field of additionalFields) {
-      const value = this.getNestedValue(row, field);
+      const value = get(row, field);
       if (value !== null && value !== undefined) {
-        const fieldName = field.split('.').pop()?.toUpperCase();
+        const fieldName = field.toUpperCase();
         content += `${fieldName}: ${value}\n`;
       }
     }
-    
+
     return content || 'No content available';
   }
 
   /**
    * Create summary file with transaction statistics
    */
-  private createSummaryFile(data: any[], fileCount: number): string {
+  private createSummaryFile(hits: any[], fileCount: number): string {
     const timestamp = new Date().toISOString();
     let summary = '';
     
-    summary += '=' .repeat(80) + '\n';
+    summary += '='.repeat(80) + '\n';
     summary += `TRANSACTION DATA SUMMARY\n`;
     summary += `Generated: ${timestamp}\n`;
-    summary += '=' .repeat(80) + '\n\n';
+    summary += '='.repeat(80) + '\n\n';
     
-    summary += `Total Transactions: ${data.length}\n`;
+    summary += `Total Transactions: ${hits.length}\n`;
     summary += `Files with Content: ${fileCount}\n`;
     summary += `Export Date: ${new Date().toLocaleDateString()}\n\n`;
     
@@ -264,9 +570,10 @@ export class JiraAttachmentService {
     const apps = new Map<string, number>();
     const envs = new Map<string, number>();
     
-    for (const row of data) {
-      const app = this.getNestedValue(row, '_source.application') || 'Unknown';
-      const env = this.getNestedValue(row, '_source.environment') || 'Unknown';
+    for (const hit of hits) {
+      const row = hit._source;
+      const app = get(row, 'application') || 'Unknown';
+      const env = get(row, 'environment') || 'Unknown';
       
       apps.set(app, (apps.get(app) || 0) + 1);
       envs.set(env, (envs.get(env) || 0) + 1);
@@ -285,105 +592,33 @@ export class JiraAttachmentService {
     return summary;
   }
 
-  /**
-   * Get authentication headers for JIRA API
-   */
-  private getAuthHeaders(includeContentType: boolean = true): { [key: string]: string } {
-    const headers: { [key: string]: string } = {};
-    
-    if (includeContentType) {
-      headers['Content-Type'] = 'application/json';
-    }
-    
-    // Option 1: Use custom auth header (if provided by backend)
-    if (this.jiraConfig.authHeader) {
-      headers['Authorization'] = this.jiraConfig.authHeader;
-    } 
-    // Option 2: Basic auth with username/token
-    else if (this.jiraConfig.username && this.jiraConfig.apiToken) {
-      const auth = btoa(`${this.jiraConfig.username}:${this.jiraConfig.apiToken}`);
-      headers['Authorization'] = `Basic ${auth}`;
-    }
-    
-    return headers;
-  }
+  // ================================
+  // STATE MANAGEMENT
+  // ================================
 
   /**
-   * Get nested value from object using dot notation
+   * Reset state
    */
-  private getNestedValue(obj: any, path: string): any {
-    if (!obj || !path) return null;
-
-    const keys = path.split('.');
-    let value = obj;
-
-    for (const key of keys) {
-      if (value && typeof value === 'object' && key in value) {
-        value = value[key];
-      } else {
-        return null;
-      }
-    }
-
-    return value;
-  }
-
-  /**
-   * Show success message
-   */
-  private showSuccessMessage(message: string): void {
-    this.messageService.add({
-      severity: 'success',
-      summary: 'JIRA Upload Successful',
-      detail: message,
-      life: 5000
+  public resetState(): void {
+    this._uploadState.set({
+      isUploading: false,
+      uploadProgress: 0,
+      successMessage: '',
+      errorMessage: '',
+      showExecutions: false,
+      selectedExecutions: []
     });
+    this._testCycleExecutions.set([]);
   }
 
   /**
-   * Handle and display errors
+   * Clear messages
    */
-  private handleError(summary: string, error: any): void {
-    console.error(`[JiraService] ${summary}:`, error);
-    
-    let detail = 'Please try again or contact support.';
-    if (error instanceof Error) {
-      detail = error.message;
-    } else if (typeof error === 'string') {
-      detail = error;
-    }
-    
-    this.messageService.add({
-      severity: 'error',
-      summary,
-      detail,
-      life: 7000
-    });
-  }
-
-  /**
-   * Update JIRA configuration
-   */
-  public updateConfig(config: Partial<JiraConfig>): void {
-    this.jiraConfig = { ...this.jiraConfig, ...config };
-  }
-
-  /**
-   * Test JIRA connection
-   */
-  public async testConnection(): Promise<boolean> {
-    try {
-      const headers = this.getAuthHeaders();
-      const url = `${this.jiraConfig.baseUrl}/rest/api/3/myself`;
-      
-      await firstValueFrom(this.http.get(url, { headers }));
-      
-      this.showSuccessMessage('JIRA connection test successful');
-      return true;
-      
-    } catch (error) {
-      this.handleError('JIRA connection test failed', error);
-      return false;
-    }
+  public clearMessages(): void {
+    this._uploadState.update(state => ({
+      ...state,
+      successMessage: '',
+      errorMessage: ''
+    }));
   }
 }

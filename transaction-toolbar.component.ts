@@ -25,7 +25,7 @@ import { ViewDefinition } from 'src/app/core/models/view-definition.model';
     ChartModule]
 })
 export class TransactionToolbarComponent {
-  @Input() data: any[] = [];
+  @Input() data: TransactionDetailsResponse | undefined = undefined;
   @Input() searchType: string = '';
   @Input() appName: string = '';
   @Input() currentFilters: any = {};
