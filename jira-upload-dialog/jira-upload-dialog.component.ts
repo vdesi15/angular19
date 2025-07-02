@@ -259,22 +259,34 @@ export class JiraUploadDialogComponent {
   }
 
   /**
-   * Get status severity for PrimeNG message component
+   * Get status severity for PrimeNG badge component (v19 compatible)
    */
-  public getStatusSeverity(status: string): string {
+  public getStatusSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
     switch (status?.toLowerCase()) {
       case 'pass':
       case 'passed':
         return 'success';
       case 'fail':
       case 'failed':
-        return 'error';
+        return 'danger';
       case 'blocked':
         return 'warn';
-      default:
+      case 'pending':
+      case 'running':
         return 'info';
+      default:
+        return 'secondary';
     }
   }
+
+  /**
+   * Alternative: Computed severity for better performance (if needed)
+   */
+  public getExecutionSeverity = computed(() => {
+    return (status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined => {
+      return this.getStatusSeverity(status);
+    };
+  });
 
   /**
    * Create JIRA URL for external links
