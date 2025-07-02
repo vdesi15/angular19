@@ -1,0 +1,273 @@
+<!-- src/app/features/search-logs/components/jira-upload-dialog/jira-upload-dialog.component.html -->
+<p-dialog 
+  header="Upload Transaction Data to JIRA" 
+  [visible]="visible" 
+  [modal]="true" 
+  [style]="{ width: '90vw', maxWidth: '800px', height: '80vh' }"
+  [maximizable]="true"
+  [closable]="true"
+  [draggable]="true"
+  [resizable]="true"
+  styleClass="jira-upload-dialog"
+  (onHide)="onDialogHide()">
+
+  <div class="jira-dialog-content">
+    
+    <!-- ================================ -->
+    <!-- SUCCESS/ERROR MESSAGES -->
+    <!-- ================================ -->
+    
+    @if (uploadState().successMessage) {
+      <p-message 
+        severity="success" 
+        [text]="uploadState().successMessage"
+        [closable]="true"
+        (onClose)="clearMessages()"
+        styleClass="mb-3">
+      </p-message>
+    }
+
+    @if (uploadState().errorMessage) {
+      <p-message 
+        severity="error" 
+        [text]="uploadState().errorMessage"
+        [closable]="true"
+        (onClose)="clearMessages()"
+        styleClass="mb-3">
+      </p-message>
+    }
+
+    <!-- ================================ -->
+    <!-- JIRA ID INPUT SECTION -->
+    <!-- ================================ -->
+    
+    <div class="input-section">
+      <div class="field-group">
+        <label for="jiraInput" class="field-label">
+          <i class="pi pi-ticket"></i>
+          JIRA ID or URL
+        </label>
+        
+        <div class="input-wrapper">
+          <input 
+            id="jiraInput"
+            type="text" 
+            pInputText 
+            [(ngModel)]="jiraInput"
+            [placeholder]="inputPlaceholder()"
+            [class.ng-invalid]="jiraInput() && !isValidInput()"
+            class="w-full" 
+            autocomplete="off" />
+          
+          <!-- Input validation indicator -->
+          @if (jiraInput()) {
+            <div class="input-indicator">
+              @if (isValidInput()) {
+                <i class="pi pi-check-circle success-icon" pTooltip="Valid JIRA format"></i>
+                <p-badge [value]="jiraTypeDisplay()" severity="success"></p-badge>
+              } @else {
+                <i class="pi pi-exclamation-triangle error-icon" pTooltip="Invalid format"></i>
+                <p-badge value="Invalid" severity="danger"></p-badge>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Error message for invalid input -->
+        @if (inputErrorMessage()) {
+          <small class="error-text">
+            <i class="pi pi-exclamation-triangle"></i>
+            {{ inputErrorMessage() }}
+          </small>
+        }
+      </div>
+    </div>
+
+    <!-- ================================ -->
+    <!-- UPLOAD PROGRESS -->
+    <!-- ================================ -->
+    
+    @if (uploadState().isUploading) {
+      <div class="progress-section">
+        <div class="progress-header">
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Uploading transaction data...</span>
+        </div>
+        
+        @if (uploadState().uploadProgress > 0) {
+          <p-progressBar 
+            [value]="uploadState().uploadProgress"
+            [showValue]="true"
+            styleClass="mt-2">
+          </p-progressBar>
+        }
+      </div>
+    }
+
+    <!-- ================================ -->
+    <!-- TEST CYCLE EXECUTIONS TABLE -->
+    <!-- ================================ -->
+    
+    @if (uploadState().showExecutions && testCycleExecutions().length > 0) {
+      <div class="executions-section">
+        <div class="section-header">
+          <h4>
+            <i class="pi pi-list"></i>
+            Test Cycle Executions
+          </h4>
+          <p class="section-description">
+            Select executions to upload transaction data. You can upload to individual executions or the entire test cycle.
+          </p>
+        </div>
+
+        <p-table 
+          [value]="testCycleExecutions()" 
+          [scrollable]="true" 
+          scrollHeight="300px"
+          styleClass="executions-table"
+          [rowHover]="true">
+          
+          <ng-template pTemplate="header">
+            <tr>
+              <th style="width: 4rem">
+                <span class="sr-only">Select</span>
+              </th>
+              <th>Test Case ID</th>
+              <th>Execution ID</th>
+              <th>Status</th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-execution>
+            <tr [class.selected-row]="isExecutionSelected(execution)">
+              <td>
+                <p-checkbox 
+                  [binary]="true"
+                  [ngModel]="isExecutionSelected(execution)"
+                  (ngModelChange)="onExecutionSelectionChange(execution, $event)">
+                </p-checkbox>
+              </td>
+              
+              <td>
+                <a 
+                  [href]="createJiraUrl(execution.testcaseUrl)" 
+                  target="_blank" 
+                  class="jira-link"
+                  [pTooltip]="'Open ' + execution.testCaseKey + ' in JIRA'">
+                  {{ execution.testCaseKey }}
+                  <i class="pi pi-external-link ml-1"></i>
+                </a>
+              </td>
+              
+              <td>
+                <a 
+                  [href]="createJiraUrl(execution.keyUrl)" 
+                  target="_blank" 
+                  class="jira-link"
+                  [pTooltip]="'Open ' + execution.key + ' in JIRA'">
+                  {{ execution.key }}
+                  <i class="pi pi-external-link ml-1"></i>
+                </a>
+              </td>
+              
+              <td>
+                <p-badge 
+                  [value]="execution.status" 
+                  [severity]="getStatusSeverity(execution.status)">
+                </p-badge>
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="4" class="text-center">
+                <div class="empty-state">
+                  <i class="pi pi-inbox"></i>
+                  <p>No executions found for this test cycle</p>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+
+        <!-- Selection summary -->
+        @if (hasSelectedExecutions()) {
+          <div class="selection-summary">
+            <p-badge 
+              [value]="uploadState().selectedExecutions.length + ' selected'"
+              severity="info">
+            </p-badge>
+          </div>
+        }
+      </div>
+    }
+
+    @if (uploadState().showExecutions && testCycleExecutions().length === 0 && !uploadState().isUploading) {
+      <div class="empty-executions">
+        <i class="pi pi-info-circle"></i>
+        <p>No executions found for this test cycle</p>
+      </div>
+    }
+
+  </div>
+
+  <!-- ================================ -->
+  <!-- DIALOG FOOTER -->
+  <!-- ================================ -->
+  
+  <ng-template pTemplate="footer">
+    <div class="dialog-footer">
+      
+      <!-- Get Associated Executions Button -->
+      @if (showGetExecutionsButton()) {
+        <p-button 
+          label="Get Associated Executions"
+          icon="pi pi-search"
+          severity="info"
+          [outlined]="true"
+          [loading]="uploadState().isUploading"
+          (click)="getAssociatedExecutions()"
+          pTooltip="Load executions for this test cycle">
+        </p-button>
+      }
+
+      <!-- Upload to Selected Executions Button -->
+      @if (showUploadToSelectedButton()) {
+        <p-button 
+          label="Upload to Selected Executions"
+          icon="pi pi-upload"
+          severity="primary"
+          [loading]="uploadState().isUploading"
+          [disabled]="!hasSelectedExecutions()"
+          (click)="uploadToSelectedExecutions()"
+          [pTooltip]="'Upload to ' + uploadState().selectedExecutions.length + ' selected executions'">
+        </p-button>
+      }
+
+      <!-- Regular Upload Button -->
+      @if (showRegularUploadButton()) {
+        <p-button 
+          [label]="uploadButtonLabel()"
+          icon="pi pi-upload"
+          severity="primary"
+          [loading]="uploadState().isUploading"
+          [disabled]="!isValidInput()"
+          (click)="uploadToJira()">
+        </p-button>
+      }
+
+      <!-- Close Button -->
+      <p-button 
+        label="Close"
+        icon="pi pi-times"
+        severity="secondary"
+        [text]="true"
+        [disabled]="uploadState().isUploading"
+        (click)="onDialogHide()">
+      </p-button>
+      
+    </div>
+  </ng-template>
+
+</p-dialog>

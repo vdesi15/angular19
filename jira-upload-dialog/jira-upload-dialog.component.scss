@@ -1,0 +1,434 @@
+/* src/app/features/search-logs/components/jira-upload-dialog/jira-upload-dialog.component.scss */
+
+:host {
+  .jira-dialog-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 0.5rem 0;
+
+    /* ================================ */
+    /* INPUT SECTION */
+    /* ================================ */
+    
+    .input-section {
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .field-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: var(--text-color);
+        font-size: 0.875rem;
+
+        i {
+          color: var(--primary-color);
+        }
+      }
+
+      .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+
+        input {
+          flex: 1;
+          
+          &.ng-invalid {
+            border-color: var(--red-500);
+            box-shadow: 0 0 0 0.2rem rgba(239, 68, 68, 0.2);
+          }
+        }
+
+        .input-indicator {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+
+          .success-icon {
+            color: var(--green-500);
+            font-size: 1.1rem;
+          }
+
+          .error-icon {
+            color: var(--red-500);
+            font-size: 1.1rem;
+          }
+        }
+      }
+
+      .error-text {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        color: var(--red-500);
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+
+        i {
+          font-size: 0.7rem;
+        }
+      }
+    }
+
+    /* ================================ */
+    /* PROGRESS SECTION */
+    /* ================================ */
+    
+    .progress-section {
+      padding: 1rem;
+      background: var(--surface-50);
+      border-radius: 6px;
+      border: 1px solid var(--surface-200);
+
+      .progress-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        color: var(--text-color);
+        font-weight: 500;
+
+        i {
+          color: var(--primary-color);
+        }
+      }
+    }
+
+    /* ================================ */
+    /* EXECUTIONS SECTION */
+    /* ================================ */
+    
+    .executions-section {
+      .section-header {
+        margin-bottom: 1rem;
+
+        h4 {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin: 0 0 0.5rem 0;
+          color: var(--text-color);
+          font-size: 1.1rem;
+
+          i {
+            color: var(--primary-color);
+          }
+        }
+
+        .section-description {
+          margin: 0;
+          color: var(--text-color-secondary);
+          font-size: 0.875rem;
+          line-height: 1.4;
+        }
+      }
+
+      .selection-summary {
+        margin-top: 0.75rem;
+        display: flex;
+        justify-content: flex-end;
+      }
+    }
+
+    .empty-executions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      color: var(--text-color-secondary);
+      text-align: center;
+
+      i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.6;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.875rem;
+      }
+    }
+  }
+
+  /* ================================ */
+  /* DIALOG FOOTER */
+  /* ================================ */
+  
+  .dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+
+    // On mobile, stack buttons vertically
+    @media (max-width: 576px) {
+      flex-direction: column-reverse;
+      gap: 0.5rem;
+
+      ::ng-deep .p-button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+}
+
+/* ================================ */
+/* PRIMENG COMPONENT OVERRIDES */
+/* ================================ */
+
+:host ::ng-deep {
+  
+  /* Dialog customizations */
+  .jira-upload-dialog {
+    
+    .p-dialog-header {
+      background: var(--surface-50);
+      border-bottom: 1px solid var(--surface-200);
+      
+      .p-dialog-title {
+        font-weight: 600;
+        color: var(--text-color);
+      }
+    }
+
+    .p-dialog-content {
+      padding: 1.5rem;
+    }
+
+    .p-dialog-footer {
+      background: var(--surface-50);
+      border-top: 1px solid var(--surface-200);
+      padding: 1rem 1.5rem;
+    }
+  }
+
+  /* Table customizations */
+  .executions-table {
+    .p-datatable-thead > tr > th {
+      background: var(--surface-100);
+      border-bottom: 2px solid var(--surface-300);
+      font-weight: 600;
+      font-size: 0.875rem;
+      padding: 0.75rem;
+    }
+
+    .p-datatable-tbody > tr {
+      &.selected-row {
+        background: rgba(var(--primary-color-rgb), 0.1) !important;
+        
+        &:hover {
+          background: rgba(var(--primary-color-rgb), 0.15) !important;
+        }
+      }
+
+      > td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--surface-200);
+      }
+    }
+
+    .jira-link {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      
+      &:hover {
+        text-decoration: underline;
+        color: var(--primary-color-dark);
+      }
+
+      i {
+        font-size: 0.75rem;
+        opacity: 0.7;
+      }
+    }
+
+    .empty-state {
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-color-secondary);
+
+      i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.5;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.875rem;
+      }
+    }
+  }
+
+  /* Badge customizations */
+  .p-badge {
+    font-size: 0.75rem;
+    
+    &.p-badge-success {
+      background: var(--green-500);
+    }
+    
+    &.p-badge-danger {
+      background: var(--red-500);
+    }
+    
+    &.p-badge-info {
+      background: var(--blue-500);
+    }
+    
+    &.p-badge-warn {
+      background: var(--orange-500);
+    }
+  }
+
+  /* Progress bar */
+  .p-progressbar {
+    height: 0.75rem;
+    background: var(--surface-300);
+    border-radius: 4px;
+    overflow: hidden;
+    
+    .p-progressbar-value {
+      background: linear-gradient(90deg, var(--primary-color), var(--primary-color-dark));
+      transition: width 0.3s ease;
+    }
+    
+    .p-progressbar-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+  }
+
+  /* Message component */
+  .p-message {
+    border-radius: 6px;
+    
+    &.p-message-success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: var(--green-800);
+    }
+    
+    &.p-message-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--red-800);
+    }
+  }
+}
+
+/* ================================ */
+/* DARK MODE SUPPORT */
+/* ================================ */
+
+:host-context(.app-dark) {
+  .jira-dialog-content {
+    .progress-section {
+      background: var(--surface-800);
+      border-color: var(--surface-600);
+    }
+  }
+
+  ::ng-deep {
+    .jira-upload-dialog {
+      .p-dialog-header {
+        background: var(--surface-800);
+        border-bottom-color: var(--surface-600);
+      }
+
+      .p-dialog-footer {
+        background: var(--surface-800);
+        border-top-color: var(--surface-600);
+      }
+    }
+
+    .executions-table {
+      .p-datatable-thead > tr > th {
+        background: var(--surface-700);
+        border-bottom-color: var(--surface-500);
+      }
+
+      .p-datatable-tbody > tr.selected-row {
+        background: rgba(var(--primary-color-rgb), 0.2) !important;
+        
+        &:hover {
+          background: rgba(var(--primary-color-rgb), 0.25) !important;
+        }
+      }
+    }
+
+    .p-message {
+      &.p-message-success {
+        background: rgba(34, 197, 94, 0.15);
+        border-color: rgba(34, 197, 94, 0.4);
+        color: var(--green-300);
+      }
+      
+      &.p-message-error {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.4);
+        color: var(--red-300);
+      }
+    }
+  }
+}
+
+/* ================================ */
+/* RESPONSIVE DESIGN */
+/* ================================ */
+
+@media (max-width: 768px) {
+  :host ::ng-deep .jira-upload-dialog {
+    .p-dialog {
+      width: 95vw !important;
+      height: 90vh !important;
+      margin: 2.5vh auto !important;
+    }
+
+    .p-dialog-content {
+      padding: 1rem;
+      height: calc(100% - 120px);
+      overflow-y: auto;
+    }
+  }
+
+  :host .jira-dialog-content {
+    gap: 1rem;
+
+    .executions-section {
+      .executions-table {
+        ::ng-deep .p-datatable-wrapper {
+          font-size: 0.875rem;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  :host ::ng-deep .executions-table {
+    .p-datatable-thead > tr > th,
+    .p-datatable-tbody > tr > td {
+      padding: 0.5rem 0.25rem;
+      font-size: 0.75rem;
+    }
+
+    .jira-link {
+      font-size: 0.75rem;
+    }
+  }
+}
