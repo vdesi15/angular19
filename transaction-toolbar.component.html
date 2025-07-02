@@ -1,73 +1,151 @@
+<!-- src/app/features/search-logs/components/transaction-toolbar/transaction-toolbar.component.html -->
 <p-toolbar styleClass="transaction-toolbar">
-    <div class="p-toolbar-group-left">
-        <!-- View Selector -->
-        <div class="view-selector">
-            <label class="view-label">View:</label>
-            <p-select [options]="views" [ngModel]="selectedView" (ngModelChange)="viewModeChanged.emit($event)"
-                optionLabel="displayName" optionValue="viewid" placeholder="Select View" styleClass="view-select">
-            </p-select>
-        </div>
+  
+  <!-- ================================ -->
+  <!-- LEFT SECTION - VIEW SELECTOR -->
+  <!-- ================================ -->
+  
+  <div class="p-toolbar-group-left">
+    <div class="view-selector">
+      <label class="view-label">
+        <i class="pi pi-eye"></i>
+        View:
+      </label>
+      <p-select 
+        [options]="views" 
+        [ngModel]="selectedView" 
+        (ngModelChange)="viewModeChanged.emit($event)"
+        optionLabel="displayName" 
+        optionValue="viewid" 
+        placeholder="Select View" 
+        styleClass="view-select"
+        [disabled]="!hasTransactionData()">
+      </p-select>
     </div>
+  </div>
 
-    <div class="p-toolbar-group-right">
-        <!-- Metrics Button -->
-        <p-button icon="pi pi-chart-pie" label="Metrics" severity="secondary" [outlined]="true"
-            (click)="metricsPanel.toggle($event)" [disabled]="!hasMetrics()" pTooltip="View transaction metrics" />
+  <!-- ================================ -->
+  <!-- RIGHT SECTION - ACTION BUTTONS -->
+  <!-- ================================ -->
+  
+  <div class="p-toolbar-group-right">
+    
+    <!-- Metrics Button -->
+    <p-button 
+      icon="pi pi-chart-pie" 
+      label="Metrics" 
+      severity="secondary" 
+      [outlined]="true"
+      (click)="metricsPanel.toggle($event)" 
+      [disabled]="!hasMetrics()" 
+      pTooltip="View transaction metrics"
+      tooltipPosition="bottom">
+    </p-button>
 
-        <!-- Download Button -->
-        <p-button icon="pi pi-download" label="Download" severity="secondary" [outlined]="true"
-            (click)="downloadTransactionData()" pTooltip="Download transaction messages" />
+    <!-- Download Button -->
+    <p-button 
+      icon="pi pi-download" 
+      label="Download" 
+      severity="secondary" 
+      [outlined]="true"
+      (click)="downloadTransactionData()" 
+      [disabled]="!hasTransactionData()"
+      pTooltip="Download transaction messages as ZIP"
+      tooltipPosition="bottom">
+    </p-button>
 
-        <!-- Share Menu Button -->
-        <p-button icon="pi pi-share-alt" label="Share" severity="secondary" [outlined]="true"
-            (click)="shareMenu.toggle($event)" pTooltip="Share transaction" />
+    <!-- Share Menu Button -->
+    <p-button 
+      icon="pi pi-share-alt" 
+      label="Share" 
+      severity="secondary" 
+      [outlined]="true"
+      (click)="shareMenu.toggle($event)" 
+      [disabled]="!hasTransactionData()"
+      pTooltip="Share transaction"
+      tooltipPosition="bottom">
+    </p-button>
 
-        <!-- JIRA Menu Button -->
-        <p-button icon="pi pi-ticket" label="JIRA" severity="secondary" [outlined]="true"
-            (click)="jiraMenu.toggle($event)" pTooltip="JIRA actions" />
-    </div>
+    <!-- JIRA Menu Button -->
+    <p-button 
+      icon="pi pi-ticket" 
+      label="JIRA" 
+      severity="secondary" 
+      [outlined]="true"
+      (click)="jiraMenu.toggle($event)" 
+      [disabled]="!hasTransactionData()"
+      pTooltip="JIRA actions"
+      tooltipPosition="bottom">
+    </p-button>
+    
+  </div>
+  
 </p-toolbar>
 
-<!-- Metrics Overlay Panel -->
+<!-- ================================ -->
+<!-- METRICS OVERLAY PANEL -->
+<!-- ================================ -->
+
 <p-overlayPanel #metricsPanel styleClass="metrics-panel">
-    <div class="metrics-content">
-        <h4>Transaction Metrics</h4>
-        @if (metricsData(); as metrics) {
-        <p-chart type="doughnut" [data]="metrics.chartData" [options]="metrics.chartOptions"
-            [style]="{ width: '300px', height: '300px' }">
-        </p-chart>
-        } @else {
-        <p class="no-metrics">No metrics data available</p>
-        }
+  <div class="metrics-content">
+    <div class="metrics-header">
+      <h4>
+        <i class="pi pi-chart-pie"></i>
+        Transaction Metrics
+      </h4>
     </div>
+    
+    @if (metricsData(); as metrics) {
+      <div class="metrics-chart">
+        <p-chart 
+          type="doughnut" 
+          [data]="metrics.chartData" 
+          [options]="metrics.chartOptions"
+          [style]="{ width: '300px', height: '300px' }">
+        </p-chart>
+      </div>
+      
+      <div class="metrics-summary">
+        <div class="metric-item">
+          <span class="metric-label">Total Transactions:</span>
+          <span class="metric-value">{{ data.length }}</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Applications:</span>
+          <span class="metric-value">{{ metrics.applicationCount || 0 }}</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-label">Environments:</span>
+          <span class="metric-value">{{ metrics.environmentCount || 0 }}</span>
+        </div>
+      </div>
+    } @else {
+      <div class="no-metrics">
+        <i class="pi pi-info-circle"></i>
+        <p>No metrics data available</p>
+      </div>
+    }
+  </div>
 </p-overlayPanel>
 
-<!-- Share Menu -->
+<!-- ================================ -->
+<!-- SHARE MENU -->
+<!-- ================================ -->
+
 <p-menu #shareMenu [model]="shareMenuItems" [popup]="true"></p-menu>
 
-<!-- JIRA Menu -->
+<!-- ================================ -->
+<!-- JIRA MENU -->
+<!-- ================================ -->
+
 <p-menu #jiraMenu [model]="jiraMenuItems" [popup]="true"></p-menu>
 
-<!-- JIRA Upload Dialog -->
-<p-dialog header="Attach Transaction to JIRA" [visible]="showJiraDialog()" [modal]="true" [style]="{ width: '450px' }"
-    (onHide)="hideJiraDialog()">
+<!-- ================================ -->
+<!-- JIRA UPLOAD DIALOG -->
+<!-- ================================ -->
 
-    <div class="jira-dialog-content">
-        <p class="dialog-description">
-            Provide JIRA ticket ID to attach transaction data
-        </p>
-
-        <div class="field">
-            <label for="jiraId">JIRA ID</label>
-            <input id="jiraId" type="text" pInputText [(ngModel)]="jiraTicketId" placeholder="e.g., PROJ-1234"
-                class="w-full" />
-        </div>
-    </div>
-
-    <ng-template pTemplate="footer">
-        <p-button label="Upload" icon="pi pi-upload" [loading]="isUploading()" [disabled]="!jiraTicketId?.trim()"
-            (click)="uploadToJira()" />
-
-        <p-button label="Close" severity="secondary" [text]="true" (click)="hideJiraDialog()" />
-    </ng-template>
-</p-dialog>
+<app-jira-upload-dialog
+  [visible]="showJiraDialog()"
+  [transactionData]="data"
+  (visibleChange)="onJiraDialogVisibilityChange($event)">
+</app-jira-upload-dialog>

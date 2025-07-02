@@ -25,7 +25,7 @@ import { ViewDefinition } from 'src/app/core/models/view-definition.model';
     ChartModule]
 })
 export class TransactionToolbarComponent {
-  @Input() data: TransactionDetailsResponse | undefined = undefined;
+  @Input({ required: true }) data: TransactionDetailsResponse | undefined = undefined;
   @Input() searchType: string = '';
   @Input() appName: string = '';
   @Input() currentFilters: any = {};
@@ -39,20 +39,20 @@ export class TransactionToolbarComponent {
   // Injected services
   private downloadService = inject(TransactionDownloadService);
   private shareService = inject(TransactionShareService);
-  private jiraService = inject(JiraAttachmentService);
   private metricsService = inject(TransactionMetricsService);
 
-  // State signals
+  // ================================
+  // STATE SIGNALS
+  // ================================
+
   private _showJiraDialog: WritableSignal<boolean> = signal(false);
-  private _isUploading: WritableSignal<boolean> = signal(false);
-  public jiraTicketId: string = '';
 
   // Public computed signals
   public readonly showJiraDialog = this._showJiraDialog.asReadonly();
-  public readonly isUploading = this._isUploading.asReadonly();
 
   public readonly metricsData = computed(() => {
-    return this.metricsService.calculateMetrics(this.data);
+    const transactionHits = this.data?.hits?.hits || [];
+    return this.metricsService.calculateMetrics(transactionHits);
   });
 
   public readonly hasMetrics = computed(() => {
@@ -60,17 +60,26 @@ export class TransactionToolbarComponent {
     return metrics && metrics.chartData.datasets[0].data.length > 0;
   });
 
-  // Menu items
+  public readonly hasTransactionData = computed(() => {
+    return this.data?.hits?.hits && this.data.hits.hits.length > 0;
+  });
+
+  // ================================
+  // MENU ITEMS
+  // ================================
+
   public readonly shareMenuItems: MenuItem[] = [
     {
       label: 'Copy Transaction ID',
       icon: 'pi pi-copy',
-      command: () => this.copyTransactionId()
+      command: () => this.copyTransactionId(),
+      disabled: !this.hasTransactionData()
     },
     {
       label: 'Copy Transaction Link',
       icon: 'pi pi-link',
-      command: () => this.copyTransactionLink()
+      command: () => this.copyTransactionLink(),
+      disabled: !this.hasTransactionData()
     }
   ];
 
@@ -78,16 +87,28 @@ export class TransactionToolbarComponent {
     {
       label: 'Upload to JIRA',
       icon: 'pi pi-upload',
-      command: () => this.showJiraUploadDialog()
+      command: () => this.showJiraUploadDialog(),
+      disabled: !this.hasTransactionData()
     }
   ];
+
+  // ================================
+  // PUBLIC METHODS
+  // ================================
 
   /**
    * Download transaction data as ZIP
    */
   public async downloadTransactionData(): Promise<void> {
+    if (!this.hasTransactionData()) {
+      console.warn('[TransactionToolbar] No transaction data to download');
+      return;
+    }
+
     try {
-      await this.downloadService.downloadTransactionMessages(this.data);
+      // Convert TransactionDetailsResponse to the format expected by download service
+      const transactionHits = this.data?.hits?.hits?.map(hit => hit._source) || [];
+      await this.downloadService.downloadTransactionMessages(transactionHits);
     } catch (error) {
       console.error('[TransactionToolbar] Download failed:', error);
     }
@@ -101,6 +122,8 @@ export class TransactionToolbarComponent {
       const transactionId = this.extractTransactionId();
       if (transactionId) {
         await this.shareService.copyTransactionId(transactionId);
+      } else {
+        console.warn('[TransactionToolbar] No transaction ID found');
       }
     } catch (error) {
       console.error('[TransactionToolbar] Copy transaction ID failed:', error);
@@ -115,6 +138,8 @@ export class TransactionToolbarComponent {
       const transactionId = this.extractTransactionId();
       if (transactionId) {
         await this.shareService.copyTransactionLink(transactionId, this.currentFilters);
+      } else {
+        console.warn('[TransactionToolbar] No transaction ID found');
       }
     } catch (error) {
       console.error('[TransactionToolbar] Copy transaction link failed:', error);
@@ -125,7 +150,11 @@ export class TransactionToolbarComponent {
    * Show JIRA upload dialog
    */
   public showJiraUploadDialog(): void {
-    this.jiraTicketId = '';
+    if (!this.hasTransactionData()) {
+      console.warn('[TransactionToolbar] No transaction data for JIRA upload');
+      return;
+    }
+    
     this._showJiraDialog.set(true);
   }
 
@@ -134,32 +163,44 @@ export class TransactionToolbarComponent {
    */
   public hideJiraDialog(): void {
     this._showJiraDialog.set(false);
-    this.jiraTicketId = '';
   }
 
   /**
-   * Upload transaction data to JIRA
+   * Handle JIRA dialog visibility change
    */
-  public async uploadToJira(): Promise<void> {
-    if (!this.jiraTicketId?.trim()) return;
-
-    this._isUploading.set(true);
-    
-    try {
-      await this.jiraService.attachTransactionToJira(this.jiraTicketId.trim(), this.data);
-      this.hideJiraDialog();
-    } catch (error) {
-      console.error('[TransactionToolbar] JIRA upload failed:', error);
-    } finally {
-      this._isUploading.set(false);
-    }
+  public onJiraDialogVisibilityChange(visible: boolean): void {
+    this._showJiraDialog.set(visible);
   }
+
+  // ================================
+  // PRIVATE HELPER METHODS
+  // ================================
 
   /**
    * Extract transaction ID from data
    */
   private extractTransactionId(): string | null {
-    if (!this.data?.length) return null;
+    if (!this.data?.hits?.hits?.length) return null;
+
+    const firstHit = this.data.hits.hits[0];
+    const firstRow = firstHit._source;
+    const identifierFields = [
+      '_source.transactionId',
+      '_source.id',
+      '_source.traceId',
+      'transactionId',
+      'id'
+    ];
+
+    for (const field of identifierFields) {
+      const value = this.getNestedValue(firstRow, field);
+      if (value) {
+        return String(value);
+      }
+    }
+
+    return null;
+  }this.data?.length) return null;
 
     const firstRow = this.data[0];
     const identifierFields = [

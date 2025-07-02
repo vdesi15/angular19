@@ -1,77 +1,119 @@
 :host ::ng-deep .transaction-toolbar {
-      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-      border: none;
-      color: white;
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
-      
-      .p-toolbar-group-left .toolbar-title {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+
+  .p-toolbar-group-left {
+    flex: 1;
+
+    .view-selector {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+
+      .view-label {
         color: white;
         font-weight: 600;
-        font-size: 1rem;
+        font-size: 0.9rem;
+        white-space: nowrap;
       }
-      
-      .p-toolbar-group-right {
-        gap: 0.5rem;
-        
-        .p-button {
+
+      .view-select {
+        min-width: 160px;
+
+        .p-select {
+          background-color: rgba(255, 255, 255, 0.1);
           border-color: rgba(255, 255, 255, 0.3);
           color: white;
-          
+
+          .p-select-label {
+            color: white;
+          }
+
           &:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: rgba(255, 255, 255, 0.15);
             border-color: rgba(255, 255, 255, 0.5);
           }
-          
-          &:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-          }
         }
       }
     }
+  }
 
-    :host ::ng-deep .metrics-panel {
-      .metrics-content {
-        padding: 1rem;
-        text-align: center;
-        
-        h4 {
-          margin: 0 0 1rem 0;
-          color: var(--text-color);
-        }
-        
-        .no-metrics {
-          color: var(--text-color-secondary);
-          font-style: italic;
-        }
+  .p-toolbar-group-right {
+    gap: 0.5rem;
+
+    .p-button {
+      border-color: rgba(255, 255, 255, 0.3);
+      color: white;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
     }
+  }
+}
 
-    .jira-dialog-content {
-      .dialog-description {
-        margin-bottom: 1.5rem;
-        color: var(--text-color-secondary);
-      }
-      
-      .field {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        
-        label {
-          font-weight: 600;
-          color: var(--text-color);
-        }
-      }
+:host ::ng-deep .metrics-panel {
+  .metrics-content {
+    padding: 1rem;
+    text-align: center;
+
+    h4 {
+      margin: 0 0 1rem 0;
+      color: var(--text-color);
     }
 
-    /* Dark mode support */
-    :host-context(.app-dark) ::ng-deep .transaction-toolbar {
-      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-      
-      .p-button {
+    .no-metrics {
+      color: var(--text-color-secondary);
+      font-style: italic;
+    }
+  }
+}
+
+.jira-dialog-content {
+  .dialog-description {
+    margin-bottom: 1.5rem;
+    color: var(--text-color-secondary);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    label {
+      font-weight: 600;
+      color: var(--text-color);
+    }
+  }
+}
+
+/* Dark mode support */
+:host-context(.app-dark) ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+
+  .p-toolbar-group-left {
+    .view-selector {
+      .view-select .p-select {
         &:hover {
-          background-color: rgba(255, 255, 255, 0.15);
+          background-color: rgba(255, 255, 255, 0.2);
         }
       }
     }
+  }
+
+  .p-toolbar-group-right {
+    .p-button {
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+      }
+    }
+  }
+}
