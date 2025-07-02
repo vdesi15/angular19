@@ -163,7 +163,7 @@ export class JiraUploadDialogComponent {
   // ================================
 
   /**
-   * Handle dialog close
+   * Handle dialog close (both X button and programmatic close)
    */
   public onDialogHide(): void {
     this.visibleChange.emit(false);
@@ -261,7 +261,7 @@ export class JiraUploadDialogComponent {
   /**
    * Get status severity for PrimeNG badge component (v19 compatible)
    */
-  public getStatusSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined {
+  public getStatusSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast"  {
     switch (status?.toLowerCase()) {
       case 'pass':
       case 'passed':
@@ -283,7 +283,7 @@ export class JiraUploadDialogComponent {
    * Alternative: Computed severity for better performance (if needed)
    */
   public getExecutionSeverity = computed(() => {
-    return (status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" | undefined => {
+    return (status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" => {
       return this.getStatusSeverity(status);
     };
   });

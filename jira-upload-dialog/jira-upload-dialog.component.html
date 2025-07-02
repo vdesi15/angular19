@@ -3,11 +3,12 @@
   header="Upload Transaction Data to JIRA" 
   [visible]="visible" 
   [modal]="true" 
-  [style]="{ width: '90vw', maxWidth: '800px', height: '80vh' }"
-  [maximizable]="true"
+  [style]="{ width: '600px' }"
+  [height]="uploadState().showExecutions ? '700px' : 'auto'"
+  [maximizable]="false"
   [closable]="true"
   [draggable]="true"
-  [resizable]="true"
+  [resizable]="false"
   styleClass="jira-upload-dialog"
   (onHide)="onDialogHide()">
 
@@ -23,7 +24,7 @@
         [text]="uploadState().successMessage"
         [closable]="true"
         (onClose)="clearMessages()"
-        styleClass="mb-3">
+        styleClass="mb-3 message-full-width">
       </p-message>
     }
 
@@ -33,7 +34,7 @@
         [text]="uploadState().errorMessage"
         [closable]="true"
         (onClose)="clearMessages()"
-        styleClass="mb-3">
+        styleClass="mb-3 message-full-width">
       </p-message>
     }
 
@@ -48,7 +49,7 @@
           JIRA ID or URL
         </label>
         
-        <div class="input-wrapper">
+        <div class="input-container">
           <input 
             id="jiraInput"
             type="text" 
@@ -56,29 +57,26 @@
             [(ngModel)]="jiraInput"
             [placeholder]="inputPlaceholder()"
             [class.ng-invalid]="jiraInput() && !isValidInput()"
-            class="w-full" 
+            class="jira-input" 
             autocomplete="off" />
-          
-          <!-- Input validation indicator -->
-          @if (jiraInput()) {
-            <div class="input-indicator">
-              @if (isValidInput()) {
-                <i class="pi pi-check-circle success-icon" pTooltip="Valid JIRA format"></i>
-                <p-badge [value]="jiraTypeDisplay()" severity="success"></p-badge>
-              } @else {
-                <i class="pi pi-exclamation-triangle error-icon" pTooltip="Invalid format"></i>
-                <p-badge value="Invalid" severity="danger"></p-badge>
-              }
-            </div>
-          }
         </div>
 
-        <!-- Error message for invalid input -->
-        @if (inputErrorMessage()) {
-          <small class="error-text">
-            <i class="pi pi-exclamation-triangle"></i>
-            {{ inputErrorMessage() }}
-          </small>
+        <!-- Validation feedback below input -->
+        @if (jiraInput()) {
+          <div class="validation-feedback">
+            @if (isValidInput()) {
+              <div class="validation-success">
+                <i class="pi pi-check-circle"></i>
+                <span class="validation-text">Valid {{ jiraTypeDisplay() }}</span>
+                <p-badge [value]="jiraTypeDisplay()" severity="success" styleClass="ml-2"></p-badge>
+              </div>
+            } @else {
+              <div class="validation-error">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span class="validation-text">{{ inputErrorMessage() }}</span>
+              </div>
+            }
+          </div>
         }
       </div>
     </div>
@@ -108,7 +106,7 @@
     <!-- TEST CYCLE EXECUTIONS TABLE -->
     <!-- ================================ -->
     
-    @if (uploadState().showExecutions && testCycleExecutions().length > 0) {
+    @if (uploadState().showExecutions) {
       <div class="executions-section">
         <div class="section-header">
           <h4>
@@ -120,93 +118,95 @@
           </p>
         </div>
 
-        <p-table 
-          [value]="testCycleExecutions()" 
-          [scrollable]="true" 
-          scrollHeight="300px"
-          styleClass="executions-table"
-          [rowHover]="true">
-          
-          <ng-template pTemplate="header">
-            <tr>
-              <th style="width: 4rem">
-                <span class="sr-only">Select</span>
-              </th>
-              <th>Test Case ID</th>
-              <th>Execution ID</th>
-              <th>Status</th>
-            </tr>
-          </ng-template>
-
-          <ng-template pTemplate="body" let-execution>
-            <tr [class.selected-row]="isExecutionSelected(execution)">
-              <td>
-                <p-checkbox 
-                  [binary]="true"
-                  [ngModel]="isExecutionSelected(execution)"
-                  (ngModelChange)="onExecutionSelectionChange(execution, $event)">
-                </p-checkbox>
-              </td>
+        @if (testCycleExecutions().length > 0) {
+          <div class="table-container">
+            <p-table 
+              [value]="testCycleExecutions()" 
+              [scrollable]="true" 
+              scrollHeight="240px"
+              styleClass="executions-table"
+              [rowHover]="true">
               
-              <td>
-                <a 
-                  [href]="createJiraUrl(execution.testcaseUrl)" 
-                  target="_blank" 
-                  class="jira-link"
-                  [pTooltip]="'Open ' + execution.testCaseKey + ' in JIRA'">
-                  {{ execution.testCaseKey }}
-                  <i class="pi pi-external-link ml-1"></i>
-                </a>
-              </td>
-              
-              <td>
-                <a 
-                  [href]="createJiraUrl(execution.keyUrl)" 
-                  target="_blank" 
-                  class="jira-link"
-                  [pTooltip]="'Open ' + execution.key + ' in JIRA'">
-                  {{ execution.key }}
-                  <i class="pi pi-external-link ml-1"></i>
-                </a>
-              </td>
-              
-              <td>
-                <p-badge 
-                  [value]="execution.status" 
-                  [severity]="getStatusSeverity(execution.status)">
-                </p-badge>
-              </td>
-            </tr>
-          </ng-template>
+              <ng-template pTemplate="header">
+                <tr>
+                  <th style="width: 50px" class="text-center">
+                    <span class="sr-only">Select</span>
+                  </th>
+                  <th>Test Case ID</th>
+                  <th>Execution ID</th>
+                  <th style="width: 100px" class="text-center">Status</th>
+                </tr>
+              </ng-template>
 
-          <ng-template pTemplate="emptymessage">
-            <tr>
-              <td colspan="4" class="text-center">
-                <div class="empty-state">
-                  <i class="pi pi-inbox"></i>
-                  <p>No executions found for this test cycle</p>
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
+              <ng-template pTemplate="body" let-execution>
+                <tr [class.selected-row]="isExecutionSelected(execution)">
+                  <td class="text-center">
+                    <p-checkbox 
+                      [binary]="true"
+                      [ngModel]="isExecutionSelected(execution)"
+                      (ngModelChange)="onExecutionSelectionChange(execution, $event)">
+                    </p-checkbox>
+                  </td>
+                  
+                  <td>
+                    <a 
+                      [href]="createJiraUrl(execution.testcaseUrl)" 
+                      target="_blank" 
+                      class="jira-link"
+                      [pTooltip]="'Open ' + execution.testCaseKey + ' in JIRA'">
+                      {{ execution.testCaseKey }}
+                      <i class="pi pi-external-link ml-1"></i>
+                    </a>
+                  </td>
+                  
+                  <td>
+                    <a 
+                      [href]="createJiraUrl(execution.keyUrl)" 
+                      target="_blank" 
+                      class="jira-link"
+                      [pTooltip]="'Open ' + execution.key + ' in JIRA'">
+                      {{ execution.key }}
+                      <i class="pi pi-external-link ml-1"></i>
+                    </a>
+                  </td>
+                  
+                  <td class="text-center">
+                    <p-badge 
+                      [value]="execution.status" 
+                      [severity]="getStatusSeverity(execution.status)">
+                    </p-badge>
+                  </td>
+                </tr>
+              </ng-template>
 
-        <!-- Selection summary -->
-        @if (hasSelectedExecutions()) {
-          <div class="selection-summary">
-            <p-badge 
-              [value]="uploadState().selectedExecutions.length + ' selected'"
-              severity="info">
-            </p-badge>
+              <ng-template pTemplate="emptymessage">
+                <tr>
+                  <td colspan="4" class="text-center">
+                    <div class="empty-state">
+                      <i class="pi pi-inbox"></i>
+                      <p>No executions found for this test cycle</p>
+                    </div>
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
+
+          <!-- Selection summary -->
+          @if (hasSelectedExecutions()) {
+            <div class="selection-summary">
+              <p-badge 
+                [value]="uploadState().selectedExecutions.length + ' selected'"
+                severity="info">
+              </p-badge>
+            </div>
+          }
+        } @else if (!uploadState().isUploading) {
+          <div class="empty-executions">
+            <i class="pi pi-info-circle"></i>
+            <p>No executions found for this test cycle</p>
           </div>
         }
-      </div>
-    }
-
-    @if (uploadState().showExecutions && testCycleExecutions().length === 0 && !uploadState().isUploading) {
-      <div class="empty-executions">
-        <i class="pi pi-info-circle"></i>
-        <p>No executions found for this test cycle</p>
       </div>
     }
 

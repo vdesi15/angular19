@@ -8,6 +8,446 @@
     padding: 0.5rem 0;
 
     /* ================================ */
+    /* MESSAGE STYLING */
+    /* ================================ */
+    
+    .message-full-width {
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+
+    /* ================================ */
+    /* INPUT SECTION */
+    /* ================================ */
+    
+    .input-section {
+      .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .field-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: var(--text-color);
+        font-size: 0.875rem;
+
+        i {
+          color: var(--primary-color);
+        }
+      }
+
+      .input-container {
+        width: 100%;
+        
+        .jira-input {
+          width: 100%;
+          padding: 0.75rem;
+          border: 2px solid var(--surface-400);
+          border-radius: 6px;
+          font-size: 0.875rem;
+          transition: all 0.2s ease;
+          background: var(--surface-ground);
+          color: var(--text-color);
+          
+          &:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.2);
+          }
+          
+          &.ng-invalid {
+            border-color: var(--red-500);
+            box-shadow: 0 0 0 0.2rem rgba(239, 68, 68, 0.2);
+          }
+
+          &::placeholder {
+            color: var(--text-color-secondary);
+            opacity: 0.7;
+          }
+        }
+      }
+
+      .validation-feedback {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-height: 1.5rem;
+        font-size: 0.875rem;
+
+        .validation-success {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: var(--green-600);
+          
+          i {
+            font-size: 1rem;
+          }
+          
+          .validation-text {
+            font-weight: 500;
+          }
+        }
+
+        .validation-error {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: var(--red-600);
+          
+          i {
+            font-size: 1rem;
+          }
+          
+          .validation-text {
+            font-weight: 500;
+            line-height: 1.3;
+          }
+        }
+      }
+    }
+
+    /* ================================ */
+    /* PROGRESS SECTION */
+    /* ================================ */
+    
+    .progress-section {
+      padding: 1rem;
+      background: var(--surface-50);
+      border-radius: 6px;
+      border: 1px solid var(--surface-200);
+
+      .progress-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        color: var(--text-color);
+        font-weight: 500;
+
+        i {
+          color: var(--primary-color);
+        }
+      }
+    }
+
+    /* ================================ */
+    /* EXECUTIONS SECTION */
+    /* ================================ */
+    
+    .executions-section {
+      .section-header {
+        margin-bottom: 1rem;
+
+        h4 {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin: 0 0 0.5rem 0;
+          color: var(--text-color);
+          font-size: 1.1rem;
+
+          i {
+            color: var(--primary-color);
+          }
+        }
+
+        .section-description {
+          margin: 0;
+          color: var(--text-color-secondary);
+          font-size: 0.875rem;
+          line-height: 1.4;
+        }
+      }
+
+      .table-container {
+        border: 1px solid var(--surface-300);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+
+      .selection-summary {
+        margin-top: 0.75rem;
+        display: flex;
+        justify-content: flex-end;
+      }
+    }
+
+    .empty-executions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      color: var(--text-color-secondary);
+      text-align: center;
+      background: var(--surface-50);
+      border-radius: 6px;
+      border: 1px solid var(--surface-200);
+
+      i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.6;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.875rem;
+      }
+    }
+  }
+
+  /* ================================ */
+  /* DIALOG FOOTER */
+  /* ================================ */
+  
+  .dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+
+    // On mobile, stack buttons vertically
+    @media (max-width: 576px) {
+      flex-direction: column-reverse;
+      gap: 0.5rem;
+
+      ::ng-deep .p-button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  }
+}
+
+/* ================================ */
+/* PRIMENG COMPONENT OVERRIDES */
+/* ================================ */
+
+:host ::ng-deep {
+  
+  /* Dialog customizations */
+  .jira-upload-dialog {
+    
+    .p-dialog-header {
+      background: var(--surface-50);
+      border-bottom: 1px solid var(--surface-300);
+      padding: 1rem 1.5rem;
+      
+      .p-dialog-title {
+        font-weight: 600;
+        color: var(--text-color);
+        font-size: 1.1rem;
+      }
+
+      .p-dialog-header-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: var(--text-color-secondary);
+        
+        &:hover {
+          color: var(--text-color);
+          background: var(--surface-100);
+        }
+      }
+    }
+
+    .p-dialog-content {
+      padding: 1.5rem;
+      background: var(--surface-ground);
+    }
+
+    .p-dialog-footer {
+      background: var(--surface-50);
+      border-top: 1px solid var(--surface-300);
+      padding: 1rem 1.5rem;
+    }
+  }
+
+  /* Message components */
+  .p-message {
+    border-radius: 6px;
+    font-size: 0.875rem;
+    
+    &.message-full-width {
+      width: 100%;
+    }
+    
+    &.p-message-success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: var(--green-700);
+      
+      .p-message-icon {
+        color: var(--green-600);
+      }
+    }
+    
+    &.p-message-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--red-700);
+      
+      .p-message-icon {
+        color: var(--red-600);
+      }
+    }
+  }
+
+  /* Table customizations */
+  .executions-table {
+    .p-datatable-thead > tr > th {
+      background: var(--surface-100);
+      border-bottom: 2px solid var(--surface-300);
+      font-weight: 600;
+      font-size: 0.875rem;
+      padding: 0.75rem;
+      color: var(--text-color);
+    }
+
+    .p-datatable-tbody > tr {
+      &.selected-row {
+        background: rgba(var(--primary-color-rgb), 0.1) !important;
+        
+        &:hover {
+          background: rgba(var(--primary-color-rgb), 0.15) !important;
+        }
+      }
+
+      > td {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--surface-200);
+        color: var(--text-color);
+      }
+
+      &:hover {
+        background: var(--surface-hover);
+      }
+    }
+
+    .jira-link {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      
+      &:hover {
+        text-decoration: underline;
+        color: var(--primary-color-dark);
+      }
+
+      i {
+        font-size: 0.75rem;
+        opacity: 0.7;
+      }
+    }
+
+    .empty-state {
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-color-secondary);
+
+      i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.5;
+      }
+
+      p {
+        margin: 0;
+        font-size: 0.875rem;
+      }
+    }
+
+    .text-center {
+      text-align: center;
+    }
+  }
+
+  /* Badge customizations */
+  .p-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    
+    &.p-badge-success {
+      background: var(--green-500);
+      color: white;
+    }
+    
+    &.p-badge-danger {
+      background: var(--red-500);
+      color: white;
+    }
+    
+    &.p-badge-info {
+      background: var(--blue-500);
+      color: white;
+    }
+    
+    &.p-badge-warn {
+      background: var(--orange-500);
+      color: white;
+    }
+
+    &.p-badge-secondary {
+      background: var(--surface-400);
+      color: var(--text-color);
+    }
+  }
+
+  /* Progress bar */
+  .p-progressbar {
+    height: 0.75rem;
+    background: var(--surface-300);
+    border-radius: 4px;
+    overflow: hidden;
+    
+    .p-progressbar-value {
+      background: linear-gradient(90deg, var(--primary-color), var(--primary-color-dark));
+      transition: width 0.3s ease;
+    }
+    
+    .p-progressbar-label {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: white;
+    }
+  }
+
+  /* Input styling overrides */
+  .p-inputtext {
+    &:enabled:focus {
+      outline: none;
+      box-shadow: 0 0 0 0.2rem rgba(var(--primary-color-rgb), 0.2);
+      border-color: var(--primary-color);
+    }
+  }
+}
+
+/* ================================ */
+/* DARK MODE SUPPORT */
+/* ================================ */
+
+:host-context(.app-dark) {
+  .jira-dialog-content {
+    .input-section {
+      /* src/app/features/search-logs/components/jira-upload-dialog/jira-upload-dialog.component.scss */
+
+:host {
+  .jira-dialog-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 0.5rem 0;
+
+    /* ================================ */
     /* INPUT SECTION */
     /* ================================ */
     
