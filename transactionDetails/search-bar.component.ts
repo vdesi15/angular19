@@ -1,21 +1,24 @@
-import { Component, EventEmitter, Output, inject, signal, computed, WritableSignal } from '@angular/core';
+// src/app/features/search-logs/components/search-bar/search-bar.component.ts
+import { Component, EventEmitter, Output, inject, signal, computed, WritableSignal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 
 // PrimeNG Modules
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
-import { BadgeModule } from 'primeng/badge';
-import { ChipModule } from 'primeng/chip';
-import { OverlayPanelModule } from 'primeng/overlaypanel';
-import { OverlayPanel } from 'primeng/overlaypanel';
 
-// Services and Models
+// Services
 import { SearchQueryDetectionService, QueryDetectionResult } from '../services/search-query-detection.service';
+import { SearchOrchestratorService } from '../services/search-orchestrator.service';
+import { SearchFilterService } from 'src/app/core/services/filters.service';
+import { EnhancedJiraService, TestCycleExecution } from '../services/enhanced-jira.service';
+
+// Components
 import { FavoritesPopoverComponent } from 'src/app/core/components/search-favorites/search-favorites.component';
+import { JiraUploadDialogComponent } from '../components/jira-upload-dialog/jira-upload-dialog.component';
 
 @Component({
   selector: 'app-search-bar',
@@ -27,10 +30,8 @@ import { FavoritesPopoverComponent } from 'src/app/core/components/search-favori
     InputTextModule,
     ButtonModule,
     TooltipModule,
-    BadgeModule,
-    ChipModule,
-    OverlayPanelModule,
-    FavoritesPopoverComponent
+    FavoritesPopoverComponent,
+    JiraUploadDialogComponent
   ],
   templateUrl: './search-bar.component.html',
   styleUrls: ['./search-bar.component.scss']
@@ -39,14 +40,25 @@ export class SearchBarComponent {
   @Output() search = new EventEmitter<string>();
 
   private queryDetectionService = inject(SearchQueryDetectionService);
-  private router = inject(Router);
+  private searchOrchestrator = inject(SearchOrchestratorService);
+  private searchFilterService = inject(SearchFilterService);
+  private jiraService = inject(EnhancedJiraService);
+  private route = inject(ActivatedRoute);
 
-  // State signals
+  // ================================
+  // STATE SIGNALS
+  // ================================
+
   public searchQuery: WritableSignal<string> = signal('');
   public isSearching: WritableSignal<boolean> = signal(false);
-  public showDetectionHint: WritableSignal<boolean> = signal(false);
+  public showJiraExecutionDialog: WritableSignal<boolean> = signal(false);
+  public testCycleId: WritableSignal<string> = signal('');
+  public testCycleExecutions: WritableSignal<TestCycleExecution[]> = signal([]);
 
-  // Computed signals
+  // ================================
+  // COMPUTED SIGNALS
+  // ================================
+
   public detectionResult = computed(() => {
     const query = this.searchQuery();
     if (!query.trim()) return null;
@@ -56,16 +68,6 @@ export class SearchBarComponent {
   public isValidQuery = computed(() => {
     const result = this.detectionResult();
     return result ? this.queryDetectionService.isValidDetection(result) : false;
-  });
-
-  public queryTypeDisplay = computed(() => {
-    const result = this.detectionResult();
-    if (!result) return '';
-    return this.queryDetectionService.getQueryTypeDescription(result);
-  });
-
-  public searchPlaceholder = computed(() => {
-    return this.getContextualPlaceholder();
   });
 
   public searchButtonIcon = computed(() => {
@@ -81,66 +83,38 @@ export class SearchBarComponent {
     }
   });
 
-  public confidenceLevel = computed(() => {
+  public getSearchTooltip = computed(() => {
     const result = this.detectionResult();
-    return result ? Math.round(result.confidence * 100) : 0;
+    if (!result) return 'Enter a search query';
+    
+    const confidence = Math.round(result.confidence * 100);
+    const type = this.queryDetectionService.getQueryTypeDescription(result);
+    
+    return `Search ${type} (${confidence}% confidence)`;
   });
 
-  public confidenceColor = computed(() => {
-    const confidence = this.confidenceLevel();
-    if (confidence >= 80) return 'success';
-    if (confidence >= 60) return 'warning';
-    return 'danger';
-  });
+  // ================================
+  // EFFECTS & INITIALIZATION
+  // ================================
 
-  // Example search suggestions
-  public readonly searchExamples = [
-    {
-      type: 'Transaction ID',
-      examples: [
-        '550e8400-e29b-41d4-a716-446655440000',
-        'abc123def456ghi789jkl012mno345pqr',
-        'trace_abc123def456'
-      ],
-      icon: 'pi pi-sitemap'
-    },
-    {
-      type: 'JIRA Ticket',
-      examples: [
-        'PROJ-123',
-        'TICKET-456',
-        'BUG-789'
-      ],
-      icon: 'pi pi-ticket'
-    },
-    {
-      type: 'Batch ID',
-      examples: [
-        'ABC123',
-        'BATCH45',
-        'XYZ789'
-      ],
-      icon: 'pi pi-clone'
-    },
-    {
-      type: 'Natural Language',
-      examples: [
-        'show me errors from the last hour',
-        'find transactions for user john.doe',
-        'list all failed payments today'
-      ],
-      icon: 'pi pi-comment'
-    }
-  ];
+  constructor() {
+    // Listen for URL parameters to handle JIRA context
+    effect(() => {
+      this.route.queryParams.subscribe(params => {
+        this.handleUrlParameters(params);
+      });
+    });
+  }
+
+  // ================================
+  // EVENT HANDLERS
+  // ================================
 
   /**
    * Handle search input changes
    */
   public onInputChange(value: string): void {
     this.searchQuery.set(value);
-    
-    // Show detection hint for queries longer than 3 characters
-    this.showDetectionHint.set(value.length > 3);
   }
 
   /**
@@ -151,23 +125,142 @@ export class SearchBarComponent {
     if (!query) return;
 
     const result = this.detectionResult();
-    if (!result || !this.queryDetectionService.isValidDetection(result)) {
-      // Could show an error message or proceed anyway
-      console.warn('Low confidence in query detection, proceeding anyway');
+    if (!result) {
+      console.warn('[SearchBar] No detection result for query:', query);
+      return;
     }
 
     this.isSearching.set(true);
-    
-    // Emit the search event
-    this.search.emit(query);
-    
-    // Add to browser history
-    this.addToSearchHistory(query);
-    
-    // Reset searching state after a brief delay
-    setTimeout(() => {
+
+    try {
+      this.handleSearchByType(result, query);
+    } catch (error) {
+      console.error('[SearchBar] Search execution failed:', error);
       this.isSearching.set(false);
-    }, 1000);
+    }
+  }
+
+  /**
+   * Handle search based on detected type
+   */
+  private async handleSearchByType(result: QueryDetectionResult, query: string): Promise<void> {
+    switch (result.type) {
+      case 'transaction':
+        await this.handleTransactionSearch(query);
+        break;
+        
+      case 'jira':
+        await this.handleJiraSearch(result);
+        break;
+        
+      case 'batch':
+      case 'natural':
+        await this.handleRegularSearch(result, query);
+        break;
+        
+      default:
+        await this.handleRegularSearch(result, query);
+    }
+  }
+
+  /**
+   * Handle transaction ID search
+   */
+  private async handleTransactionSearch(transactionId: string): Promise<void> {
+    const globalFilters = this.searchFilterService.filters();
+    
+    if (!this.validateGlobalFilters(globalFilters)) {
+      console.error('[SearchBar] Global filters required for transaction search');
+      this.isSearching.set(false);
+      return;
+    }
+
+    // Use existing search orchestrator
+    await this.searchOrchestrator.performSearch({
+      type: 'transaction',
+      query: transactionId,
+      title: `Transaction: ${transactionId.substring(0, 12)}...`,
+      appName: globalFilters?.application?.[0] || ''
+    });
+
+    this.isSearching.set(false);
+  }
+
+  /**
+   * Handle JIRA search
+   */
+  private async handleJiraSearch(result: QueryDetectionResult): Promise<void> {
+    const jiraDetection = this.jiraService.detectJiraId(result.extractedValue);
+    
+    if (!jiraDetection.isValid) {
+      console.error('[SearchBar] Invalid JIRA format:', result.extractedValue);
+      this.isSearching.set(false);
+      return;
+    }
+
+    // Handle test cycles specially - show execution selection dialog
+    if (jiraDetection.type === 'test-cycle') {
+      await this.showTestCycleExecutionDialog(jiraDetection.id);
+      this.isSearching.set(false);
+      return;
+    }
+
+    // For regular JIRA IDs, test cases, and executions
+    await this.searchOrchestrator.performSearch({
+      type: 'jira',
+      query: jiraDetection.id,
+      title: `JIRA: ${jiraDetection.id}`,
+      appName: '', // JIRA searches don't require app name
+      metadata: {
+        jiraType: jiraDetection.type,
+        detectionResult: jiraDetection
+      }
+    });
+
+    this.isSearching.set(false);
+  }
+
+  /**
+   * Handle regular search (batch, natural language, etc.)
+   */
+  private async handleRegularSearch(result: QueryDetectionResult, query: string): Promise<void> {
+    await this.searchOrchestrator.performSearch({
+      type: result.type as any,
+      query: result.extractedValue,
+      title: `${result.type}: ${result.extractedValue}`,
+      appName: '',
+      metadata: {
+        detectionResult: result,
+        originalQuery: query
+      }
+    });
+
+    this.isSearching.set(false);
+  }
+
+  /**
+   * Show test cycle execution selection dialog
+   */
+  private async showTestCycleExecutionDialog(testCycleId: string): Promise<void> {
+    try {
+      const executions = await this.jiraService.getTestCycleExecutions(testCycleId);
+      
+      this.testCycleId.set(testCycleId);
+      this.testCycleExecutions.set(executions);
+      this.showJiraExecutionDialog.set(true);
+      
+    } catch (error) {
+      console.error('[SearchBar] Failed to load test cycle executions:', error);
+    }
+  }
+
+  /**
+   * Handle execution dialog close
+   */
+  public onExecutionDialogClose(): void {
+    this.showJiraExecutionDialog.set(false);
+    this.testCycleId.set('');
+    this.testCycleExecutions.set([]);
   }
 
   /**
@@ -180,87 +273,80 @@ export class SearchBarComponent {
     }
   }
 
-  /**
-   * Clear the search input
-   */
-  public clearSearch(): void {
-    this.searchQuery.set('');
-    this.showDetectionHint.set(false);
-  }
+  // ================================
+  // URL PARAMETER HANDLING
+  // ================================
 
   /**
-   * Use an example search query
+   * Handle URL parameters for JIRA context
    */
-  public useExample(example: string, overlayPanel: OverlayPanel): void {
-    this.searchQuery.set(example);
-    this.showDetectionHint.set(true);
-    overlayPanel.hide();
-    
-    // Focus the input field
-    setTimeout(() => {
-      const input = document.querySelector('input[placeholder*="search"]') as HTMLInputElement;
-      if (input) {
-        input.focus();
-        input.setSelectionRange(input.value.length, input.value.length);
+  private handleUrlParameters(params: any): void {
+    const jiraid = params['jiraid'];
+    const searchText = params['searchText'];
+
+    if (jiraid && searchText) {
+      // Handle JIRA with current ID navigation
+      const decodedJiraId = this.safeBase64Decode(jiraid);
+      const decodedSearchText = this.safeBase64Decode(searchText);
+      
+      if (decodedJiraId && decodedSearchText) {
+        this.handleJiraWithCurrentId(decodedJiraId, decodedSearchText);
       }
-    }, 100);
-  }
-
-  /**
-   * Navigate to browse mode
-   */
-  public navigateToBrowse(): void {
-    this.router.navigate(['/browse']);
-  }
-
-  /**
-   * Navigate to errors mode
-   */
-  public navigateToErrors(): void {
-    this.router.navigate(['/errors']);
-  }
-
-  /**
-   * Get contextual placeholder text
-   */
-  private getContextualPlaceholder(): string {
-    const currentRoute = this.router.url;
-    
-    if (currentRoute.includes('/search')) {
-      return 'Enter transaction ID, JIRA ticket, batch ID, or ask in natural language...';
+    } else if (jiraid) {
+      // Handle regular JIRA search
+      const decodedJiraId = this.safeBase64Decode(jiraid);
+      if (decodedJiraId) {
+        this.searchQuery.set(decodedJiraId);
+      }
+    } else if (searchText) {
+      // Handle regular transaction search
+      const decodedSearchText = this.safeBase64Decode(searchText);
+      if (decodedSearchText) {
+        this.searchQuery.set(decodedSearchText);
+      }
     }
-    
-    return 'Search transactions, tickets, batches...';
   }
 
   /**
-   * Add search to browser history for autocomplete
+   * Handle JIRA search with current ID (timeline navigation)
    */
-  private addToSearchHistory(query: string): void {
+  private async handleJiraWithCurrentId(jiraId: string, currentId: string): Promise<void> {
+    await this.searchOrchestrator.performSearch({
+      type: 'jira',
+      query: jiraId,
+      title: `JIRA: ${jiraId} - ${currentId.substring(0, 12)}...`,
+      appName: '',
+      metadata: {
+        currentId,
+        isTimelineNavigation: true
+      }
+    });
+  }
+
+  /**
+   * Safe base64 decode with error handling
+   */
+  private safeBase64Decode(encoded: string): string | null {
     try {
-      const searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
-      
-      // Remove existing entry if present
-      const filteredHistory = searchHistory.filter((item: string) => item !== query);
-      
-      // Add to beginning and limit to 10 items
-      const updatedHistory = [query, ...filteredHistory].slice(0, 10);
-      
-      localStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
+      return atob(encoded);
     } catch (error) {
-      console.warn('Failed to save search history:', error);
+      console.warn('[SearchBar] Failed to decode base64:', encoded);
+      return null;
     }
   }
 
+  // ================================
+  // VALIDATION HELPERS
+  // ================================
+
   /**
-   * Get search history for autocomplete
+   * Validate that required global filters are set for transaction search
    */
-  public getSearchHistory(): string[] {
-    try {
-      return JSON.parse(localStorage.getItem('searchHistory') || '[]');
-    } catch (error) {
-      console.warn('Failed to load search history:', error);
-      return [];
-    }
+  private validateGlobalFilters(globalFilters: any): boolean {
+    return !!(
+      globalFilters?.application?.length &&
+      globalFilters?.environment &&
+      globalFilters?.location
+    );
   }
 }

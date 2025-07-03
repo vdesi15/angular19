@@ -33,23 +33,45 @@ export class SearchStrategyManager {
   // ================================
 
   private initializeStrategies(): void {
-    const transactionStrategy = inject(TransactionSearchStrategy);
-    const jiraStrategy = inject(JiraSearchStrategy);
-    const batchStrategy = inject(BatchSearchStrategy);
-    const naturalLanguageStrategy = inject(NaturalLanguageSearchStrategy);
-    const sseStrategy = inject(SseStrategy);
-    const guidStrategy = inject(GuidSearchStrategy);
+  // Enhanced strategies for better JIRA and Transaction handling
+  const enhancedTransactionStrategy = inject(EnhancedTransactionSearchStrategy);
+  const enhancedJiraStrategy = inject(EnhancedJiraSearchStrategy);
+  
+  // Existing strategies
+  const batchStrategy = inject(BatchSearchStrategy);
+  const naturalLanguageStrategy = inject(NaturalLanguageSearchStrategy);
+  const sseStrategy = inject(SseStrategy);
+  const guidStrategy = inject(GuidSearchStrategy);
 
-    this.strategies.set('transaction', transactionStrategy);
-    this.strategies.set('jira', jiraStrategy);
-    this.strategies.set('batch', batchStrategy);
-    this.strategies.set('natural', naturalLanguageStrategy);
-    this.strategies.set('browse', sseStrategy);
-    this.strategies.set('error', sseStrategy);
-    this.strategies.set('guid', guidStrategy); // Legacy
+  // Register enhanced strategies with priority
+  this.strategies.set('transaction', enhancedTransactionStrategy);
+  this.strategies.set('jira', enhancedJiraStrategy);
+  
+  // Register other strategies
+  this.strategies.set('batch', batchStrategy);
+  this.strategies.set('natural', naturalLanguageStrategy);
+  this.strategies.set('browse', sseStrategy);
+  this.strategies.set('error', sseStrategy);
+  this.strategies.set('guid', guidStrategy); // Legacy support
 
-    console.log('[StrategyManager] Initialized strategies:', Array.from(this.strategies.keys()));
+  console.log('[StrategyManager] Enhanced strategies initialized:', Array.from(this.strategies.keys()));
+}
+
+// Updated mapDetectionToSearchType method
+private mapDetectionToSearchType(detection: QueryDetectionResult): SearchType {
+  switch (detection.type) {
+    case 'transaction':
+      return 'transaction';
+    case 'jira':
+      return 'jira';
+    case 'batch':
+      return 'batch';
+    case 'natural':
+      return 'natural';
+    default:
+      return 'transaction'; // Fallback
   }
+}
 
   // ================================
   // STRATEGY SELECTION & ENHANCEMENT
@@ -138,19 +160,6 @@ export class SearchStrategyManager {
   // ================================
   // PRIVATE HELPERS
   // ================================
-
-  private mapDetectionToSearchType(detection: QueryDetectionResult): SearchType {
-    switch (detection.type) {
-      case 'transaction':
-      case 'jira':
-      case 'batch':
-        return 'transaction'; // All use transaction view for now
-      case 'natural':
-        return 'transaction'; // AI search results in transaction view
-      default:
-        return 'transaction';
-    }
-  }
 
   private generateTitleFromDetection(detection: QueryDetectionResult, fallbackTitle?: string): string {
     const typeDescription = this.queryDetectionService.getQueryTypeDescription(detection);
