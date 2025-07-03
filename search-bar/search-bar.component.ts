@@ -14,11 +14,128 @@ import { ButtonModule } from 'primeng/button';
   ]
 })
 export class SearchBarComponent {
-  @Output() search = new EventEmitter<string>();
+  @@Output() search = new EventEmitter<string>();
+  
+  // New input signal for controlling initial position
+  public initialPosition = input<'center' | 'top'>('center');
+  
+  // View child for search input
+  private searchInput = viewChild.required<ElementRef>('searchInput');
+  
+  // Service injections
+  private searchOrchestrator = inject(SearchOrchestratorService);
+
+  // ================================
+  // REACTIVE STATE SIGNALS
+  // ================================
 
   public searchTerm: WritableSignal<string> = signal('');
-  onSearchSubmit(event:Event) : void {
+  public isSearching: WritableSignal<boolean> = signal(false);
+  
+  // Search bar state management
+  public searchBarState: WritableSignal<SearchBarState> = signal({
+    position: 'center',
+    hasResults: false,
+    isSearching: false
+  });
+
+  // ================================
+  // COMPUTED SIGNALS
+  // ================================
+
+  public canSearch = computed(() => {
+    const term = this.searchTerm().trim();
+    return term.length > 0 && !this.isSearching();
+  });
+
+  // ================================
+  // LIFECYCLE & EFFECTS
+  // ================================
+
+  constructor() {
+    // Effect to handle search bar positioning based on results
+    effect(() => {
+      const activeSearches = this.searchOrchestrator.activeSearches();
+      const hasResults = activeSearches.length > 0;
+      const currentState = this.searchBarState();
+      
+      // Auto-transition to top when results appear
+      if (hasResults && currentState.position === 'center') {
+        this.searchBarState.set({
+          ...currentState,
+          position: 'top',
+          hasResults: true
+        });
+      }
+    });
+
+    // Effect to sync searching state
+    effect(() => {
+      const orchestratorSearching = this.searchOrchestrator.activeSearches()
+        .some(search => search.isLoading);
+      
+      this.isSearching.set(orchestratorSearching);
+      
+      this.searchBarState.update(state => ({
+        ...state,
+        isSearching: orchestratorSearching
+      }));
+    });
+  }
+
+  // ================================
+  // EVENT HANDLERS
+  // ================================
+
+  public onSearchSubmit(event: Event): void {
     event.preventDefault();
-    this.search.emit(this.searchTerm());
+    
+    const term = this.searchTerm().trim();
+    if (!term || this.isSearching()) return;
+
+    console.log('[SearchBar] Submitting search:', term);
+    
+    // Emit the search event
+    this.search.emit(term);
+  }
+
+  // ================================
+  // PUBLIC API METHODS
+  // ================================
+
+  /**
+   * Programmatically set search bar position
+   */
+  public setPosition(position: 'center' | 'top'): void {
+    this.searchBarState.update(state => ({
+      ...state,
+      position
+    }));
+  }
+
+  /**
+   * Clear search and reset position
+   */
+  public clearSearch(): void {
+    this.searchTerm.set('');
+    this.searchBarState.set({
+      position: 'center',
+      hasResults: false,
+      isSearching: false
+    });
+  }
+
+  /**
+   * Focus the search input
+   */
+  public focusInput(): void {
+    this.searchInput().nativeElement.focus();
+  }
+
+  /**
+   * Set search term programmatically
+   */
+  public setSearchTerm(term: string): void {
+    this.searchTerm.set(term);
   }
 }

@@ -1,6 +1,33 @@
-<div class="search-form-container">
-  <div>
-    <input type="text" pInputText placeholder="Search Logs (ex: Txnid, JiraId)" [(ngModel)]="searchTerm" name="searchTerm" class="p-inputtext-lg" />
-    <button pButton type="submit" label="Search" [disabled]="!searchTerm()"></button>
-  </div>
-</div>
+<div class="search-bar-container" 
+         [class.search-bar-center]="searchBarState().position === 'center'"
+         [class.search-bar-top]="searchBarState().position === 'top'"
+         [class.has-results]="searchBarState().hasResults">
+      
+      <!-- Search Form -->
+      <form class="search-form" (ngSubmit)="onSearchSubmit($event)">
+        <div class="search-input-group">
+          <input 
+            #searchInput
+            type="text" 
+            pInputText 
+            placeholder="Search Logs (ex: TxnId, JiraId, BatchId)"
+            [(ngModel)]="searchTerm"
+            name="searchTerm"
+            class="search-input"
+            [disabled]="isSearching()"
+            autocomplete="off"
+            spellcheck="false">
+          
+          <button 
+            pButton 
+            type="submit"
+            class="search-button"
+            [icon]="isSearching() ? 'pi pi-spin pi-spinner' : 'pi pi-search'"
+            [disabled]="!canSearch()"
+            [loading]="isSearching()"
+            pTooltip="Search"
+            tooltipPosition="top">
+          </button>
+        </div>
+      </form>
+    </div>
