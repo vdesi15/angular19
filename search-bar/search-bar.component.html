@@ -1,46 +1,70 @@
-<div class="simple-search-container">
-      <div class="search-input-group">
-        <p-inputGroup>
-          <!-- Search Input -->
-          <input 
-            pInputText 
-            placeholder="Search transactions, JIRA tickets, batches..."
-            [ngModel]="searchQuery()"
-            (ngModelChange)="onInputChange($event)"
-            (keydown)="onKeyDown($event)"
-            class="search-input"
-            autocomplete="off" />
-          
-          <!-- Search Button -->
-          <button 
-            pButton 
-            type="button" 
-            icon="pi pi-search"
-            class="search-button"
-            [disabled]="!searchQuery().trim() || isSearching()"
-            (click)="executeSearch()"
-            [pTooltip]="getSearchTooltip()"
-            tooltipPosition="top">
-            @if (isSearching()) {
-              <i class="pi pi-spin pi-spinner"></i>
-            }
-          </button>
-        </p-inputGroup>
-        
-        <!-- Detection Hint (Simple) -->
-        @if (searchQuery().trim() && detectionResult()) {
-          <div class="detection-hint" [class]="'detection-' + getConfidenceLevel()">
-            <i [class]="getDetectionIcon() + ' mr-2'"></i>
-            <span>{{ getDetectionDescription() }}</span>
-            @if (detectionResult()!.confidence < 0.8) {
-              <i class="pi pi-exclamation-triangle ml-2 text-warning"></i>
+<div class="search-bar-container" [class.search-bar-center]="searchBarState().position === 'center'"
+  [class.search-bar-top]="searchBarState().position === 'top'" [class.has-results]="searchBarState().hasResults">
+
+  <!-- Search Input Section -->
+  <div class="search-input-wrapper">
+    <div class="search-input-group">
+
+      <!-- Main Input Group -->
+      <p-inputGroup>
+        <input #searchInput pInputText type="text" class="search-input" [placeholder]="currentPlaceholder()"
+          [(ngModel)]="searchQuery" (keydown.enter)="handleSearch()" (input)="onQueryChange()"
+          [disabled]="isSearching()" autocomplete="off" spellcheck="false">
+
+        <button pButton type="button" class="search-button"
+          [icon]="isSearching() ? 'pi pi-spin pi-spinner' : 'pi pi-search'" [disabled]="!canSearch()"
+          [loading]="isSearching()" (click)="handleSearch()" pTooltip="Search" tooltipPosition="top">
+        </button>
+      </p-inputGroup>
+
+      <!-- Strategy Detection Indicator -->
+      @if (detectedStrategy(); as strategy) {
+      <div class="strategy-indicator" [class]="getStrategyIndicatorClass(strategy.confidence)">
+        <i [class]="getStrategyIcon(strategy.type)"></i>
+        <span>{{ getStrategyLabel(strategy.type) }}</span>
+        @if (strategy.confidence < 0.8) { <small>({{ (strategy.confidence * 100).toFixed(0) }}%)</small>
+          }
+      </div>
+      }
+
+      <!-- Search Examples Overlay -->
+      @if (showExamples() && searchBarState().position === 'center') {
+      <p-overlayPanel #examplesPanel [showCloseIcon]="false" [dismissable]="true">
+        <div class="examples-panel">
+          <h4>Search Examples</h4>
+          <div class="example-grid">
+            @for (example of searchExamples; track example.type) {
+            <div class="example-item" (click)="useExample(example.query)">
+              <i [class]="example.icon"></i>
+              <div class="example-content">
+                <span class="example-label">{{ example.label }}</span>
+                <code class="example-query">{{ example.query }}</code>
+              </div>
+            </div>
             }
           </div>
-        }
-      </div>
-      
-      <!-- Favorites Button -->
-      <div class="favorites-section">
-        <app-favorites-popover></app-favorites-popover>
-      </div>
+        </div>
+      </p-overlayPanel>
+      }
     </div>
+
+    <!-- Favorites Component -->
+    @if (searchBarState().position === 'center') {
+    <div class="favorites-wrapper">
+      <app-favorites-popover></app-favorites-popover>
+    </div>
+    }
+  </div>
+
+  <!-- Search Stats (when in top position) -->
+  @if (searchBarState().position === 'top' && searchStats(); as stats) {
+  <div class="search-stats-compact">
+    <p-chip [label]="stats.activeSearches + ' active'" icon="pi pi-search" styleClass="stats-chip">
+    </p-chip>
+    @if (stats.lastStrategy) {
+    <p-chip [label]="'Last: ' + stats.lastStrategy" icon="pi pi-cog" styleClass="stats-chip strategy-chip">
+    </p-chip>
+    }
+  </div>
+  }
+</div>

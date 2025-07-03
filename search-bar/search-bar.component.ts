@@ -28,111 +28,298 @@ import { FavoritesPopoverComponent } from 'src/app/core/components/search-favori
 })
 export class SearchBarComponent {
   @Output() search = new EventEmitter<string>();
+  
+  // New input signal for controlling initial position
+  public initialPosition = input<'center' | 'top'>('center');
+  
+  // View child for search input
+  private searchInput = viewChild.required<ElementRef>('searchInput');
+  
+  // Service injections
+  private strategyManager = inject(SearchStrategyManager);
+  private searchOrchestrator = inject(SearchOrchestratorService);
+  private searchFilterService = inject(SearchFilterService);
+  private route = inject(ActivatedRoute);
 
-  private queryDetectionService = inject(SearchQueryDetectionService);
+  // ================================
+  // REACTIVE STATE SIGNALS
+  // ================================
 
-  // State signals
   public searchQuery: WritableSignal<string> = signal('');
   public isSearching: WritableSignal<boolean> = signal(false);
-
-  // Computed signals
-  public detectionResult = computed(() => {
-    const query = this.searchQuery();
-    if (!query.trim()) return null;
-    return this.queryDetectionService.detectQueryType(query);
+  public showExamples: WritableSignal<boolean> = signal(false);
+  
+  // Search bar state management
+  public searchBarState: WritableSignal<SearchBarState> = signal({
+    position: 'center',
+    hasResults: false,
+    isSearching: false
   });
 
-  public isValidQuery = computed(() => {
-    const result = this.detectionResult();
-    return result ? this.queryDetectionService.isValidDetection(result) : false;
+  // ================================
+  // COMPUTED SIGNALS
+  // ================================
+
+  public detectedStrategy = computed(() => {
+    const query = this.searchQuery().trim();
+    if (!query) return null;
+    
+    const strategy = this.strategyManager.selectBestStrategy(query);
+    if (!strategy) return null;
+    
+    const testResults = this.strategyManager.testStrategiesForQuery(query);
+    const bestMatch = testResults.find(r => r.canHandle);
+    
+    return {
+      type: bestMatch?.strategy || 'unknown',
+      strategy: strategy,
+      confidence: bestMatch ? 0.9 : 0.5, // Simplified confidence
+      name: bestMatch?.name || 'Unknown'
+    };
   });
 
-  /**
-   * Handle search input changes
-   */
-  public onInputChange(value: string): void {
-    this.searchQuery.set(value);
+  public canSearch = computed(() => {
+    const query = this.searchQuery().trim();
+    return query.length > 0 && !this.isSearching();
+  });
+
+  public currentPlaceholder = computed(() => {
+    const state = this.searchBarState();
+    
+    if (state.position === 'top') {
+      return 'Search transactions, JIRA tickets, batches...';
+    }
+    
+    const detectedStrategy = this.detectedStrategy();
+    if (detectedStrategy) {
+      return this.getPlaceholderForStrategy(detectedStrategy.type);
+    }
+    
+    return 'Enter transaction ID, JIRA ticket, or search term...';
+  });
+
+  public searchStats = computed(() => {
+    const activeSearches = this.searchOrchestrator.activeSearches();
+    const strategyStats = this.strategyManager.getStrategyStats();
+    
+    return {
+      activeSearches: activeSearches.length,
+      lastStrategy: strategyStats.lastUsed,
+      totalStrategies: strategyStats.total
+    };
+  });
+
+  // ================================
+  // SEARCH EXAMPLES DATA
+  // ================================
+
+  public readonly searchExamples = [
+    {
+      type: 'transaction',
+      label: 'Transaction ID',
+      query: '550e8400-e29b-41d4-a716-446655440000',
+      icon: 'pi pi-receipt'
+    },
+    {
+      type: 'jira',
+      label: 'JIRA Ticket',
+      query: 'PROJ-123',
+      icon: 'pi pi-ticket'
+    },
+    {
+      type: 'batch',
+      label: 'Batch ID',
+      query: 'BATCH001',
+      icon: 'pi pi-th-large'
+    },
+    {
+      type: 'natural',
+      label: 'Natural Search',
+      query: 'payment errors last hour',
+      icon: 'pi pi-comments'
+    }
+  ];
+
+  // ================================
+  // LIFECYCLE & EFFECTS
+  // ================================
+
+  constructor() {
+    // Effect to handle search bar positioning based on results
+    effect(() => {
+      const activeSearches = this.searchOrchestrator.activeSearches();
+      const hasResults = activeSearches.length > 0;
+      const currentState = this.searchBarState();
+      
+      // Auto-transition to top when results appear
+      if (hasResults && currentState.position === 'center') {
+        this.searchBarState.set({
+          ...currentState,
+          position: 'top',
+          hasResults: true
+        });
+      }
+      
+      // Return to center when no results (optional)
+      // Uncomment if you want automatic return to center
+      // else if (!hasResults && currentState.position === 'top') {
+      //   this.searchBarState.set({
+      //     ...currentState,
+      //     position: 'center',
+      //     hasResults: false
+      //   });
+      // }
+    });
+
+    // Effect to sync searching state
+    effect(() => {
+      const orchestratorSearching = this.searchOrchestrator.activeSearches()
+        .some(search => search.isLoading);
+      
+      this.searchBarState.update(state => ({
+        ...state,
+        isSearching: orchestratorSearching
+      }));
+    });
   }
 
-  /**
-   * Execute the search
-   */
-  public executeSearch(): void {
+  // ================================
+  // EVENT HANDLERS
+  // ================================
+
+  public async handleSearch(): Promise<void> {
     const query = this.searchQuery().trim();
-    if (!query) return;
+    if (!query || this.isSearching()) return;
 
     this.isSearching.set(true);
-    
-    // Emit the search event
-    this.search.emit(query);
-    
-    // Reset searching state after a brief delay
-    setTimeout(() => {
+    this.showExamples.set(false);
+
+    try {
+      // Use strategy manager's enhanced request processing
+      const searchRequest = {
+        type: 'transaction' as const, // Will be auto-detected
+        query,
+        title: '',
+        appName: ''
+      };
+
+      const enhancedRequest = this.strategyManager.enhanceRequest(searchRequest);
+      
+      // Emit the search event
+      this.search.emit(query);
+      
+      // Execute the search through orchestrator
+      await this.searchOrchestrator.performSearch(enhancedRequest);
+      
+    } catch (error) {
+      console.error('[SearchBar] Search failed:', error);
+    } finally {
       this.isSearching.set(false);
-    }, 1000);
-  }
-
-  /**
-   * Handle Enter key press
-   */
-  public onKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      this.executeSearch();
     }
   }
 
-  /**
-   * Get search button tooltip
-   */
-  public getSearchTooltip(): string {
-    const result = this.detectionResult();
-    if (!result) return 'Enter a search query';
+  public onQueryChange(): void {
+    const query = this.searchQuery();
     
-    const confidence = Math.round(result.confidence * 100);
-    const type = this.queryDetectionService.getQueryTypeDescription(result);
-    
-    return `Search ${type} (${confidence}% confidence)`;
-  }
-
-  /**
-   * Get detection description for hint
-   */
-  public getDetectionDescription(): string {
-    const result = this.detectionResult();
-    if (!result) return '';
-    
-    const confidence = Math.round(result.confidence * 100);
-    const type = this.queryDetectionService.getQueryTypeDescription(result);
-    
-    return `Detected: ${type} (${confidence}% confidence)`;
-  }
-
-  /**
-   * Get detection icon based on type
-   */
-  public getDetectionIcon(): string {
-    const result = this.detectionResult();
-    if (!result) return 'pi pi-search';
-    
-    switch (result.type) {
-      case 'transaction': return 'pi pi-sitemap';
-      case 'jira': return 'pi pi-ticket';
-      case 'batch': return 'pi pi-clone';
-      case 'natural': return 'pi pi-comment';
-      default: return 'pi pi-search';
+    // Show examples for empty queries in center mode
+    if (!query && this.searchBarState().position === 'center') {
+      this.showExamples.set(true);
+    } else {
+      this.showExamples.set(false);
     }
   }
 
-  /**
-   * Get confidence level for styling
-   */
-  public getConfidenceLevel(): string {
-    const result = this.detectionResult();
-    if (!result) return 'low';
+  public useExample(exampleQuery: string): void {
+    this.searchQuery.set(exampleQuery);
+    this.showExamples.set(false);
     
-    if (result.confidence >= 0.8) return 'high';
-    if (result.confidence >= 0.6) return 'medium';
-    return 'low';
+    // Focus input and trigger search
+    setTimeout(() => {
+      this.searchInput().nativeElement.focus();
+    }, 100);
+  }
+
+  // ================================
+  // UI HELPER METHODS
+  // ================================
+
+  public getStrategyIndicatorClass(confidence: number): string {
+    const baseClass = 'strategy-indicator';
+    
+    if (confidence >= 0.8) return `${baseClass} high-confidence`;
+    if (confidence >= 0.6) return `${baseClass} medium-confidence`;
+    return `${baseClass} low-confidence`;
+  }
+
+  public getStrategyIcon(strategyType: string): string {
+    const iconMap: Record<string, string> = {
+      'transaction': 'pi pi-receipt',
+      'jira': 'pi pi-ticket',
+      'batch': 'pi pi-th-large',
+      'natural': 'pi pi-comments',
+      'browse': 'pi pi-list',
+      'error': 'pi pi-exclamation-triangle'
+    };
+    
+    return iconMap[strategyType] || 'pi pi-search';
+  }
+
+  public getStrategyLabel(strategyType: string): string {
+    const labelMap: Record<string, string> = {
+      'transaction': 'Transaction',
+      'jira': 'JIRA Ticket',
+      'batch': 'Batch Process',
+      'natural': 'Smart Search',
+      'browse': 'Browse',
+      'error': 'Error Stream'
+    };
+    
+    return labelMap[strategyType] || 'Search';
+  }
+
+  private getPlaceholderForStrategy(strategyType: string): string {
+    const placeholderMap: Record<string, string> = {
+      'transaction': 'Transaction ID detected - press Enter to search',
+      'jira': 'JIRA ticket detected - press Enter to search',
+      'batch': 'Batch ID detected - press Enter to search',
+      'natural': 'Natural language query - press Enter to search',
+      'browse': 'Browse mode active',
+      'error': 'Error stream mode active'
+    };
+    
+    return placeholderMap[strategyType] || 'Press Enter to search';
+  }
+
+  // ================================
+  // PUBLIC API METHODS
+  // ================================
+
+  /**
+   * Programmatically set search bar position
+   */
+  public setPosition(position: 'center' | 'top'): void {
+    this.searchBarState.update(state => ({
+      ...state,
+      position
+    }));
+  }
+
+  /**
+   * Clear search and reset position
+   */
+  public clearSearch(): void {
+    this.searchQuery.set('');
+    this.searchBarState.set({
+      position: 'center',
+      hasResults: false,
+      isSearching: false
+    });
+  }
+
+  /**
+   * Focus the search input
+   */
+  public focusInput(): void {
+    this.searchInput().nativeElement.focus();
   }
 }
