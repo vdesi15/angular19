@@ -1,8 +1,3 @@
-// src/app/features/search-logs/components/search-bar/search-bar.component.scss
-// ================================
-// SIMPLIFIED SEARCH BAR STYLES - Clean & Professional
-// ================================
-
 :host {
   display: block;
   width: 100%;
@@ -14,7 +9,7 @@
 
 .search-bar-container {
   width: 100%;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   
   // CENTER POSITION - Default state (middle of screen)
   &.search-bar-center {
@@ -47,6 +42,13 @@
     .search-form {
       width: 100%;
       max-width: 700px;
+    }
+  }
+  
+  // Smooth transition states
+  &.has-results {
+    .search-input-group {
+      transform: scale(0.95);
     }
   }
 }
@@ -201,7 +203,7 @@
   }
   
   .search-button {
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 0.875rem;
     min-width: 45px;
     font-size: 1rem;
     
@@ -292,84 +294,6 @@
   .search-button {
     &:disabled {
       background: var(--p-surface-600);
-    }
-  }
-}
-
-// ================================
-// ACCESSIBILITY ENHANCEMENTS
-// ================================
-
-// Focus indicators
-.search-input:focus,
-.search-button:focus {
-  outline: 2px solid var(--p-primary-color);
-  outline-offset: 2px;
-}
-
-// High contrast mode
-@media (prefers-contrast: high) {
-  .search-form {
-    .search-input-group {
-      border: 2px solid var(--p-content-border-color);
-    }
-  }
-  
-  .search-input {
-    border: 2px solid var(--p-content-border-color);
-  }
-  
-  .search-button {
-    border: 2px solid var(--p-primary-color);
-  }
-}
-
-// Reduced motion
-@media (prefers-reduced-motion: reduce) {
-  .search-bar-container,
-  .search-form .search-input-group,
-  .search-button {
-    transition: none;
-    animation: none;
-  }
-  
-  .search-form .search-input-group:focus-within {
-    transform: none;
-  }
-  
-  .search-button:hover:not(:disabled) {
-    transform: none;
-  }
-  
-  .pi-spinner {
-    animation: none;
-  }
-}
-
-// ================================
-// LOADING STATE ENHANCEMENTS
-// ================================
-
-.search-bar-container.has-results {
-  .search-input {
-    &:disabled {
-      background: var(--p-surface-50);
-      
-      .app-dark & {
-        background: var(--p-surface-700);
-      }
-    }
-  }
-  
-  .search-button {
-    &:disabled {
-      background: var(--p-primary-400);
-      color: var(--p-primary-contrast-color);
-      opacity: 0.8;
-      
-      .app-dark & {
-        background: var(--p-primary-600);
-      }
     }
   }
 }

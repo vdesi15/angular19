@@ -1,269 +1,207 @@
-// Clean search-result.component.ts - Remove favorites-related code
-
-import { Component, Input, computed, inject, WritableSignal, signal, Signal, effect, ViewChild, ChangeDetectorRef } from '@angular/core';
+// search-logs.component.ts
+import { Component, inject, effect, computed, Signal, viewChild, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { map } from 'rxjs';
 
-// Models
-import { ActiveSearch } from '../../models/search.model';
-import { ColumnDefinition } from 'src/app/core/models/column-definition.model';
-import { ViewDefinition } from 'src/app/core/models/view-definition.model';
-import { StreamFilter } from 'src/app/core/models/stream-filter.model';
-
-// Services
-import { ColumnDefinitionService } from 'src/app/core/services/column-definition.service';
-import { ViewDefinitionService } from 'src/app/core/services/view-definition.service';
-import { SearchOrchestratorService } from '../../services/search-orchestrator.service';
-// REMOVED: SearchHistoryService, FiltersService imports for favorites
-
-// Child Components & Modules
-import { AccordionModule } from 'primeng/accordion';
-import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
-import { BadgeModule } from 'primeng/badge';
-import { ProgressBarModule } from 'primeng/progressbar';
-import { ChipModule } from 'primeng/chip';
-import { TagModule } from 'primeng/tag';
-
-// Toolbars
-import { TransactionToolbarComponent } from '../transaction-toolbar/transaction-toolbar.component';
-import { StreamingToolbarComponent } from '../streaming-toolbar/streaming-toolbar.component';
-import { BatchToolbarComponent } from '../batch-toolbar/batch-toolbar.component';
-import { JiraToolbarComponent } from '../jira-toolbar/jira-toolbar.component';
-
-// Viewers
-import { LogViewerComponent } from '../log-viewer/log-viewer.component';
-import { BatchViewerComponent } from '../batch-viewer/batch-viewer.component';
-import { JiraViewerComponent } from '../jira-viewer/jira-viewer.component';
-import { TransactionTimelineComponent } from '../transaction-timeline/transaction-timeline.component';
-import { TableSkeletonComponent } from 'src/app/shared/components/table-skeleton/table-skeleton.component';
+import { SearchOrchestratorService } from './services/search-orchestrator.service';
+import { SearchStrategyManager } from './services/search-strategy.manager'; // NEW
+import { FiltersService } from 'src/app/core/services/filters.service';
+import { SearchBarComponent } from './components/search-bar/search-bar.component';
+import { SearchResultComponent } from './components/search-result/search-result.component';
+import { TransactionDetailsComponent } from './components/transaction-details/transaction-details.component';
+import { ActiveSearch } from './models/search.model';
 
 @Component({
-  selector: 'app-search-result',
+  selector: 'app-search-logs',
   standalone: true,
   imports: [
-    CommonModule, AccordionModule, ButtonModule, TooltipModule, BadgeModule, 
-    ProgressBarModule, ChipModule, TagModule,
-    TransactionToolbarComponent, StreamingToolbarComponent, BatchToolbarComponent, JiraToolbarComponent,
-    LogViewerComponent, BatchViewerComponent, JiraViewerComponent, TransactionTimelineComponent, 
-    TableSkeletonComponent
+    CommonModule, 
+    SearchBarComponent, 
+    SearchResultComponent,
+    TransactionDetailsComponent
   ],
-  templateUrl: './search-result.component.html',
-  styleUrls: ['./search-result.component.scss']
+  templateUrl: './search-logs.component.html',
+  styleUrls: ['./search-logs.component.scss']
 })
-export class SearchResultComponent {
-  @Input({ required: true }) search!: ActiveSearch;
+export class SearchLogsComponent implements OnInit {
+  public searchOrchestrator = inject(SearchOrchestratorService);
+  private strategyManager = inject(SearchStrategyManager); // NEW
+  private route = inject(ActivatedRoute);
+  private router = inject(Router); // NEW
+  private filtersService = inject(FiltersService);
 
-  @ViewChild(LogViewerComponent) public logViewer?: LogViewerComponent;
-  @ViewChild(BatchViewerComponent) public batchViewer?: BatchViewerComponent;
-  @ViewChild(JiraViewerComponent) public jiraViewer?: JiraViewerComponent;
+  // NEW: ViewChild for search bar to control it programmatically
+  private searchBar = viewChild<SearchBarComponent>('app-search-bar');
 
-  // State signals
-  public isStopButtonHovered = signal(false);
-  public totalLoadedCount = 0;
-  public filteredCount = 0;
-
-  // Injected Services
-  public orchestrator = inject(SearchOrchestratorService);
-  private colDefService = inject(ColumnDefinitionService);
-  private viewDefService = inject(ViewDefinitionService);
-  private cdr = inject(ChangeDetectorRef);
-
-  // State Signals
-  public selectedViewId: WritableSignal<string> = signal('');
-  public streamingVisibleColumns: WritableSignal<ColumnDefinition[]> = signal([]);
-  public streamFilters: WritableSignal<StreamFilter[]> = signal([]);
-
-  // Computed signals for transaction details
-  public hasTransactionDetails = computed(() => {
-    return this.search.type === 'transaction' && 
-           this.search.transactionDetails && 
-           this.search.transactionDetails.TRANSACTION_TIMELINE?.length > 0;
-  });
-
-  // Derived Signals
-  public allColumnsForViewType: Signal<ColumnDefinition[]> = computed(() => {
-    const app = this.search.appName;
-    const viewType = this.getViewType();
-    return this.colDefService.getColumnsFor(app, viewType);
-  });
+  private routeData = toSignal(this.route.data);
   
-  public availableViews: Signal<ViewDefinition[]> = computed(() => {
-    return this.viewDefService.getViewsForApp(this.search.appName);
+  // NEW: Convert queryParams to signal for reactive URL handling
+  private queryParams = toSignal(this.route.queryParams);
+
+  public mode: Signal<'search' | 'browse' | 'error'> = computed(() => {
+    return this.routeData()?.['mode'] ?? 'search';
   });
 
-  public finalVisibleColumns: Signal<ColumnDefinition[]> = computed(() => {
-    if (this.search.type === 'transaction' || this.search.type === 'jira') {
-      const selectedViewId = this.selectedViewId();
-      if (!selectedViewId) return [];
-      
-      return this.allColumnsForViewType().filter(col => {
-        if (!col.views) return true;
-        return col.views.split(',').map(v => v.trim()).includes(selectedViewId);
-      });
-    }
-    return this.streamingVisibleColumns();
-  });  
-
-  // Computed signal to determine if we should show skeleton
-  public showSkeleton = computed(() => {
-    return this.search.isLoading && this.search.data.length === 0;
-  });
-
-  // Computed signal to determine if we should show the content
-  public showContent = computed(() => {
-    return !this.showSkeleton() && !this.search.error;
-  });
-
-  // Records summary for display
-  public recordsSummary = computed(() => {
-    const totalLoaded = this.search.data.length;
-    const totalRecords = this.search.totalRecords;
-    const filteredCount = this.filteredCount;
+  public orderedSearches: Signal<ActiveSearch[]> = computed(() => {
+    const searches = this.searchOrchestrator.activeSearches();
     
-    if (this.search.isStreaming) {
-      let summary = `Loaded: ${totalLoaded.toLocaleString()}`;
-      if (totalRecords > totalLoaded) {
-        summary += ` of ${totalRecords.toLocaleString()}`;
-      }
-      if (filteredCount < totalLoaded && filteredCount > 0) {
-        summary += ` (Filtered: ${filteredCount.toLocaleString()})`;
-      }
-      return `(${summary})`;
-    } else {
-      let summary = `${totalLoaded.toLocaleString()} record${totalLoaded !== 1 ? 's' : ''}`;
-      if (filteredCount < totalLoaded && filteredCount > 0) {
-        summary += ` (${filteredCount.toLocaleString()} visible)`;
-      }
-      return `(${summary})`;
-    }
+    // Separate SSE searches (browse/error) from transaction searches
+    const sseSearches = searches.filter(s => s.type === 'browse' || s.type === 'error');
+    const transactionSearches = searches.filter(s => s.type === 'transaction');
+    
+    // Return in order: SSE first, then transactions, then others
+    return [...sseSearches, ...transactionSearches];
   });
 
   constructor() {
+    // Existing effect for mode changes
     effect(() => {
-      const allColumns = this.allColumnsForViewType();
-      if (allColumns.length > 0) {
-        this.resetStreamingColumns();
-      }
+      const currentMode = this.mode();
+      console.log(`[SearchLogsComponent] Mode changed to: ${currentMode}. Triggering initial search.`);
+      this.triggerInitialSearchForMode(currentMode);
+    }, { allowSignalWrites: true });
 
-      const available = this.availableViews();
-      if (available.length > 0) {
-        const defaultView = available.find(v => v.default) ?? available[0];
-        if (defaultView) {
-          this.selectedViewId.set(defaultView.viewId);
-        }
+    // NEW: Effect for URL parameter handling
+    effect(() => {
+      const params = this.queryParams();
+      if (params) {
+        console.log('[SearchLogsComponent] Query params changed:', params);
+        this.handleUrlParameters(params);
       }
-    });
+    }, { allowSignalWrites: true });
   }
 
-  // Helper Methods
-  private getViewType(): 'browse' | 'error' {
-    switch (this.search.type) {
-      case 'transaction':
-      case 'jira':
-      case 'batch':
-      case 'natural':
-        return 'browse'; // Use browse columns for these types
-      case 'error':
-        return 'error';
-      case 'browse':
-      default:
-        return 'browse';
+  // NEW: OnInit for initial URL handling
+  ngOnInit() {
+    // Handle initial URL parameters if they exist
+    const initialParams = this.route.snapshot.queryParams;
+    if (Object.keys(initialParams).length > 0) {
+      console.log('[SearchLogsComponent] Initial URL params:', initialParams);
+      this.handleUrlParameters(initialParams);
     }
   }
 
-  public updateFilteredCount(count: number): void {
-    setTimeout(() => {
-      this.filteredCount = count;
-      this.cdr.detectChanges();
-    }, 0);
+  // NEW: URL parameter handling using strategy manager
+  private handleUrlParameters(params: Record<string, any>): void {
+    // Skip if no relevant search parameters
+    const hasSearchParams = params['searchText'] || params['jiraId'];
+    if (!hasSearchParams) {
+      return;
+    }
+
+    console.log('[SearchLogsComponent] Processing URL parameters with strategy manager');
+    
+    // Let strategy manager handle URL parameters
+    const urlResult = this.strategyManager.handleUrlParameters(params);
+    
+    if (urlResult && urlResult.shouldTriggerSearch) {
+      console.log('[SearchLogsComponent] URL result from strategy:', urlResult);
+      
+      // Populate search bar with decoded query
+      const searchBarComponent = this.searchBar();
+      if (searchBarComponent) {
+        searchBarComponent.setSearchTerm(urlResult.searchQuery);
+        
+        // Auto-trigger search with strategy-specific metadata
+        setTimeout(() => {
+          console.log('[SearchLogsComponent] Auto-triggering search for:', urlResult.searchQuery);
+          this.handleSearchWithMetadata(urlResult.searchQuery, urlResult.metadata);
+        }, 100);
+      }
+    } else {
+      console.log('[SearchLogsComponent] No strategy could handle URL parameters');
+    }
   }
 
-  // Event Handlers
-  resetStreamingColumns(): void {
-    const allColumns = this.allColumnsForViewType();
-    const defaultVisible = allColumns.filter(c => c.visible === true);
-    this.streamingVisibleColumns.set(defaultVisible);
-    this.cdr.markForCheck();
+  // NEW: Enhanced search handler with metadata support
+  private handleSearchWithMetadata(query: string, metadata?: any): void {
+    const appName = this.filtersService.filters()?.application[0] ?? 'default-app';
+    
+    // Use metadata from URL strategy if available
+    const searchType = metadata?.searchType || 'transaction';
+    const title = metadata?.searchType === 'jira' 
+      ? `JIRA: ${query}` 
+      : `Search Results for: ${query}`;
+    
+    this.searchOrchestrator.performSearch({
+      type: searchType,
+      query: query,
+      title: title,
+      appName: appName,
+      metadata: metadata // Pass through strategy metadata
+    });
   }
 
-  onStreamingColumnsChange(selectedColumns: ColumnDefinition[]): void {
-    const masterList = this.allColumnsForViewType();
-    const selectedIds = new Set(selectedColumns.map(c => c.id));
-    const orderedSelection = masterList.filter(col => selectedIds.has(col.id));
-    this.streamingVisibleColumns.set(orderedSelection);
-  }
-  
-  onStreamFiltersChange(filters: StreamFilter[]): void {
-    this.orchestrator.applyStreamFilters(this.search.id, filters);
+  // EXISTING: Keep your original triggerInitialSearchForMode method
+  triggerInitialSearchForMode(mode: 'browse' | 'error' | 'search'): void {
+    if (mode === 'search') {
+      return;
+    }
+
+    const appName = this.filtersService.filters()?.application[0] ?? 'default-app';
+    const request = {
+      type: mode,
+      title: mode === 'browse' ? 'Live Logs (Browse)' : 'Live Logs (Errors)',
+      appName: appName,
+      preFilter: mode === 'error' ? 'log.level:error' : undefined
+    };
+
+    this.searchOrchestrator.performSearch(request);
   }
 
-  onDrilldown(query: any): void {
-    this.orchestrator.performSearch(query);
+  // ENHANCED: Update your existing handleSearch method to use strategy manager for URL updates
+  handleSearch(query: string): void {
+    const appName = this.filtersService.filters()?.application[0] ?? 'default-app';
+    
+    // Perform the search
+    this.searchOrchestrator.performSearch({
+      type: 'transaction', // Will be auto-detected by strategy manager
+      query: query,
+      title: `Search Results for: ${query}`,
+      appName: appName
+    });
+
+    // NEW: Update URL using strategy manager
+    this.updateUrlWithStrategy(query);
   }
 
-  // Transaction view change handler
-  onViewChange(viewId: string): void {
-    this.selectedViewId.set(viewId);
-    console.log('[SearchResult] Transaction view changed to:', viewId);
+  // NEW: Update URL using appropriate strategy
+  private updateUrlWithStrategy(query: string): void {
+    const currentParams = { ...this.route.snapshot.queryParams };
+    const updatedParams = this.strategyManager.updateUrlForSearch(query, currentParams);
+    
+    console.log('[SearchLogsComponent] Updating URL params:', updatedParams);
+    
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: updatedParams,
+      queryParamsHandling: 'merge'
+    });
   }
 
-  // Accordion event handlers
-  onAccordionOpen(event: any): void {
-    this.orchestrator.expandSearch(this.search.id);
-  }
-
-  onAccordionClose(event: any): void {
-    this.orchestrator.collapseSearch(this.search.id);
-  }
-
-  // Control handlers
-  stopStreaming(event: Event): void {
-    event.stopPropagation();
-    this.orchestrator.stopSearch(this.search.id);
-  }
-
-  closePanel(event: Event): void {
-    event.stopPropagation();
-    this.orchestrator.removeSearch(this.search.id);
-  }
-
-  retrySearch(): void {
-    this.orchestrator.retrySearch(this.search.id);
-  }
-
-  // Utility methods for different search types
-  public shouldShowToolbar(): boolean {
-    return !this.search.error && !this.showSkeleton();
-  }
-
-  public shouldShowStreamingToolbar(): boolean {
-    return this.search.type === 'browse' || this.search.type === 'error';
-  }
-
-  public shouldShowTransactionToolbar(): boolean {
-    return this.search.type === 'transaction' || this.search.type === 'natural';
-  }
-
-  public shouldShowJiraToolbar(): boolean {
-    return this.search.type === 'jira';
-  }
-
-  public shouldShowBatchToolbar(): boolean {
-    return this.search.type === 'batch';
-  }
-
-  public shouldShowLogViewer(): boolean {
-    return this.search.type === 'browse' || 
-           this.search.type === 'error' || 
-           this.search.type === 'transaction' || 
-           this.search.type === 'natural';
-  }
-
-  public shouldShowBatchViewer(): boolean {
-    return this.search.type === 'batch';
-  }
-
-  public shouldShowJiraViewer(): boolean {
-    return this.search.type === 'jira';
+  // NEW: Method to clear searches and clean up URL
+  public clearAllSearches(): void {
+    this.searchOrchestrator.clearAllSearches();
+    
+    // Clear search bar
+    const searchBarComponent = this.searchBar();
+    if (searchBarComponent) {
+      searchBarComponent.clearSearch();
+    }
+    
+    // Clean up URL using strategy manager
+    const currentParams = { ...this.route.snapshot.queryParams };
+    const cleanedParams = this.strategyManager.cleanupUrlParams('', currentParams);
+    
+    console.log('[SearchLogsComponent] Cleaning URL params:', cleanedParams);
+    
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: cleanedParams,
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 }

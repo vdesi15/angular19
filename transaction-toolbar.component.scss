@@ -3,6 +3,18 @@
   border: none;
   color: white;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+  
+  // COMPACT HEIGHT
+  &.compact-toolbar {
+    min-height: 2.5rem; // Reduced height
+    padding: 0.5rem 1rem;
+    
+    .p-toolbar-group-left,
+    .p-toolbar-group-right {
+      align-items: center;
+      gap: 0.75rem;
+    }
+  }
 
   .p-toolbar-group-left {
     flex: 1;
@@ -21,19 +33,40 @@
 
       .view-select {
         min-width: 160px;
-
-        .p-select {
-          background-color: rgba(255, 255, 255, 0.1);
-          border-color: rgba(255, 255, 255, 0.3);
-          color: white;
-
+        
+        // LIGHT BLUE BACKGROUND FOR p-select
+        &.light-blue-bg .p-select {
+          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+          border: 1px solid #93c5fd !important;
+          color: #1e40af !important;
+          height: 2rem; // Compact height
+          
           .p-select-label {
-            color: white;
+            color: #1e40af !important;
+            font-weight: 500;
+            font-size: 0.875rem;
+          }
+          
+          .p-select-dropdown-icon {
+            color: #1e40af !important;
           }
 
           &:hover {
-            background-color: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.5);
+            background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%) !important;
+            border-color: #60a5fa !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
+          }
+          
+          &:focus {
+            outline: 2px solid #60a5fa;
+            outline-offset: 2px;
+          }
+          
+          &:disabled {
+            background: rgba(255, 255, 255, 0.3) !important;
+            color: rgba(255, 255, 255, 0.7) !important;
+            opacity: 0.6;
           }
         }
       }
@@ -46,10 +79,15 @@
     .p-button {
       border-color: rgba(255, 255, 255, 0.3);
       color: white;
+      height: 2rem; // Compact height
+      padding: 0.25rem 0.75rem; // Smaller padding
+      font-size: 0.875rem;
 
       &:hover {
         background-color: rgba(255, 255, 255, 0.1);
         border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
       }
 
       &:disabled {
@@ -60,59 +98,104 @@
   }
 }
 
-:host ::ng-deep .metrics-panel {
+// Metrics popover styling (replacing overlayPanel)
+:host ::ng-deep .metrics-popover {
+  max-width: 400px;
+  
+  .p-popover-content {
+    padding: 0;
+  }
+  
   .metrics-content {
-    padding: 1rem;
+    padding: 1.5rem;
     text-align: center;
-
-    h4 {
+    
+    .metrics-header h4 {
       margin: 0 0 1rem 0;
-      color: var(--text-color);
-    }
-
-    .no-metrics {
-      color: var(--text-color-secondary);
-      font-style: italic;
-    }
-  }
-}
-
-.jira-dialog-content {
-  .dialog-description {
-    margin-bottom: 1.5rem;
-    color: var(--text-color-secondary);
-  }
-
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-
-    label {
+      color: var(--p-text-color);
+      font-size: 1.1rem;
       font-weight: 600;
-      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      
+      i {
+        color: var(--p-primary-color);
+      }
     }
-  }
-}
-
-/* Dark mode support */
-:host-context(.app-dark) ::ng-deep .transaction-toolbar {
-  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-
-  .p-toolbar-group-left {
-    .view-selector {
-      .view-select .p-select {
-        &:hover {
-          background-color: rgba(255, 255, 255, 0.2);
+    
+    .metrics-chart {
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: center;
+    }
+    
+    .metrics-summary {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      
+      .metric-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--p-content-border-color);
+        
+        &:last-child {
+          border-bottom: none;
+        }
+        
+        .metric-label {
+          font-weight: 500;
+          color: var(--p-text-muted-color);
+        }
+        
+        .metric-value {
+          font-weight: 600;
+          color: var(--p-primary-color);
+          font-size: 1.1rem;
         }
       }
     }
-  }
 
-  .p-toolbar-group-right {
-    .p-button {
+    .no-metrics {
+      color: var(--p-text-muted-color);
+      font-style: italic;
+      padding: 2rem;
+      
+      i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        display: block;
+        color: var(--p-text-muted-color);
+      }
+    }
+  }
+}
+
+// Dark mode support
+:host-context(.app-dark) ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+
+  &.compact-toolbar .p-toolbar-group-left .view-selector .view-select {
+    &.light-blue-bg .p-select {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%) !important;
+      border-color: #4f46e5 !important;
+      color: #ddd6fe !important;
+      
+      .p-select-label {
+        color: #ddd6fe !important;
+      }
+      
+      .p-select-dropdown-icon {
+        color: #ddd6fe !important;
+      }
+
       &:hover {
-        background-color: rgba(255, 255, 255, 0.15);
+        background: linear-gradient(135deg, #3730a3 0%, #4338ca 100%) !important;
+        border-color: #6366f1 !important;
       }
     }
   }

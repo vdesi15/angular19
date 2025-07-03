@@ -14,10 +14,7 @@ import { ButtonModule } from 'primeng/button';
   ]
 })
 export class SearchBarComponent {
-  @@Output() search = new EventEmitter<string>();
-  
-  // New input signal for controlling initial position
-  public initialPosition = input<'center' | 'top'>('center');
+  @Output() search = new EventEmitter<string>();
   
   // View child for search input
   private searchInput = viewChild.required<ElementRef>('searchInput');
@@ -49,27 +46,40 @@ export class SearchBarComponent {
   });
 
   // ================================
-  // LIFECYCLE & EFFECTS
+  // LIFECYCLE & EFFECTS - THIS IS THE KEY!
   // ================================
 
   constructor() {
-    // Effect to handle search bar positioning based on results
+    // MAIN EFFECT: Handle search bar positioning based on results
     effect(() => {
       const activeSearches = this.searchOrchestrator.activeSearches();
       const hasResults = activeSearches.length > 0;
       const currentState = this.searchBarState();
       
+      console.log(`[SearchBar] Active searches: ${activeSearches.length}, hasResults: ${hasResults}`);
+      
       // Auto-transition to top when results appear
       if (hasResults && currentState.position === 'center') {
+        console.log('[SearchBar] Moving to top position');
         this.searchBarState.set({
           ...currentState,
           position: 'top',
           hasResults: true
         });
       }
+      
+      // Optional: Return to center when no results
+      else if (!hasResults && currentState.position === 'top') {
+        console.log('[SearchBar] Moving to center position');
+        this.searchBarState.set({
+          ...currentState,
+          position: 'center',
+          hasResults: false
+        });
+      }
     });
 
-    // Effect to sync searching state
+    // Effect to sync searching state from orchestrator
     effect(() => {
       const orchestratorSearching = this.searchOrchestrator.activeSearches()
         .some(search => search.isLoading);
@@ -133,7 +143,7 @@ export class SearchBarComponent {
   }
 
   /**
-   * Set search term programmatically
+   * Set search term programmatically (for URL handling)
    */
   public setSearchTerm(term: string): void {
     this.searchTerm.set(term);

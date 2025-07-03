@@ -1,5 +1,5 @@
 <!-- src/app/features/search-logs/components/transaction-toolbar/transaction-toolbar.component.html -->
-<p-toolbar styleClass="transaction-toolbar">
+<p-toolbar styleClass="transaction-toolbar compact-toolbar">
   
   <!-- ================================ -->
   <!-- LEFT SECTION - VIEW SELECTOR -->
@@ -86,7 +86,7 @@
 <!-- METRICS OVERLAY PANEL -->
 <!-- ================================ -->
 
-<p-overlayPanel #metricsPanel styleClass="metrics-panel">
+<p-popover #metricsPopover styleClass="metrics-popover">
   <div class="metrics-content">
     <div class="metrics-header">
       <h4>
@@ -126,7 +126,7 @@
       </div>
     }
   </div>
-</p-overlayPanel>
+</p-popover>
 
 <!-- ================================ -->
 <!-- SHARE MENU -->
