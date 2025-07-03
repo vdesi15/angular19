@@ -145,20 +145,33 @@ export class SearchExecutionManager {
   // ENHANCED STRATEGY SELECTION
   // ================================
 
+  private validateSearchType(strategyString: string): SearchType | null {
+    const validTypes: SearchType[] = ['browse', 'error', 'transaction', 'jira', 'batch', 'natural'];
+    
+    if (validTypes.includes(strategyString as SearchType)) {
+      return strategyString as SearchType;
+    }
+    
+    console.warn(`[ExecutionManager] Invalid strategy type: ${strategyString}`);
+    return null;
+  }
+
   /**
    * Get strategy for a search using the new strategy system
    */
   private getStrategyForSearch(search: ActiveSearch): any {
-    // For enhanced searches with strategy info, use that
     if (search.searchMetadata?.searchStrategy) {
-      const strategy = this.strategyManager.getStrategy(search.searchMetadata.searchStrategy);
-      if (strategy) {
-        return {
-          strategy,
-          strategyName: strategy.getStrategyName(),
-          strategyType: search.searchMetadata.searchStrategy,
-          confidence: search.searchMetadata.confidence || 0.7
-        };
+      const strategyType = this.validateSearchType(search.searchMetadata.searchStrategy);
+      if (strategyType) {
+        const strategy = this.strategyManager.getStrategy(strategyType);
+        if (strategy) {
+          return {
+            strategy,
+            strategyName: strategy.getStrategyName(),
+            strategyType: strategyType,
+            confidence: search.searchMetadata.confidence || 0.7
+          };
+        }
       }
     }
 
