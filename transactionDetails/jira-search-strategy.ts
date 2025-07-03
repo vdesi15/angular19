@@ -320,4 +320,79 @@ export class EnhancedJiraSearchStrategy implements SearchStrategy {
 
     console.log(`[EnhancedJiraSearchStrategy] Timeline navigation to ${txnId}`);
   }
+
+  // NEW: Handle URL parameters for JIRA searches
+  handleUrlParams(params: Record<string, string>): UrlHandlingResult | null {
+    const jiraId = params['jiraId'];
+    const searchText = params['searchText'];
+    
+    if (jiraId && searchText) {
+      // JIRA with searchText (currentTxnId)
+      const decodedJiraId = this.safeBase64Decode(jiraId);
+      const decodedSearchText = this.safeBase64Decode(searchText);
+      
+      if (decodedJiraId && decodedSearchText && this.canHandle(decodedJiraId)) {
+        return {
+          searchQuery: decodedJiraId,
+          searchType: 'jira',
+          metadata: {
+            fromUrl: true,
+            currentTxnId: decodedSearchText,
+            isTimelineNavigation: true,
+            originalParams: { jiraId, searchText }
+          },
+          shouldTriggerSearch: true
+        };
+      }
+    } else if (jiraId) {
+      // Regular JIRA search
+      const decodedJiraId = this.safeBase64Decode(jiraId);
+      
+      if (decodedJiraId && this.canHandle(decodedJiraId)) {
+        return {
+          searchQuery: decodedJiraId,
+          searchType: 'jira',
+          metadata: {
+            fromUrl: true,
+            originalParam: 'jiraId'
+          },
+          shouldTriggerSearch: true
+        };
+      }
+    }
+    
+    return null;
+  }
+  
+  // NEW: Update URL for JIRA searches
+  updateUrlForSearch(query: string, currentParams: Record<string, string>): Record<string, string> {
+    const updatedParams = { ...currentParams };
+    
+    // Add encoded JIRA ID
+    updatedParams['jiraId'] = btoa(query);
+    
+    // Remove transaction params if they exist
+    delete updatedParams['searchText'];
+    
+    // Keep datetime params for JIRA searches (they might be relevant)
+    
+    return updatedParams;
+  }
+  
+  // NEW: Cleanup URL params
+  cleanupUrlParams(currentParams: Record<string, string>): Record<string, string> {
+    const cleanedParams = { ...currentParams };
+    delete cleanedParams['jiraId'];
+    delete cleanedParams['searchText'];
+    return cleanedParams;
+  }
+  
+  private safeBase64Decode(encoded: string): string | null {
+    try {
+      return atob(encoded);
+    } catch (error) {
+      console.warn('[JiraStrategy] Failed to decode base64:', encoded);
+      return null;
+    }
+  }
 }

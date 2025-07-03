@@ -15,6 +15,65 @@ export class TransactionDetailsStrategy {
   private http = inject(HttpClient);
   private configService = inject(ConfigService);
 
+  // NEW: Handle URL parameters for transaction searches
+  handleUrlParams(params: Record<string, string>): UrlHandlingResult | null {
+    const searchText = params['searchText'];
+    
+    if (searchText) {
+      const decodedSearchText = this.safeBase64Decode(searchText);
+      if (decodedSearchText && this.canHandle(decodedSearchText)) {
+        return {
+          searchQuery: decodedSearchText,
+          searchType: 'transaction',
+          metadata: {
+            fromUrl: true,
+            originalParam: 'searchText'
+          },
+          shouldTriggerSearch: true
+        };
+      }
+    }
+    
+    return null;
+  }
+  
+  // NEW: Update URL for transaction searches
+  updateUrlForSearch(query: string, currentParams: Record<string, string>): Record<string, string> {
+    const updatedParams = { ...currentParams };
+    
+    // Add encoded transaction ID
+    updatedParams['searchText'] = btoa(query);
+    
+    // Remove JIRA params if they exist
+    delete updatedParams['jiraId'];
+    
+    // Remove datetime params for transaction searches
+    delete updatedParams['startDate'];
+    delete updatedParams['endDate'];
+    delete updatedParams['dateRange'];
+    
+    return updatedParams;
+  }
+  
+  // NEW: Cleanup URL params
+  cleanupUrlParams(currentParams: Record<string, string>): Record<string, string> {
+    const cleanedParams = { ...currentParams };
+    delete cleanedParams['searchText'];
+    delete cleanedParams['startDate'];
+    delete cleanedParams['endDate'];
+    delete cleanedParams['dateRange'];
+    return cleanedParams;
+  }
+  
+  private safeBase64Decode(encoded: string): string | null {
+    try {
+      return atob(encoded);
+    } catch (error) {
+      console.warn('[TransactionStrategy] Failed to decode base64:', encoded);
+      return null;
+    }
+  }
+
   public buildDisplayTitle(transactionId: string): string {
     return `Transaction Details: ${transactionId.substring(0, 12)}...`;
   }

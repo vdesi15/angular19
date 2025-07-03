@@ -8,8 +8,21 @@ export interface SearchDataResponse {
 
 export interface SearchStrategy {
   canHandle(query: any, context?: any): boolean;
-  execute(query: any, globalFilters: SearchFilterModel, streamFilters: StreamFilter[], preFilter?: string): Observable<any>;
+  execute(query: string, globalFilters: any, streamFilters?: any[], preFilter?: any): Observable<any>;
   getStrategyName(): string;
+  getMetadata?(): any;
+  
+  // NEW: URL handling methods
+  handleUrlParams?(params: Record<string, string>): UrlHandlingResult | null;
+  updateUrlForSearch?(query: string, currentParams: Record<string, string>): Record<string, string>;
+  cleanupUrlParams?(currentParams: Record<string, string>): Record<string, string>;
+}
+
+export interface UrlHandlingResult {
+  searchQuery: string;
+  searchType: string;
+  metadata?: any;
+  shouldTriggerSearch: boolean;
 }
 
 export interface TransactionSearchResponse extends SearchDataResponse {
@@ -17,12 +30,3 @@ export interface TransactionSearchResponse extends SearchDataResponse {
   relatedSpans?: any[];
 }
 
-export interface JiraSearchResponse extends SearchDataResponse {
-  jiraDetails?: any;
-  associatedTransactions?: any[];
-}
-
-export interface BatchSearchResponse extends SearchDataResponse {
-  batchDetails?: any;
-  batchStatus?: string;
-  processedCount?: number;

@@ -67,6 +67,54 @@ export class SearchStrategyManager {
     console.log('[StrategyManager] Modern strategies initialized:', this.availableStrategies());
   }
 
+  public handleUrlParameters(params: Record<string, string>): UrlHandlingResult | null {
+    const currentStrategies = this.strategies();
+    
+    // Try each strategy to see if it can handle the URL params
+    for (const [strategyType, strategy] of currentStrategies) {
+      if (strategy.handleUrlParams) {
+        const result = strategy.handleUrlParams(params);
+        if (result) {
+          console.log(`[StrategyManager] URL handled by ${strategyType} strategy:`, result);
+          return result;
+        }
+      }
+    }
+    
+    console.log('[StrategyManager] No strategy could handle URL parameters');
+    return null;
+  }
+  
+  // NEW: Update URL using the appropriate strategy
+  public updateUrlForSearch(query: string, currentParams: Record<string, string>): Record<string, string> {
+    const selectedStrategy = this.selectBestStrategy(query);
+    
+    if (selectedStrategy && selectedStrategy.updateUrlForSearch) {
+      return selectedStrategy.updateUrlForSearch(query, currentParams);
+    }
+    
+    // Fallback: basic encoding
+    return {
+      ...currentParams,
+      searchText: btoa(query)
+    };
+  }
+  
+  // NEW: Cleanup URL using the appropriate strategy
+  public cleanupUrlParams(query: string, currentParams: Record<string, string>): Record<string, string> {
+    const selectedStrategy = this.selectBestStrategy(query);
+    
+    if (selectedStrategy && selectedStrategy.cleanupUrlParams) {
+      return selectedStrategy.cleanupUrlParams(currentParams);
+    }
+    
+    // Fallback: remove common search params
+    const cleanedParams = { ...currentParams };
+    delete cleanedParams['searchText'];
+    delete cleanedParams['jiraId'];
+    return cleanedParams;
+  }
+
   // ================================
   // INTELLIGENT STRATEGY SELECTION - canHandle() Based
   // ================================
