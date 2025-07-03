@@ -4,51 +4,41 @@
 }
 
 // ================================
-// DYNAMIC POSITIONING SYSTEM
+// FIXED POSITIONING SYSTEM
 // ================================
 
 .search-bar-container {
   width: 100%;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   
-  // CENTER POSITION - Default state (middle of screen)
+  // CENTER POSITION - Center of screen
   &.search-bar-center {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 300px;
+    min-height: calc(100vh - 200px);
     padding: 2rem 1rem;
     
     .search-form {
       width: 100%;
-      max-width: 600px;
+      max-width: 1200px; // Double width
     }
   }
   
-  // TOP POSITION - After search results (sticky header)
+  // TOP POSITION - 100px from top
   &.search-bar-top {
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem 1.5rem;
-    background: var(--p-surface-0);
-    border-bottom: 1px solid var(--p-content-border-color);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    margin-top: 100px; // 100px from top
+    background: transparent;
+    position: relative;
     
     .search-form {
       width: 100%;
-      max-width: 700px;
-    }
-  }
-  
-  // Smooth transition states
-  &.has-results {
-    .search-input-group {
-      transform: scale(0.95);
+      max-width: 1200px; // Double width
     }
   }
 }
@@ -80,32 +70,32 @@
 }
 
 // ================================
-// SEARCH INPUT STYLING
+// FIXED SEARCH INPUT STYLING - MAXIMUM SPECIFICITY FOR DARK MODE
 // ================================
 
-.search-input {
+:host ::ng-deep .search-input {
   flex: 1;
   padding: 0.875rem 1.25rem;
   font-size: 1rem;
   border: none;
   border-radius: 8px 0 0 8px !important;
-  background: var(--p-surface-0);
-  color: var(--p-text-color);
+  background: var(--p-surface-0) !important;
+  color: var(--p-text-color) !important;
   outline: none;
   
   &::placeholder {
-    color: var(--p-text-muted-color);
+    color: var(--p-text-muted-color) !important;
     font-style: italic;
   }
   
   &:focus {
-    background: var(--p-surface-50);
+    background: var(--p-surface-50) !important;
   }
   
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    background: var(--p-surface-100);
+    background: var(--p-surface-100) !important;
   }
 }
 
@@ -113,7 +103,7 @@
 // SEARCH BUTTON STYLING
 // ================================
 
-.search-button {
+:host ::ng-deep .search-button {
   padding: 0.875rem 1rem;
   border: none;
   border-radius: 0 8px 8px 0 !important;
@@ -144,14 +134,81 @@
     outline-offset: 2px;
   }
   
-  // Icon styling
   i {
     font-size: 1.1rem;
   }
   
-  // Loading spinner animation
   .pi-spinner {
     animation: spin 1s linear infinite;
+  }
+}
+
+// ================================
+// MAXIMUM SPECIFICITY DARK MODE OVERRIDES
+// ================================
+
+// HIGHEST SPECIFICITY: Component host + global dark class + deep + important
+:host-context(.app-dark) ::ng-deep .search-input {
+  background: #2a2a2a !important; // Fixed dark background
+  color: #ffffff !important; // Fixed white text
+  border: 1px solid #404040 !important;
+  
+  &::placeholder {
+    color: #a3a3a3 !important; // Light gray placeholder
+  }
+  
+  &:focus {
+    background: #363636 !important; // Slightly lighter on focus
+    border-color: var(--p-primary-color) !important;
+  }
+  
+  &:disabled {
+    background: #1a1a1a !important;
+    color: #666666 !important;
+  }
+}
+
+// Alternative maximum specificity approach
+.app-dark :host ::ng-deep .search-input {
+  background: #2a2a2a !important;
+  color: #ffffff !important;
+  border: 1px solid #404040 !important;
+  
+  &::placeholder {
+    color: #a3a3a3 !important;
+  }
+  
+  &:focus {
+    background: #363636 !important;
+    border-color: var(--p-primary-color) !important;
+  }
+  
+  &:disabled {
+    background: #1a1a1a !important;
+    color: #666666 !important;
+  }
+}
+
+// Third approach - using attribute selector for maximum specificity
+:host ::ng-deep .search-input[pInputText] {
+  .app-dark & {
+    background: #2a2a2a !important;
+    color: #ffffff !important;
+    border: 1px solid #404040 !important;
+    
+    &::placeholder {
+      color: #a3a3a3 !important;
+    }
+    
+    &:focus {
+      background: #363636 !important;
+      border-color: var(--p-primary-color) !important;
+    }
+    
+    &:disabled {
+      background: #1a1a1a !important;
+      color: #666666 !important;
+    }
   }
 }
 
@@ -176,11 +233,19 @@
   .search-bar-container {
     &.search-bar-center {
       padding: 1.5rem 1rem;
-      min-height: 250px;
+      
+      .search-form {
+        max-width: 800px;
+      }
     }
     
     &.search-bar-top {
       padding: 0.75rem 1rem;
+      margin-top: 80px;
+      
+      .search-form {
+        max-width: 800px;
+      }
     }
   }
 }
@@ -189,20 +254,29 @@
   .search-bar-container {
     &.search-bar-center {
       padding: 1rem 0.75rem;
-      min-height: 200px;
+      min-height: calc(100vh - 150px);
+      
+      .search-form {
+        max-width: 100%;
+      }
     }
     
     &.search-bar-top {
       padding: 0.75rem;
+      margin-top: 60px;
+      
+      .search-form {
+        max-width: 100%;
+      }
     }
   }
   
-  .search-input {
+  :host ::ng-deep .search-input {
     padding: 0.75rem 1rem;
     font-size: 0.95rem;
   }
   
-  .search-button {
+  :host ::ng-deep .search-button {
     padding: 0.75rem 0.875rem;
     min-width: 45px;
     font-size: 1rem;
@@ -217,11 +291,11 @@
   .search-bar-container {
     &.search-bar-center {
       padding: 0.75rem 0.5rem;
-      min-height: 150px;
     }
     
     &.search-bar-top {
       padding: 0.5rem;
+      margin-top: 40px;
     }
   }
   
@@ -229,12 +303,12 @@
     .search-input-group {
       flex-direction: column;
       
-      .search-input {
+      :host ::ng-deep .search-input {
         border-radius: 8px 8px 0 0 !important;
         font-size: 16px; // Prevent iOS zoom
       }
       
-      .search-button {
+      :host ::ng-deep .search-button {
         border-radius: 0 0 8px 8px !important;
         min-width: 45px;
         transform: none;
@@ -242,58 +316,7 @@
         &:hover:not(:disabled) {
           transform: none;
         }
-        
-        i {
-          font-size: 1rem;
-        }
       }
-    }
-  }
-}
-
-// ================================
-// DARK MODE SUPPORT (.app-dark)
-// ================================
-
-.app-dark {
-  .search-bar-container {
-    &.search-bar-top {
-      background: var(--p-surface-900);
-      border-bottom-color: var(--p-surface-700);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    }
-  }
-  
-  .search-form {
-    .search-input-group {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-      
-      &:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      }
-      
-      &:focus-within {
-        box-shadow: 0 4px 12px rgba(var(--p-primary-color-rgb), 0.3);
-      }
-    }
-  }
-  
-  .search-input {
-    background: var(--p-surface-800);
-    color: var(--p-text-color);
-    
-    &:focus {
-      background: var(--p-surface-700);
-    }
-    
-    &:disabled {
-      background: var(--p-surface-600);
-    }
-  }
-  
-  .search-button {
-    &:disabled {
-      background: var(--p-surface-600);
     }
   }
 }

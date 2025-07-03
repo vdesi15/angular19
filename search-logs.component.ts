@@ -27,18 +27,19 @@ import { ActiveSearch } from './models/search.model';
 })
 export class SearchLogsComponent implements OnInit {
   public searchOrchestrator = inject(SearchOrchestratorService);
-  private strategyManager = inject(SearchStrategyManager); // NEW
+  private strategyManager = inject(SearchStrategyManager);
   private route = inject(ActivatedRoute);
-  private router = inject(Router); // NEW
+  private router = inject(Router);
   private filtersService = inject(FiltersService);
 
-  // NEW: ViewChild for search bar to control it programmatically
-  private searchBar = viewChild<SearchBarComponent>('app-search-bar');
+  private searchBar = viewChild<SearchBarComponent>('searchBarRef');
 
   private routeData = toSignal(this.route.data);
-  
-  // NEW: Convert queryParams to signal for reactive URL handling
   private queryParams = toSignal(this.route.queryParams);
+
+  // Flags to prevent duplicate processing
+  private isViewInitialized = false;
+  private hasProcessedInitialParams = false;
 
   public mode: Signal<'search' | 'browse' | 'error'> = computed(() => {
     return this.routeData()?.['mode'] ?? 'search';
@@ -47,45 +48,61 @@ export class SearchLogsComponent implements OnInit {
   public orderedSearches: Signal<ActiveSearch[]> = computed(() => {
     const searches = this.searchOrchestrator.activeSearches();
     
-    // Separate SSE searches (browse/error) from transaction searches
     const sseSearches = searches.filter(s => s.type === 'browse' || s.type === 'error');
     const transactionSearches = searches.filter(s => s.type === 'transaction');
     
-    // Return in order: SSE first, then transactions, then others
     return [...sseSearches, ...transactionSearches];
   });
 
   constructor() {
-    // Existing effect for mode changes
+    // Effect for mode changes
     effect(() => {
       const currentMode = this.mode();
-      console.log(`[SearchLogsComponent] Mode changed to: ${currentMode}. Triggering initial search.`);
+      console.log(`[SearchLogsComponent] Mode changed to: ${currentMode}`);
       this.triggerInitialSearchForMode(currentMode);
     }, { allowSignalWrites: true });
 
-    // NEW: Effect for URL parameter handling
+    // FIXED: Effect for URL parameter changes (not initial load)
     effect(() => {
       const params = this.queryParams();
-      if (params) {
-        console.log('[SearchLogsComponent] Query params changed:', params);
+      
+      // Only process if:
+      // 1. View is initialized
+      // 2. We've already processed initial params (so this is a change)
+      // 3. Params actually exist
+      if (params && this.isViewInitialized && this.hasProcessedInitialParams) {
+        console.log('[SearchLogsComponent] Processing URL parameter CHANGES:', params);
         this.handleUrlParameters(params);
       }
     }, { allowSignalWrites: true });
   }
 
-  // NEW: OnInit for initial URL handling
   ngOnInit() {
-    // Handle initial URL parameters if they exist
+    console.log('[SearchLogsComponent] Component initialized');
+  }
+
+  // FIXED: Only handle initial URL parameters here
+  ngAfterViewInit() {
+    console.log('[SearchLogsComponent] View initialized');
+    this.isViewInitialized = true;
+    
+    // Process INITIAL URL parameters if they exist
     const initialParams = this.route.snapshot.queryParams;
     if (Object.keys(initialParams).length > 0) {
-      console.log('[SearchLogsComponent] Initial URL params:', initialParams);
-      this.handleUrlParameters(initialParams);
+      console.log('[SearchLogsComponent] Processing INITIAL URL params:', initialParams);
+      this.hasProcessedInitialParams = true;
+      
+      // Small delay to ensure everything is ready
+      setTimeout(() => {
+        this.handleUrlParameters(initialParams);
+      }, 100);
+    } else {
+      // No initial params, but mark as processed so effect can handle future changes
+      this.hasProcessedInitialParams = true;
     }
   }
 
-  // NEW: URL parameter handling using strategy manager
   private handleUrlParameters(params: Record<string, any>): void {
-    // Skip if no relevant search parameters
     const hasSearchParams = params['searchText'] || params['jiraId'];
     if (!hasSearchParams) {
       return;
@@ -93,33 +110,44 @@ export class SearchLogsComponent implements OnInit {
 
     console.log('[SearchLogsComponent] Processing URL parameters with strategy manager');
     
-    // Let strategy manager handle URL parameters
     const urlResult = this.strategyManager.handleUrlParameters(params);
     
     if (urlResult && urlResult.shouldTriggerSearch) {
       console.log('[SearchLogsComponent] URL result from strategy:', urlResult);
       
-      // Populate search bar with decoded query
       const searchBarComponent = this.searchBar();
       if (searchBarComponent) {
+        console.log('[SearchLogsComponent] Setting search term:', urlResult.searchQuery);
         searchBarComponent.setSearchTerm(urlResult.searchQuery);
         
         // Auto-trigger search with strategy-specific metadata
         setTimeout(() => {
           console.log('[SearchLogsComponent] Auto-triggering search for:', urlResult.searchQuery);
           this.handleSearchWithMetadata(urlResult.searchQuery, urlResult.metadata);
-        }, 100);
+        }, 150);
+      } else {
+        console.warn('[SearchLogsComponent] Search bar component not available, retrying...');
+        // Retry with longer delay
+        setTimeout(() => {
+          const retryComponent = this.searchBar();
+          if (retryComponent) {
+            retryComponent.setSearchTerm(urlResult.searchQuery);
+            setTimeout(() => {
+              this.handleSearchWithMetadata(urlResult.searchQuery, urlResult.metadata);
+            }, 100);
+          } else {
+            console.error('[SearchLogsComponent] Search bar component not available after retry');
+          }
+        }, 500);
       }
     } else {
       console.log('[SearchLogsComponent] No strategy could handle URL parameters');
     }
   }
 
-  // NEW: Enhanced search handler with metadata support
   private handleSearchWithMetadata(query: string, metadata?: any): void {
     const appName = this.filtersService.filters()?.application[0] ?? 'default-app';
     
-    // Use metadata from URL strategy if available
     const searchType = metadata?.searchType || 'transaction';
     const title = metadata?.searchType === 'jira' 
       ? `JIRA: ${query}` 
@@ -130,11 +158,10 @@ export class SearchLogsComponent implements OnInit {
       query: query,
       title: title,
       appName: appName,
-      metadata: metadata // Pass through strategy metadata
+      metadata: metadata
     });
   }
 
-  // EXISTING: Keep your original triggerInitialSearchForMode method
   triggerInitialSearchForMode(mode: 'browse' | 'error' | 'search'): void {
     if (mode === 'search') {
       return;
@@ -151,28 +178,22 @@ export class SearchLogsComponent implements OnInit {
     this.searchOrchestrator.performSearch(request);
   }
 
-  // ENHANCED: Update your existing handleSearch method to use strategy manager for URL updates
   handleSearch(query: string): void {
     const appName = this.filtersService.filters()?.application[0] ?? 'default-app';
     
-    // Perform the search
     this.searchOrchestrator.performSearch({
-      type: 'transaction', // Will be auto-detected by strategy manager
+      type: 'transaction',
       query: query,
       title: `Search Results for: ${query}`,
       appName: appName
     });
 
-    // NEW: Update URL using strategy manager
     this.updateUrlWithStrategy(query);
   }
 
-  // NEW: Update URL using appropriate strategy
   private updateUrlWithStrategy(query: string): void {
     const currentParams = { ...this.route.snapshot.queryParams };
     const updatedParams = this.strategyManager.updateUrlForSearch(query, currentParams);
-    
-    console.log('[SearchLogsComponent] Updating URL params:', updatedParams);
     
     this.router.navigate([], {
       relativeTo: this.route,
@@ -181,21 +202,16 @@ export class SearchLogsComponent implements OnInit {
     });
   }
 
-  // NEW: Method to clear searches and clean up URL
   public clearAllSearches(): void {
     this.searchOrchestrator.clearAllSearches();
     
-    // Clear search bar
     const searchBarComponent = this.searchBar();
     if (searchBarComponent) {
       searchBarComponent.clearSearch();
     }
     
-    // Clean up URL using strategy manager
     const currentParams = { ...this.route.snapshot.queryParams };
     const cleanedParams = this.strategyManager.cleanupUrlParams('', currentParams);
-    
-    console.log('[SearchLogsComponent] Cleaning URL params:', cleanedParams);
     
     this.router.navigate([], {
       relativeTo: this.route,
