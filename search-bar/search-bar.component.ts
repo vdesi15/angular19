@@ -22,6 +22,11 @@ export class SearchBarComponent {
   // Service injections
   private searchOrchestrator = inject(SearchOrchestratorService);
 
+  // JIRA Dialog States
+  public showJiraUploadDialog: WritableSignal<boolean> = signal(false);
+  public showTestCycleDialog: WritableSignal<boolean> = signal(false);
+  public currentTestCycleId: WritableSignal<string> = signal('');
+
   // ================================
   // REACTIVE STATE SIGNALS
   // ================================
@@ -39,6 +44,22 @@ export class SearchBarComponent {
   // ================================
   // COMPUTED SIGNALS
   // ================================
+
+  public detectionResult = computed(() => {
+    const query = this.searchTerm();
+    if (!query.trim()) return null;
+    return this.jiraService.detectJiraId(query);
+  });
+
+  public isValidQuery = computed(() => {
+    const result = this.detectionResult();
+    return result ? result.isValid : true;
+  });
+
+  public isTestCycle = computed(() => {
+    const result = this.detectionResult();
+    return result?.isValid && result.type === 'test-cycle';
+  });
 
   public canSearch = computed(() => {
     const term = this.searchTerm().trim();
@@ -97,16 +118,73 @@ export class SearchBarComponent {
   // EVENT HANDLERS
   // ================================
 
-  public onSearchSubmit(event: Event): void {
-    event.preventDefault();
-    
-    const term = this.searchTerm().trim();
-    if (!term || this.isSearching()) return;
+ // ================================
+  // MAIN SEARCH HANDLER - ENHANCED
+  // ================================
 
-    console.log('[SearchBar] Submitting search:', term);
+  public async performSearch(): Promise<void> {
+    const query = this.searchTerm();
+    if (!query.trim()) return;
+
+    this.isSearching.set(true);
+
+    try {
+      const detectionResult = this.detectionResult();
+      
+      // Handle test cycle specially - show dialog in search mode
+      if (detectionResult?.isValid && detectionResult.type === 'test-cycle') {
+        await this.handleTestCycleSearch(detectionResult.id);
+        return;
+      }
+
+      // Handle other search types normally
+      await this.handleRegularSearch(query);
+      
+    } catch (error) {
+      console.error('[SearchBar] Search failed:', error);
+    } finally {
+      this.isSearching.set(false);
+    }
+  }
+
+  /**
+   * Handle test cycle search - show JIRA dialog in search mode
+   */
+  private async handleTestCycleSearch(testCycleId: string): Promise<void> {
+    console.log(`[SearchBar] Handling test cycle search: ${testCycleId}`);
     
-    // Emit the search event
-    this.search.emit(term);
+    // Set the JIRA input and show dialog in search mode
+    this.showJiraUploadDialog.set(true);
+    // The effect in the JIRA component will auto-load executions
+    
+    this.isSearching.set(false);
+  }
+
+  /**
+   * Handle regular search (non-test-cycle)
+   */
+  private async handleRegularSearch(query: string): Promise<void> {
+    console.log(`[SearchBar] Handling regular search: ${query}`);
+    
+    // Emit to parent (search-logs component) which will handle strategy detection
+    this.search.emit(query.trim());
+  }
+
+  // ================================
+  // JIRA DIALOG HANDLERS
+  // ================================
+
+  /**
+   * Handle search request from JIRA dialog
+   */
+  public onJiraSearchRequested(event: { query: string; type: 'cycle' | 'execution' }): void {
+    console.log('[SearchBar] JIRA search requested:', event);
+    
+    // Emit the search to parent component
+    this.search.emit(event.query);
+    
+    // Close dialog
+    this.showJiraUploadDialog.set(false);
   }
 
   // ================================
