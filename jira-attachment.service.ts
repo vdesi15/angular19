@@ -58,6 +58,11 @@ export class EnhancedJiraService {
   private searchFilterService = inject(SearchFilterService);
   private downloadService = inject(TransactionDownloadService);
 
+    private _pendingJiraId: WritableSignal<string> = signal('');
+    private _isDialogMode: WritableSignal<'upload' | 'search'> = signal('upload');// Public readonly signals
+    public readonly pendingJiraId = this._pendingJiraId.asReadonly();
+    public readonly isDialogMode = this._isDialogMode.asReadonly();
+
   // Configuration
   private jiraConfig: JiraConfig = {
     baseUrl: '/api', // Your backend API base
@@ -623,6 +628,38 @@ export class EnhancedJiraService {
   }
 
   /**
+ * Set pending JIRA ID for dialog auto-population
+ */
+public setPendingJiraId(jiraId: string, mode: 'upload' | 'search' = 'search'): void {
+  console.log(`[JiraService] Setting pending JIRA ID: ${jiraId}, mode: ${mode}`);
+  this._pendingJiraId.set(jiraId);
+  this._isDialogMode.set(mode);
+}
+
+/**
+ * Clear pending JIRA ID (called when dialog opens and consumes the value)
+ */
+public clearPendingJiraId(): void {
+  console.log('[JiraService] Clearing pending JIRA ID');
+  this._pendingJiraId.set('');
+}
+
+/**
+ * Get and consume pending JIRA ID (one-time use)
+ */
+public consumePendingJiraId(): { jiraId: string; mode: 'upload' | 'search' } {
+  const jiraId = this._pendingJiraId();
+  const mode = this._isDialogMode();
+  
+  console.log(`[JiraService] Consuming pending JIRA ID: ${jiraId}, mode: ${mode}`);
+  
+  // Clear after consuming
+  this.clearPendingJiraId();
+  
+  return { jiraId, mode };
+}
+
+/**
  * Clear test cycle executions and reset state
  */
 public clearTestCycleExecutions(): void {
@@ -633,15 +670,6 @@ public clearTestCycleExecutions(): void {
     showExecutions: false,
     selectedExecutions: []
   }));
-}
-
-/**
- * Set JIRA input for external components (like auto-population)
- */
-public setJiraInput(jiraId: string): void {
-  console.log(`[EnhancedJiraService] External JIRA input set: ${jiraId}`);
-  // This is mainly for external coordination, 
-  // the actual input is managed by the dialog component
 }
 
 /**

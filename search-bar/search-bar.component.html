@@ -58,7 +58,6 @@
 <app-jira-upload-dialog
   [visible]="showJiraUploadDialog()"
   [mode]="'search'"
-  [initialJiraId]="searchTerm()"
   [transactionData]="undefined"
   (visibleChange)="showJiraUploadDialog.set($event)"
   (searchRequested)="onJiraSearchRequested($event)">

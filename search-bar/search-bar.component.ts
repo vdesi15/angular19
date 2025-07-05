@@ -153,6 +153,7 @@ export class SearchBarComponent {
   private async handleTestCycleSearch(testCycleId: string): Promise<void> {
     console.log(`[SearchBar] Handling test cycle search: ${testCycleId}`);
     
+    this.jiraService.setPendingJiraId(term, 'search');
     // Set the JIRA input and show dialog in search mode
     this.showJiraUploadDialog.set(true);
     // The effect in the JIRA component will auto-load executions
