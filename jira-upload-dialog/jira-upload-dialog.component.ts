@@ -39,10 +39,11 @@ export type JiraDialogMode = 'upload' | 'search';
     templateUrl: './jira-upload-dialog.component.html',
     styleUrls: ['./jira-upload-dialog.component.scss']
 })
-export class JiraUploadDialogComponent implements OnInit, OnChanges {
+export class JiraUploadDialogComponent implements OnInit {
     @Input({ required: true }) visible = false;
     @Input({ required: true }) transactionData: TransactionDetailsResponse | undefined = undefined;
     @Input() mode: JiraDialogMode = 'upload';
+    @Input() initialJiraId: string = '';
     @Output() visibleChange = new EventEmitter<boolean>();
     @Output() searchRequested = new EventEmitter<{ query: string; type: 'cycle' | 'execution' }>();
 
@@ -195,23 +196,61 @@ export class JiraUploadDialogComponent implements OnInit, OnChanges {
         });
 
         effect(() => {
-            if (this.visible) {
-                const pendingId = this.jiraService.pendingJiraId();
-                if (pendingId && !this.jiraInput()) {
-                this.jiraInput.set(pendingId);
-                this.jiraService.clearPendingJiraId();
-                }
+            const input = this.jiraInput();
+            const result = this.detectionResult();
+
+            if (this.visible && result?.isValid && result.type === 'test-cycle') {
+                console.log(`[JiraDialog] Auto-loading executions for: ${result.id}`);
+                this.autoLoadExecutions(result.id);
+            } else if (this.visible && input && (!result?.isValid || result.type !== 'test-cycle')) {
+                // Clear executions if input is no longer valid test cycle
+                console.log('[JiraDialog] Input no longer valid test cycle, clearing executions');
+                this.jiraService.clearTestCycleExecutions();
+                this.selectedExecution.set(null);
             }
-            });
+        });
     }
 
+    ngOnChanges(changes: SimpleChanges): void {
+        console.log('[JiraDialog] ngOnChanges called with:', changes);
+
+        // Handle visible changes
+        if (changes['visible']) {
+            console.log('[JiraDialog] Visible changed from', changes['visible'].previousValue, 'to', changes['visible'].currentValue);
+        }
+
+        // Handle initialJiraId changes
+        if (changes['initialJiraId']) {
+            console.log('[JiraDialog] InitialJiraId changed from', changes['initialJiraId'].previousValue, 'to', changes['initialJiraId'].currentValue);
+
+            const newValue = changes['initialJiraId'].currentValue;
+            if (this.visible && newValue && newValue.trim()) {
+                console.log(`[JiraDialog] Setting input in ngOnChanges: ${newValue}`);
+                this.jiraInput.set(newValue);
+            }
+        }
+
+        // Handle case where both visible and initialJiraId are set at the same time
+        if (changes['visible'] && changes['initialJiraId']) {
+            const isVisible = changes['visible'].currentValue;
+            const jiraId = changes['initialJiraId'].currentValue;
+
+            if (isVisible && jiraId && jiraId.trim()) {
+                console.log(`[JiraDialog] Setting input from both changes: ${jiraId}`);
+                this.jiraInput.set(jiraId);
+            }
+        }
+    }
 
     ngOnInit(): void {
-    const pending = this.jiraService.consumePendingJiraId();
-    if (pending.jiraId) {
-        this.jiraInput.set(pending.jiraId);
+        console.log('[JiraDialog] Component initialized');
+
+        // Handle initial population on component init
+        if (this.visible && this.initialJiraId && this.initialJiraId.trim()) {
+            console.log(`[JiraDialog] Initial population on init: ${this.initialJiraId}`);
+            this.jiraInput.set(this.initialJiraId);
+        }
     }
-}
 
     // ================================
     // EVENT HANDLERS
