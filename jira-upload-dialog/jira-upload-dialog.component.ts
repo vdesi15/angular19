@@ -168,24 +168,31 @@ export class JiraUploadDialogComponent {
 
   constructor() {
     // Reset state when dialog is opened/closed
-     effect(() => {
-      if (!this.visible) {
+     if (!this.visible) {
         this.jiraService.resetState();
         this.jiraInput.set('');
-        this.selectedExecution.set(null);
+        this.selectedExecution.set([]);
         this.jiraService.clearTestCycleExecutions();
-      } else if (this.visible && this.initialJiraId) {
-        console.log(`[JiraDialog] Auto-populating with: ${this.initialJiraId}`);
-        this.jiraInput.set(this.initialJiraId);
       }
-    });
 
     // Update selected rows when service selection changes
+    /*
     effect(() => {
       const executions = this.testCycleExecutions();
       const selectedIds = this.uploadState().selectedExecutions;
       const selected = executions.filter(exec => selectedIds.includes(exec.id));
       this.selectedExecution.set(selected);
+    });
+    */
+
+    effect(() => {
+      const initialId = this.initialJiraId;
+      const isVisible = this.visible;
+      
+      if (isVisible && initialId && initialId.trim()) {
+        console.log(`[JiraDialog] Setting initial JIRA ID: ${initialId}`);
+        this.jiraInput.set(initialId);
+      }
     });
 
     effect(() => {
