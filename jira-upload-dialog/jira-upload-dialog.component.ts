@@ -20,6 +20,15 @@ import { TransactionDetailsResponse } from '../../models/transactionDetails/tran
 
 export type JiraDialogMode = 'upload' | 'search';
 
+TestCycleExecutions{
+  id: number;
+  testCaseKey: string <-- Test case id
+  testcaseUrl: string; <-- test case url
+  key: string;  <-- Execution id
+  keyUrl: string; <-- execution url
+  status: string;
+}
+
 @Component({
     selector: 'app-jira-upload-dialog',
     standalone: true,
@@ -40,503 +49,353 @@ export type JiraDialogMode = 'upload' | 'search';
     styleUrls: ['./jira-upload-dialog.component.scss']
 })
 export class JiraUploadDialogComponent implements OnInit {
-    @Input({ required: true }) visible = false;
-    @Input({ required: true }) transactionData: TransactionDetailsResponse | undefined = undefined;
-    @Input() mode: JiraDialogMode = 'upload';
-    @Input() initialJiraId: string = '';
-    @Output() visibleChange = new EventEmitter<boolean>();
-    @Output() searchRequested = new EventEmitter<{ query: string; type: 'cycle' | 'execution' }>();
+@Input({ required: true }) visible = false;
+  @Input({ required: true }) transactionData: TransactionDetailsResponse | undefined = undefined;
+  @Input() mode: JiraDialogMode = 'upload';
+  @Input() initialJiraId: string = '';
+  
+  @Output() visibleChange = new EventEmitter<boolean>();
+  @Output() dialogClosed = new EventEmitter<void>();
+  @Output() searchRequested = new EventEmitter<{ query: string; type: 'cycle' | 'execution' }>();
 
+  private jiraService = inject(EnhancedJiraService);
 
+  // ================================
+  // STATE SIGNALS
+  // ================================
 
-    private jiraService = inject(EnhancedJiraService);
+  public jiraInput: WritableSignal<string> = signal('');
+  public selectedExecution: WritableSignal<TestCycleExecution | null> = signal(null);
 
-    // ================================
-    // STATE SIGNALS
-    // ================================
+  // ================================
+  // COMPUTED SIGNALS
+  // ================================
 
-    public jiraInput: WritableSignal<string> = signal('');
-    public selectedExecution: WritableSignal<TestCycleExecution[]> = signal([]);
+  public readonly detectionResult = computed(() => {
+    const input = this.jiraInput();
+    if (!input.trim()) return null;
+    return this.jiraService.detectJiraId(input);
+  });
 
-    // ================================
-    // COMPUTED SIGNALS
-    // ================================
+  public readonly isValidInput = computed(() => {
+    const result = this.detectionResult();
+    return result?.isValid ?? false;
+  });
 
-    public readonly detectionResult = computed(() => {
-        const input = this.jiraInput();
-        if (!input.trim()) return null;
-        return this.jiraService.detectJiraId(input);
+  public readonly dialogTitle = computed(() => {
+    return this.mode === 'upload'
+      ? 'Upload Transaction Data to JIRA'
+      : 'JIRA Search & Execution Selection';
+  });
+
+  public readonly inputPlaceholder = computed(() => {
+    return 'Enter JIRA ID (e.g., APP-123, APP-C123, APP-T123) or paste JIRA URL';
+  });
+
+  public readonly jiraTypeDisplay = computed(() => {
+    const result = this.detectionResult();
+    if (!result) return '';
+
+    switch (result.type) {
+      case 'jira-id': return 'JIRA Ticket';
+      case 'test-case': return 'Test Case';
+      case 'test-cycle': return 'Test Cycle';
+      case 'execution': return 'Test Execution';
+      default: return 'Invalid Format';
+    }
+  });
+
+  // SIMPLIFIED BUTTON LOGIC
+  public readonly primaryButtonText = computed(() => {
+  const selected = this.selectedExecution();
+  const result = this.detectionResult();
+  
+  if (this.mode === 'search') {
+    if (selected) {
+      return `Search ${selected.key}`; // "Search APP-E11"
+    }
+    if (result?.isValid) {
+      return `Search ${result.id}`; // "Search APP-C1"
+    }
+  } else {
+    // Upload mode
+    if (selected) {
+      return `Upload to ${selected.key}`;
+    }
+    if (result?.isValid) {
+      return `Upload to ${result.id}`;
+    }
+  }
+  
+  return this.mode === 'search' ? 'Search' : 'Upload';
+});
+
+public readonly showPrimaryButton = computed(() => {
+  return this.isValidInput();
+});
+
+  public readonly showExecutionsTable = computed(() => {
+    const result = this.detectionResult();
+    const executions = this.testCycleExecutions();
+    
+    return result?.isValid && 
+           result.type === 'test-cycle' && 
+           executions.length > 0;
+  });
+
+  // Service state
+  public readonly uploadState = this.jiraService.uploadState;
+  public readonly testCycleExecutions = this.jiraService.testCycleExecutions;
+
+  // ================================
+  // LIFECYCLE HOOKS
+  // ================================
+
+  ngOnInit(): void {
+    console.log('[JiraDialog] Component initialized');
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Handle initial JIRA ID when it changes
+    if (changes['initialJiraId'] && changes['initialJiraId'].currentValue) {
+      const newJiraId = changes['initialJiraId'].currentValue;
+      console.log(`[JiraDialog] Setting initial JIRA ID: ${newJiraId}`);
+      this.jiraInput.set(newJiraId);
+      
+      // Auto-load executions if it's a test cycle
+      this.autoLoadExecutionsIfNeeded(newJiraId);
+    }
+    
+    // Handle visibility changes
+    if (changes['visible']) {
+      const isVisible = changes['visible'].currentValue;
+      if (!isVisible) {
+        this.resetDialogState();
+      }
+    }
+  }
+
+  // ================================
+  // EFFECTS
+  // ================================
+
+  constructor() {
+    // Handle visible state and initial values
+    effect(() => {
+      const isVisible = this.visible;
+      const initial = this.initialJiraId;
+      
+      if (isVisible && initial && initial.trim() && !this.jiraInput()) {
+        console.log(`[JiraDialog] Effect - Setting initial JIRA ID: ${initial}`);
+        this.jiraInput.set(initial);
+        this.autoLoadExecutionsIfNeeded(initial);
+      }
     });
+  }
 
-    public readonly isValidInput = computed(() => {
-        const result = this.detectionResult();
-        return result?.isValid ?? false;
-    });
+  // ================================
+  // AUTO-LOADING LOGIC
+  // ================================
 
-    public readonly dialogTitle = computed(() => {
-        return this.mode === 'upload'
-            ? 'Upload Transaction Data to JIRA'
-            : 'JIRA Search';
-    });
+  /**
+   * Auto-load executions if the JIRA ID is a test cycle
+   */
+  private async autoLoadExecutionsIfNeeded(jiraId: string): Promise<void> {
+    if (!jiraId.trim()) return;
+    
+    const detection = this.jiraService.detectJiraId(jiraId);
+    
+    if (detection.isValid && detection.type === 'test-cycle' && this.mode === 'search') {
+      console.log(`[JiraDialog] Auto-loading executions for test cycle: ${detection.id}`);
+      
+      try {
+        await this.jiraService.getTestCycleExecutions(detection.id);
+        console.log(`[JiraDialog] Auto-loaded ${this.testCycleExecutions().length} executions`);
+      } catch (error) {
+        console.error('[JiraDialog] Failed to auto-load executions:', error);
+      }
+    }
+  }
 
-    public readonly inputErrorMessage = computed(() => {
-        const result = this.detectionResult();
-        return result?.errorMessage || '';
-    });
+  // ================================
+  // EVENT HANDLERS
+  // ================================
 
-    public readonly jiraTypeDisplay = computed(() => {
-        const result = this.detectionResult();
-        if (!result) return '';
+  /**
+   * Handle dialog hide event
+   */
+  public onDialogHide(): void {
+    console.log('[JiraDialog] Dialog hiding');
+    this.visibleChange.emit(false);
+    this.dialogClosed.emit();
+    this.resetDialogState();
+  }
 
+  /**
+   * Handle manual JIRA input change and auto-load executions
+   */
+  public onJiraInputChange(): void {
+    const input = this.jiraInput();
+    console.log(`[JiraDialog] JIRA input changed: ${input}`);
+    
+    // Clear previous state
+    this.jiraService.clearTestCycleExecutions();
+    this.selectedExecution.set(null);
+    
+    // Auto-load if it's a test cycle
+    this.autoLoadExecutionsIfNeeded(input);
+  }
+
+  /**
+   * Handle execution row click for selection (SIMPLIFIED)
+   */
+  public onExecutionRowSelect(execution: TestCycleExecution): void {
+  const current = this.selectedExecution();
+  // Toggle selection
+  if (current?.id === execution.id) {
+    this.selectedExecution.set(null); // Deselect
+  } else {
+    this.selectedExecution.set(execution); // Select new one
+  }
+}
+
+  /**
+   * Check if execution is selected (SIMPLIFIED)
+   */
+  public isExecutionSelected(execution: TestCycleExecution): boolean {
+  const current = this.selectedExecution();
+  return current?.id === execution.id;
+}
+
+
+  // ================================
+  // ACTION HANDLERS
+  // ================================
+
+  /**
+   * Perform primary action (SIMPLIFIED)
+   */
+  public async performPrimaryAction(): Promise<void> {
+    const selected = this.selectedExecution();
+  const result = this.detectionResult();
+  
+  if (!result?.isValid) return;
+
+  if (this.mode === 'search') {
+    if (selected) {
+      // Search specific execution
+      this.searchRequested.emit({
+        query: selected.key,
+        type: 'execution'
+      });
+    } else {
+      // Search the cycle
+      this.searchRequested.emit({
+        query: result.id,
+        type: 'cycle'
+      });
+    }
+    this.visibleChange.emit(false);
+  } else {
+    // Upload mode - keep your existing upload logic
+    await this.performUpload(result, selected);
+  }
+  }
+
+  /**
+   * Perform upload action
+   */
+  private async performUpload(result: JiraIdDetectionResult, selectedExecution: TestCycleExecution | null): Promise<void> {
+    try {
+      if (selectedExecution) {
+        // Upload to specific execution
+        await this.jiraService.uploadToTestExecution(selectedExecution.id, this.transactionData);
+      } else {
+        // Upload to JIRA ID, test case, or test cycle
         switch (result.type) {
-            case 'jira-id': return 'JIRA Ticket';
-            case 'test-case': return 'Test Case';
-            case 'test-cycle': return 'Test Cycle';
-            case 'execution': return 'Execution (Not Supported)';
-            default: return 'Invalid Format';
+          case 'jira-id':
+            await this.jiraService.uploadToJiraId(result.id, this.transactionData);
+            break;
+          case 'test-case':
+            await this.jiraService.uploadToTestCase(result.id, this.transactionData);
+            break;
+          case 'test-cycle':
+            await this.jiraService.uploadToTestCycleExecutions(result.id, this.transactionData);
+            break;
         }
-    });
+      }
+      
+      console.log('[JiraDialog] Upload completed successfully');
+    } catch (error) {
+      console.error('[JiraDialog] Upload failed:', error);
+    }
+  }
 
-    public readonly primaryActionText = computed(() => {
-        const selectedExec = this.selectedExecution();
+  /**
+   * Clear messages
+   */
+  public clearMessages(): void {
+    this.jiraService.clearMessages();
+  }
 
-        if (this.mode === 'upload') {
-            return selectedExec
-                ? `Upload to ${selectedExec.key}`
-                : `Upload to ${this.jiraInput()}`;
-        } else {
-            return selectedExec
-                ? `Search ${selectedExec.key}`
-                : `Search ${this.jiraInput()}`;
-        }
-    });
-
-    public readonly secondaryActionText = computed(() => {
-        const result = this.detectionResult();
-
-        if (!result?.isValid || result.type !== 'test-cycle') {
-            return null;
-        }
-
-        return this.mode === 'upload'
-            ? `Upload to ${result.id}`
-            : `Search ${result.id}`;
-    });
-
-    public readonly showBothActions = computed(() => {
-        const result = this.detectionResult();
-        const hasSelectedExecution = this.selectedExecution() !== null;
-
-        return result?.isValid &&
-            result.type === 'test-cycle' &&
-            hasSelectedExecution &&
-            this.testCycleExecutions().length > 0;
-    });
-
-    public readonly actionButtonText = computed(() => {
-        if (this.mode === 'upload') {
-            const result = this.detectionResult();
-            if (!result) return 'Upload';
-
-            switch (result.type) {
-                case 'test-cycle': return `Upload to ${result.id}`;
-                case 'test-case': return `Upload to ${result.id}`;
-                case 'jira-id': return `Upload to ${result.id}`;
-                default: return 'Upload';
-            }
-        } else {
-            // Search mode
-            const selectedExecution = this.selectedExecution()[0];
-            return selectedExecution
-                ? `Search ${selectedExecution.key}`
-                : `Search ${this.jiraInput()}`;
-        }
-    });
-
-    public readonly inputPlaceholder = computed(() => {
-        return 'Enter JIRA ID (e.g., APP-123, APP-C123, APP-T123) or paste JIRA URL';
-    });
-
-    // Service state
-    public readonly uploadState = this.jiraService.uploadState;
-    public readonly testCycleExecutions = this.jiraService.testCycleExecutions;
-    public readonly hasSelectedExecutions = this.jiraService.hasSelectedExecutions;
-
-    // ================================
-    // EFFECTS
-    // ================================
-
-    constructor() {
-        // Reset state when dialog is opened/closed
-        if (!this.visible) {
-            this.jiraService.resetState();
-            this.jiraInput.set('');
-            this.selectedExecution.set([]);
-            this.jiraService.clearTestCycleExecutions();
-        }
-
-        // Update selected rows when service selection changes
-        /*
-        effect(() => {
-          const executions = this.testCycleExecutions();
-          const selectedIds = this.uploadState().selectedExecutions;
-          const selected = executions.filter(exec => selectedIds.includes(exec.id));
-          this.selectedExecution.set(selected);
-        });
-        */
-
-        effect(() => {
-            const isVisible = this.visible;
-            const initial = this.initialJiraId;
-            
-            if (isVisible && initial && initial.trim() && !this.jiraInput()) {
-                console.log(`[JiraDialog] Effect - Setting initial JIRA ID: ${initial}`);
-                this.jiraInput.set(initial);
-                this.autoLoadExecutionsIfNeeded(initial);
-            }
-            });
-
-        effect(() => {
-            const input = this.jiraInput();
-            const result = this.detectionResult();
-
-            if (this.visible && result?.isValid && result.type === 'test-cycle') {
-                console.log(`[JiraDialog] Auto-loading executions for: ${result.id}`);
-                this.autoLoadExecutions(result.id);
-            } else if (this.visible && input && (!result?.isValid || result.type !== 'test-cycle')) {
-                console.log('[JiraDialog] Input no longer valid test cycle, clearing executions');
-                this.jiraService.clearTestCycleExecutions();
-                this.selectedExecution.set(null);
-            }
-        });
+  /**
+   * Load executions manually
+   */
+  public async loadExecutions(): Promise<void> {
+    const result = this.detectionResult();
+    
+    if (!result?.isValid || result.type !== 'test-cycle') {
+      console.warn('[JiraDialog] Cannot load executions - not a valid test cycle');
+      return;
     }
 
-    ngOnChanges(changes: SimpleChanges): void {
-        console.log('[JiraDialog] ngOnChanges called with:', changes);
-
-        // Handle visible changes
-        if (changes['visible']) {
-            console.log('[JiraDialog] Visible changed from', changes['visible'].previousValue, 'to', changes['visible'].currentValue);
-        }
-
-        // Handle initialJiraId changes
-        if (changes['initialJiraId']) {
-            console.log('[JiraDialog] InitialJiraId changed from', changes['initialJiraId'].previousValue, 'to', changes['initialJiraId'].currentValue);
-
-            const newValue = changes['initialJiraId'].currentValue;
-            if (this.visible && newValue && newValue.trim()) {
-                console.log(`[JiraDialog] Setting input in ngOnChanges: ${newValue}`);
-                this.jiraInput.set(newValue);
-            }
-        }
-
-        // Handle case where both visible and initialJiraId are set at the same time
-        if (changes['visible'] && changes['initialJiraId']) {
-            const isVisible = changes['visible'].currentValue;
-            const jiraId = changes['initialJiraId'].currentValue;
-
-            if (isVisible && jiraId && jiraId.trim()) {
-                console.log(`[JiraDialog] Setting input from both changes: ${jiraId}`);
-                this.jiraInput.set(jiraId);
-            }
-        }
+    try {
+      await this.jiraService.getTestCycleExecutions(result.id);
+      console.log(`[JiraDialog] Manually loaded ${this.testCycleExecutions().length} executions`);
+    } catch (error) {
+      console.error('[JiraDialog] Failed to load executions:', error);
     }
+  }
 
-    ngOnInit(): void {
-        console.log('[JiraDialog] Component initialized');
+  // ================================
+  // UTILITY METHODS
+  // ================================
 
-        // Handle initial population on component init
-        if (this.visible && this.initialJiraId && this.initialJiraId.trim()) {
-            console.log(`[JiraDialog] Initial population on init: ${this.initialJiraId}`);
-            this.jiraInput.set(this.initialJiraId);
-        }
+  /**
+   * Reset dialog state
+   */
+  private resetDialogState(): void {
+    console.log('[JiraDialog] Resetting dialog state');
+    this.selectedExecution.set(null);
+    this.jiraService.clearTestCycleExecutions();
+    this.jiraService.clearMessages();
+  }
+
+  /**
+   * Track by function for executions table
+   */
+  public trackByExecutionId(index: number, execution: TestCycleExecution): string {
+    return execution.id;
+  }
+
+  /**
+   * Get badge severity for execution status
+   */
+  public getStatusSeverity(status: string): string {
+    switch (status?.toLowerCase()) {
+      case 'pass':
+      case 'passed':
+        return 'success';
+      case 'fail':
+      case 'failed':
+        return 'danger';
+      case 'blocked':
+        return 'warning';
+      case 'todo':
+      case 'not executed':
+        return 'secondary';
+      default:
+        return 'info';
     }
-
-    // ================================
-    // EVENT HANDLERS
-    // ================================
-
-    /**
-     * Handle dialog close properly
-     */
-    public onDialogHide(): void {
-        console.log('[JiraDialog] Dialog hide requested');
-        this.visibleChange.emit(false);
-    }
-
-    /**
-     * Handle explicit cancel button
-     */
-    public onCancel(): void {
-        console.log('[JiraDialog] Cancel button clicked');
-        this.visibleChange.emit(false);
-    }
-
-    /**
-     * Handle execution selection change
-     */
-    public onExecutionSelect(execution: TestCycleExecution): void {
-        console.log('[JiraDialog] Execution selected:', execution.key);
-        this.selectedExecution.set(execution);
-    }
-
-    /**
-     * Handle execution deselection
-     */
-    public onExecutionDeselect(): void {
-        console.log('[JiraDialog] Execution deselected');
-        this.selectedExecution.set(null);
-    }
-
-    /**
-     * ENHANCED: Handle primary action (execution-specific)
-     */
-    public async performPrimaryAction(): Promise<void> {
-        const selectedExec = this.selectedExecution();
-
-        if (this.mode === 'upload') {
-            if (selectedExec) {
-                return this.performExecutionUpload(selectedExec);
-            } else {
-                return this.performCycleUpload();
-            }
-        } else {
-            if (selectedExec) {
-                return this.performExecutionSearch(selectedExec);
-            } else {
-                return this.performCycleSearch();
-            }
-        }
-    }
-
-    /**
-     * ENHANCED: Handle secondary action (cycle-level)
-     */
-    public async performSecondaryAction(): Promise<void> {
-        if (this.mode === 'upload') {
-            return this.performCycleUpload();
-        } else {
-            return this.performCycleSearch();
-        }
-    }
-
-    /**
-     * Upload to specific execution
-     */
-    private async performExecutionUpload(execution: TestCycleExecution): Promise<void> {
-        console.log(`[JiraDialog] Uploading to execution: ${execution.key}`);
-
-        try {
-            await this.jiraService.uploadToJira(execution.key, this.transactionData);
-            // ENHANCED: Don't close dialog after upload, stay open
-            console.log('[JiraDialog] Upload completed, staying in dialog');
-        } catch (error) {
-            console.error('[JiraDialog] Execution upload failed:', error);
-        }
-    }
-
-    /**
-     * Upload to test cycle
-     */
-    private async performCycleUpload(): Promise<void> {
-        const result = this.detectionResult();
-        if (!result?.isValid) {
-            console.error('[JiraDialog] Invalid JIRA input for cycle upload');
-            return;
-        }
-
-        console.log(`[JiraDialog] Uploading to cycle: ${result.id}`);
-
-        try {
-            if (result.type === 'test-cycle') {
-                await this.jiraService.uploadToTestCycleExecutions(result.id, this.transactionData);
-            } else {
-                await this.jiraService.uploadToJira(result.id, this.transactionData);
-            }
-            // ENHANCED: Don't close dialog after upload, stay open
-            console.log('[JiraDialog] Upload completed, staying in dialog');
-        } catch (error) {
-            console.error('[JiraDialog] Cycle upload failed:', error);
-        }
-    }
-
-    /**
-     * Search specific execution
-     */
-    private async performExecutionSearch(execution: TestCycleExecution): Promise<void> {
-        console.log(`[JiraDialog] Searching execution: ${execution.key}`);
-
-        this.searchRequested.emit({
-            query: execution.key,
-            type: 'execution'
-        });
-
-        this.visibleChange.emit(false);
-    }
-
-    /**
-     * Search test cycle
-     */
-    private async performCycleSearch(): Promise<void> {
-        const result = this.detectionResult();
-        if (!result?.isValid) {
-            console.error('[JiraDialog] Invalid JIRA input for cycle search');
-            return;
-        }
-
-        console.log(`[JiraDialog] Searching cycle: ${result.id}`);
-
-        this.searchRequested.emit({
-            query: result.id,
-            type: 'cycle'
-        });
-
-        this.visibleChange.emit(false);
-    }
-
-    /**
-     * Set JIRA input from external source (for auto-population)
-     */
-    public setJiraInput(jiraId: string): void {
-        console.log(`[JiraDialog] Setting JIRA input: ${jiraId}`);
-        this.jiraInput.set(jiraId);
-    }
-
-    /**
-     * Get associated executions for test cycle
-     */
-    public async getAssociatedExecutions(): Promise<void> {
-        const result = this.detectionResult();
-        if (!result || result.type !== 'test-cycle') return;
-
-        try {
-            await this.jiraService.getTestCycleExecutions(result.id);
-        } catch (error) {
-            console.error('[JiraUploadDialog] Failed to get executions:', error);
-        }
-    }
-
-    /**
-     * Load executions automatically for search mode from search bar
-     */
-    private async autoLoadExecutions(testCycleId: string): Promise<void> {
-        try {
-            console.log(`[JiraUploadDialog] Auto-loading executions for search mode: ${testCycleId}`);
-            await this.jiraService.getTestCycleExecutions(testCycleId);
-        } catch (error) {
-            console.error('[JiraUploadDialog] Auto-load executions failed:', error);
-        }
-    }
-
-    /**
-     * Handle execution row selection
-     */
-    public onExecutionSelectionChange(execution: TestCycleExecution, checked: boolean): void {
-        if (checked) {
-            this.jiraService.toggleExecutionSelection(execution.id);
-        } else {
-            this.jiraService.toggleExecutionSelection(execution.id);
-        }
-    }
-
-    /**
-     * Check if execution is selected
-     */
-    public isExecutionSelected(execution: TestCycleExecution): boolean {
-        return this.uploadState().selectedExecutions.includes(execution.id);
-    }
-
-    /**
-     * Upload to regular JIRA (ticket, test case, or test cycle)
-     */
-    public async uploadToJira(): Promise<void> {
-        const result = this.detectionResult();
-        if (!result || !result.isValid) return;
-
-        try {
-            switch (result.type) {
-                case 'jira-id':
-                    await this.jiraService.uploadToJiraId(result.id, this.transactionData);
-                    break;
-                case 'test-case':
-                    await this.jiraService.uploadToTestCase(result.id, this.transactionData);
-                    break;
-                case 'test-cycle':
-                    await this.jiraService.uploadToTestCycle(result.id, this.transactionData);
-                    break;
-            }
-
-            // Close dialog after successful upload
-            setTimeout(() => {
-                this.onDialogHide();
-            }, 2000);
-
-        } catch (error) {
-            console.error('[JiraUploadDialog] Upload failed:', error);
-        }
-    }
-
-    /**
-     * Upload to selected executions
-     */
-    public async uploadToSelectedExecutions(): Promise<void> {
-        const result = this.detectionResult();
-        if (!result || result.type !== 'test-cycle') return;
-
-        try {
-            await this.jiraService.uploadToSelectedExecutions(result.id, this.transactionData);
-
-            // Close dialog after successful upload
-            setTimeout(() => {
-                this.onDialogHide();
-            }, 2000);
-
-        } catch (error) {
-            console.error('[JiraUploadDialog] Upload to executions failed:', error);
-        }
-    }
-
-    /**
-     * Clear messages
-     */
-    public clearMessages(): void {
-        this.jiraService.clearMessages();
-    }
-
-    /**
-     * Get status severity for PrimeNG badge component (v19 compatible)
-     */
-    public getStatusSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" {
-        switch (status?.toLowerCase()) {
-            case 'pass':
-            case 'passed':
-                return 'success';
-            case 'fail':
-            case 'failed':
-                return 'danger';
-            case 'blocked':
-                return 'warn';
-            case 'pending':
-            case 'running':
-                return 'info';
-            default:
-                return 'secondary';
-        }
-    }
-
-    /**
-     * Alternative: Computed severity for better performance (if needed)
-     */
-    public getExecutionSeverity = computed(() => {
-        return (status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" => {
-            return this.getStatusSeverity(status);
-        };
-    });
-
-    /**
-     * Create JIRA URL for external links
-     */
-    public createJiraUrl(url: string | undefined): string {
-        return url || '#';
-    }
+  }
 }
