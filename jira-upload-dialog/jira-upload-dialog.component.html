@@ -1,6 +1,5 @@
-<!-- src/app/features/search-logs/components/jira-upload-dialog/jira-upload-dialog.component.html -->
 <p-dialog 
-  header="Upload Transaction Data to JIRA" 
+  [header]="dialogTitle()" 
   [visible]="visible" 
   [modal]="true" 
   [style]="{ width: '600px' }"
@@ -82,95 +81,62 @@
     </div>
 
     <!-- ================================ -->
-    <!-- UPLOAD PROGRESS -->
+    <!-- TEST CYCLE EXECUTIONS SECTION -->
     <!-- ================================ -->
     
-    @if (uploadState().isUploading) {
-      <div class="progress-section">
-        <div class="progress-header">
-          <i class="pi pi-spin pi-spinner"></i>
-          <span>Uploading transaction data...</span>
-        </div>
-        
-        @if (uploadState().uploadProgress > 0) {
-          <p-progressBar 
-            [value]="uploadState().uploadProgress"
-            [showValue]="true"
-            styleClass="mt-2">
-          </p-progressBar>
-        }
-      </div>
-    }
-
-    <!-- ================================ -->
-    <!-- TEST CYCLE EXECUTIONS TABLE -->
-    <!-- ================================ -->
-    
-    @if (uploadState().showExecutions) {
+    @if (testCycleExecutions().length > 0 || uploadState().showExecutions) {
       <div class="executions-section">
-        <div class="section-header">
-          <h4>
-            <i class="pi pi-list"></i>
-            Test Cycle Executions
-          </h4>
-          <p class="section-description">
-            Select executions to upload transaction data. You can upload to individual executions or the entire test cycle.
-          </p>
+        <div class="executions-header">
+          <h4>Test Executions</h4>
+          <p-badge [value]="testCycleExecutions().length" severity="info"></p-badge>
         </div>
 
-        @if (testCycleExecutions().length > 0) {
-          <div class="table-container">
+        @if (uploadState().isUploading) {
+          <div class="loading-executions">
+            <i class="pi pi-spin pi-spinner"></i>
+            <span>Loading executions...</span>
+          </div>
+        } @else if (testCycleExecutions().length > 0) {
+          <div class="executions-table-container">
             <p-table 
               [value]="testCycleExecutions()" 
-              [scrollable]="true" 
-              scrollHeight="240px"
-              styleClass="executions-table"
-              [rowHover]="true">
+              [paginator]="true" 
+              [rows]="5"
+              [showCurrentPageReport]="true"
+              currentPageReportTemplate="Showing {first} to {last} of {totalRecords} executions"
+              [rowsPerPageOptions]="[5, 10, 25]"
+              selectionMode="single"
+              [(selection)]="selectedRows"
+              dataKey="id"
+              styleClass="compact-table">
               
               <ng-template pTemplate="header">
                 <tr>
-                  <th style="width: 50px" class="text-center">
-                    <span class="sr-only">Select</span>
-                  </th>
-                  <th>Test Case ID</th>
-                  <th>Execution ID</th>
-                  <th style="width: 100px" class="text-center">Status</th>
+                  <th style="width: 3rem">Select</th>
+                  <th>Test Case</th>
+                  <th>Execution</th>
+                  <th>Status</th>
                 </tr>
               </ng-template>
-
+              
               <ng-template pTemplate="body" let-execution>
-                <tr [class.selected-row]="isExecutionSelected(execution)">
-                  <td class="text-center">
-                    <p-checkbox 
-                      [binary]="true"
-                      [ngModel]="isExecutionSelected(execution)"
-                      (ngModelChange)="onExecutionSelectionChange(execution, $event)">
-                    </p-checkbox>
-                  </td>
-                  
+                <tr [pSelectableRow]="execution">
                   <td>
-                    <a 
-                      [href]="createJiraUrl(execution.testcaseUrl)" 
-                      target="_blank" 
-                      class="jira-link"
-                      [pTooltip]="'Open ' + execution.testCaseKey + ' in JIRA'">
+                    <p-tableRadioButton [value]="execution"></p-tableRadioButton>
+                  </td>
+                  <td>
+                    <a [href]="execution.testcaseUrl" target="_blank" class="external-link">
                       {{ execution.testCaseKey }}
-                      <i class="pi pi-external-link ml-1"></i>
+                      <i class="pi pi-external-link"></i>
                     </a>
                   </td>
-                  
                   <td>
-                    <a 
-                      [href]="createJiraUrl(execution.keyUrl)" 
-                      target="_blank" 
-                      class="jira-link"
-                      [pTooltip]="'Open ' + execution.key + ' in JIRA'">
+                    <a [href]="execution.keyUrl" target="_blank" class="external-link">
                       {{ execution.key }}
-                      <i class="pi pi-external-link ml-1"></i>
+                      <i class="pi pi-external-link"></i>
                     </a>
                   </td>
-                  
-                  <td class="text-center">
+                  <td>
                     <p-badge 
                       [value]="execution.status" 
                       [severity]="getStatusSeverity(execution.status)">
@@ -178,96 +144,130 @@
                   </td>
                 </tr>
               </ng-template>
-
+              
               <ng-template pTemplate="emptymessage">
                 <tr>
-                  <td colspan="4" class="text-center">
-                    <div class="empty-state">
-                      <i class="pi pi-inbox"></i>
-                      <p>No executions found for this test cycle</p>
-                    </div>
-                  </td>
+                  <td colspan="4" class="text-center p-3">No executions found</td>
                 </tr>
               </ng-template>
             </p-table>
-          </div>
-
-          <!-- Selection summary -->
-          @if (hasSelectedExecutions()) {
-            <div class="selection-summary">
-              <p-badge 
-                [value]="uploadState().selectedExecutions.length + ' selected'"
-                severity="info">
-              </p-badge>
-            </div>
-          }
-        } @else if (!uploadState().isUploading) {
-          <div class="empty-executions">
-            <i class="pi pi-info-circle"></i>
-            <p>No executions found for this test cycle</p>
           </div>
         }
       </div>
     }
 
-  </div>
+    <!-- ================================ -->
+    <!-- UPLOAD PROGRESS (only shows in upload mode) -->
+    <!-- ================================ -->
+    
+    @if (uploadState().isUploading && uploadState().uploadProgress > 0 && mode === 'upload') {
+      <div class="upload-progress-section">
+        <div class="progress-header">
+          <span>Upload Progress</span>
+          <span class="progress-percentage">{{ uploadState().uploadProgress }}%</span>
+        </div>
+        <p-progressBar 
+          [value]="uploadState().uploadProgress"
+          styleClass="mb-2">
+        </p-progressBar>
+      </div>
+    }
 
-  <!-- ================================ -->
-  <!-- DIALOG FOOTER -->
-  <!-- ================================ -->
-  
-  <ng-template pTemplate="footer">
+    <!-- ================================ -->
+    <!-- ACTION BUTTONS (modified for dual mode) -->
+    <!-- ================================ -->
+    
     <div class="dialog-footer">
-      
-      <!-- Get Associated Executions Button -->
-      @if (showGetExecutionsButton()) {
-        <p-button 
-          label="Get Associated Executions"
-          icon="pi pi-search"
-          severity="info"
-          [outlined]="true"
-          [loading]="uploadState().isUploading"
-          (click)="getAssociatedExecutions()"
-          pTooltip="Load executions for this test cycle">
-        </p-button>
-      }
+      <div class="button-group">
+        
+        <!-- Cancel Button -->
+        <button 
+          type="button"
+          class="p-button p-button-text"
+          (click)="onDialogHide()"
+          [disabled]="uploadState().isUploading">
+          Cancel
+        </button>
 
-      <!-- Upload to Selected Executions Button -->
-      @if (showUploadToSelectedButton()) {
-        <p-button 
-          label="Upload to Selected Executions"
-          icon="pi pi-upload"
-          severity="primary"
-          [loading]="uploadState().isUploading"
-          [disabled]="!hasSelectedExecutions()"
-          (click)="uploadToSelectedExecutions()"
-          [pTooltip]="'Upload to ' + uploadState().selectedExecutions.length + ' selected executions'">
-        </p-button>
-      }
+        <!-- CHANGED: Show executions button (only for test cycles and upload mode) -->
+        @if (detectionResult()?.type === 'test-cycle' && 
+              testCycleExecutions().length === 0 && 
+              !uploadState().showExecutions && 
+              !uploadState().isUploading &&
+              mode === 'upload') {
+          <button 
+            type="button"
+            class="p-button p-button-outlined"
+            (click)="getAssociatedExecutions()">
+            <i class="pi pi-list"></i>
+            Show Executions
+          </button>
+        }
 
-      <!-- Regular Upload Button -->
-      @if (showRegularUploadButton()) {
-        <p-button 
-          [label]="uploadButtonLabel()"
-          icon="pi pi-upload"
-          severity="primary"
-          [loading]="uploadState().isUploading"
-          [disabled]="!isValidInput()"
-          (click)="uploadToJira()">
-        </p-button>
-      }
-
-      <!-- Close Button -->
-      <p-button 
-        label="Close"
-        icon="pi pi-times"
-        severity="secondary"
-        [text]="true"
-        [disabled]="uploadState().isUploading"
-        (click)="onDialogHide()">
-      </p-button>
-      
+        <!-- MAIN ACTION BUTTON (modified text based on mode) -->
+        <button 
+          type="button"
+          class="p-button"
+          [class.p-button-success]="mode === 'upload'"
+          [class.p-button-primary]="mode === 'search'"
+          (click)="performAction()"
+          [disabled]="!isValidInput() || uploadState().isUploading">
+          
+          <!-- Icon based on mode -->
+          @if (mode === 'upload') {
+            <i class="pi pi-upload"></i>
+          } @else {
+            <i class="pi pi-search"></i>
+          }
+          
+          <!-- Dynamic text -->
+          {{ actionButtonText() }}
+        </button>
+      </div>
     </div>
-  </ng-template>
 
+  </div>
 </p-dialog>
+
+<!-- ================================ -->
+<!-- ADD: Method for status severity (add to component) -->
+<!-- ================================ -->
+<style>
+/* Keep all existing styles and add minimal new ones */
+
+.external-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.external-link:hover {
+  text-decoration: underline;
+}
+
+.compact-table {
+  font-size: 0.875rem;
+}
+
+.compact-table .p-datatable-tbody > tr > td {
+  padding: 0.5rem;
+}
+
+/* Button styling for dual mode */
+.p-button-primary {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.p-button-success {
+  background: var(--green-500);
+  border-color: var(--green-500);
+}
+
+/* Dark mode support */
+.app-dark .external-link {
+  color: var(--primary-color-text);
+}
+</style>

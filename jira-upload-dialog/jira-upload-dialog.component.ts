@@ -18,6 +18,8 @@ import { BadgeModule } from 'primeng/badge';
 import { EnhancedJiraService, JiraIdDetectionResult, TestCycleExecution } from '../../services/enhanced-jira.service';
 import { TransactionDetailsResponse } from '../../models/transactionDetails/transaction-details.model';
 
+export type JiraDialogMode = 'upload' | 'search';
+
 @Component({
   selector: 'app-jira-upload-dialog',
   standalone: true,
@@ -40,7 +42,11 @@ import { TransactionDetailsResponse } from '../../models/transactionDetails/tran
 export class JiraUploadDialogComponent {
   @Input({ required: true }) visible = false;
   @Input({ required: true }) transactionData: TransactionDetailsResponse | undefined = undefined;
+  @Input() mode: JiraDialogMode = 'upload';
   @Output() visibleChange = new EventEmitter<boolean>();
+  @Output() searchRequested = new EventEmitter<{ query: string; type: 'cycle' | 'execution' }>();
+  
+  
 
   private jiraService = inject(EnhancedJiraService);
 
@@ -84,45 +90,23 @@ export class JiraUploadDialogComponent {
     }
   });
 
-  public readonly showGetExecutionsButton = computed(() => {
-    const result = this.detectionResult();
-    const state = this.jiraService.uploadState();
-    const hasSelected = this.selectedRows().length > 0;
-    
-    return result?.type === 'test-cycle' && 
-           result.isValid && 
-           !state.showExecutions && 
-           !hasSelected;
-  });
-
-  public readonly showUploadToSelectedButton = computed(() => {
-    const result = this.detectionResult();
-    const hasSelected = this.selectedRows().length > 0;
-    
-    return result?.type === 'test-cycle' && 
-           result.isValid && 
-           hasSelected;
-  });
-
-  public readonly showRegularUploadButton = computed(() => {
-    const result = this.detectionResult();
-    const hasSelected = this.selectedRows().length > 0;
-    
-    return result?.isValid && 
-           (result.type === 'jira-id' || 
-            result.type === 'test-case' || 
-            (result.type === 'test-cycle' && !hasSelected));
-  });
-
-  public readonly uploadButtonLabel = computed(() => {
-    const result = this.detectionResult();
-    if (!result) return 'Upload';
-    
-    switch (result.type) {
-      case 'test-cycle': return `Upload to ${result.id}`;
-      case 'test-case': return `Upload to ${result.id}`;
-      case 'jira-id': return `Upload to ${result.id}`;
-      default: return 'Upload';
+  public readonly actionButtonText = computed(() => {
+    if (this.mode === 'upload') {
+      const result = this.detectionResult();
+      if (!result) return 'Upload';
+      
+      switch (result.type) {
+        case 'test-cycle': return `Upload to ${result.id}`;
+        case 'test-case': return `Upload to ${result.id}`;
+        case 'jira-id': return `Upload to ${result.id}`;
+        default: return 'Upload';
+      }
+    } else {
+      // Search mode
+      const selectedExecution = this.selectedRows()[0];
+      return selectedExecution 
+        ? `Search ${selectedExecution.key}`
+        : `Search ${this.jiraInput()}`;
     }
   });
 
@@ -156,6 +140,18 @@ export class JiraUploadDialogComponent {
       const selected = executions.filter(exec => selectedIds.includes(exec.id));
       this.selectedRows.set(selected);
     });
+
+    effect(() => {
+      const input = this.jiraInput();
+      const result = this.detectionResult();
+      
+      if (this.mode === 'search' && 
+          this.visible && 
+          result?.isValid && 
+          result.type === 'test-cycle') {
+        this.autoLoadExecutions(result.id);
+      }
+    });
   }
 
   // ================================
@@ -181,6 +177,81 @@ export class JiraUploadDialogComponent {
     } catch (error) {
       console.error('[JiraUploadDialog] Failed to get executions:', error);
     }
+  }
+
+  /**
+   * Load executions automatically for search mode from search bar
+   */
+  private async autoLoadExecutions(testCycleId: string): Promise<void> {
+    try {
+      console.log(`[JiraUploadDialog] Auto-loading executions for search mode: ${testCycleId}`);
+      await this.jiraService.getTestCycleExecutions(testCycleId);
+    } catch (error) {
+      console.error('[JiraUploadDialog] Auto-load executions failed:', error);
+    }
+  }
+
+  /**
+   * Handle primary action (upload OR search)
+   */
+  public async performAction(): Promise<void> {
+    if (this.mode === 'upload') {
+      return this.performUpload();
+    } else {
+      return this.performSearch();
+    }
+  }
+
+  /**
+   * Keep existing upload logic
+   */
+  private async performUpload(): Promise<void> {
+    const result = this.detectionResult();
+    if (!result?.isValid) {
+      console.error('[JiraUploadDialog] Invalid JIRA input for upload');
+      return;
+    }
+
+    try {
+      if (result.type === 'test-cycle') {
+        await this.jiraService.uploadToTestCycleExecutions(result.id, this.transactionData);
+      } else {
+        await this.jiraService.uploadToJira(result.id, this.transactionData);
+      }
+    } catch (error) {
+      console.error('[JiraUploadDialog] Upload failed:', error);
+    }
+  }
+
+  /**
+   * ADD: Handle search action
+   */
+  private async performSearch(): Promise<void> {
+    const result = this.detectionResult();
+    if (!result?.isValid) {
+      console.error('[JiraUploadDialog] Invalid JIRA input for search');
+      return;
+    }
+
+    const selectedExecution = this.selectedRows()[0];
+    
+    if (result.type === 'test-cycle' && selectedExecution) {
+      // Search specific execution
+      console.log(`[JiraUploadDialog] Searching execution: ${selectedExecution.key}`);
+      this.searchRequested.emit({
+        query: selectedExecution.key,
+        type: 'execution'
+      });
+    } else {
+      // Search the cycle/ticket itself
+      console.log(`[JiraUploadDialog] Searching cycle/ticket: ${result.id}`);
+      this.searchRequested.emit({
+        query: result.id,
+        type: 'cycle'
+      });
+    }
+
+    this.visibleChange.emit(false);
   }
 
   /**

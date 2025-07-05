@@ -179,16 +179,33 @@ export class SearchLogsComponent implements OnInit {
   }
 
   handleSearch(query: string): void {
+    if (!query?.trim()) {
+      console.warn('[SearchLogsComponent] Empty query provided');
+      return;
+    }
+
+    const trimmedQuery = query.trim();
     const appName = this.filtersService.filters()?.application[0] ?? 'default-app';
     
-    this.searchOrchestrator.performSearch({
-      type: 'transaction',
-      query: query,
-      title: `Search Results for: ${query}`,
-      appName: appName
-    });
+    console.log('[SearchLogsComponent] Handling search with strategy detection:', trimmedQuery);
 
-    this.updateUrlWithStrategy(query);
+    // Create a basic request and let strategy manager enhance it
+    const basicRequest = {
+      type: 'transaction', // This will be overridden by enhanceRequest
+      query: trimmedQuery,
+      title: `Search Results for: ${trimmedQuery}`,
+      appName: appName
+    };
+
+    // Use the existing enhanceRequest method to detect type and enhance
+    const enhancedRequest = this.strategyManager.enhanceRequest(basicRequest);
+    
+    console.log(`[SearchLogsComponent] Enhanced request:`, enhancedRequest);
+
+    // Perform search with enhanced request
+    this.searchOrchestrator.performSearch(enhancedRequest);
+
+    this.updateUrlWithStrategy(trimmedQuery);
   }
 
   private updateUrlWithStrategy(query: string): void {
