@@ -72,6 +72,12 @@ export class JiraUploadDialogComponent {
     return result?.isValid ?? false;
   });
 
+  public readonly dialogTitle = computed(() => {
+    return this.mode === 'upload' 
+      ? 'Upload Transaction Data to JIRA'
+      : 'JIRA Search';
+  });
+
   public readonly inputErrorMessage = computed(() => {
     const result = this.detectionResult();
     return result?.errorMessage || '';
