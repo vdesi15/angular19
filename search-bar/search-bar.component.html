@@ -1,67 +1,34 @@
-<div class="search-bar-container">
-  
-  <!-- Search Input Group -->
-  <div class="search-input-group">
-    <p-inputGroup styleClass="search-input-wrapper">
+<!-- Dynamic positioning based on search state -->
+    <div class="search-bar-container" 
+         [class.search-bar-center]="searchBarState().position === 'center'"
+         [class.search-bar-top]="searchBarState().position === 'top'"
+         [class.has-results]="searchBarState().hasResults">
       
-      <!-- Main Search Input -->
-      <input 
-        type="text" 
-        pInputText 
-        [(ngModel)]="searchQuery"
-        placeholder="Search transactions, JIRA IDs, or use natural language..."
-        class="search-input"
-        [class.invalid-input]="searchQuery() && !isValidQuery()"
-        (keydown)="onKeydown($event)"
-        [disabled]="isSearching()" />
-      
-      <!-- Search Button -->
-      <button 
-        type="button"
-        class="p-button search-button"
-        [class.p-button-loading]="isSearching()"
-        (click)="performSearch()"
-        [disabled]="!searchQuery().trim() || isSearching()">
-        
-        @if (isSearching()) {
-          <i class="pi pi-spin pi-spinner"></i>
-        } @else {
-          <i class="pi pi-search"></i>
-        }
-      </button>
-      
-      <!-- Favorites Button -->
-      <app-search-favorites 
-        (favoriteSelected)="searchQuery.set($event)"
-        styleClass="favorites-button">
-      </app-search-favorites>
-      
-    </p-inputGroup>
-  </div>
-  
-  <!-- Search Hints/Validation -->
-  @if (searchQuery() && !isValidQuery()) {
-    <div class="search-hints">
-      <i class="pi pi-info-circle"></i>
-      <span>Invalid format. Try: PROJ-123, UUID, or natural language</span>
+      <!-- Search Form -->
+      <form class="search-form" (ngSubmit)="onSearchSubmit($event)">
+        <div class="search-input-group">
+          <input 
+            #searchInput
+            type="text" 
+            pInputText 
+            placeholder="Search Logs (ex: TxnId, JiraId, BatchId)"
+            [(ngModel)]="searchTerm"
+            name="searchTerm"
+            class="search-input"
+            [disabled]="isSearching()"
+            autocomplete="off"
+            spellcheck="false">
+          
+          <button 
+            pButton 
+            type="submit"
+            class="search-button"
+            [icon]="isSearching() ? 'pi pi-spin pi-spinner' : 'pi pi-search'"
+            [disabled]="!canSearch()"
+            [loading]="isSearching()"
+            pTooltip="Search"
+            tooltipPosition="top">
+          </button>
+        </div>
+      </form>
     </div>
-  }
-  
-  @if (isTestCycle()) {
-    <div class="search-hints test-cycle-hint">
-      <i class="pi pi-info-circle"></i>
-      <span>Test cycle detected - click search to select executions</span>
-    </div>
-  }
-</div>
-
-<!-- ENHANCED JIRA DIALOG - Now supports both upload and search modes -->
-<app-jira-upload-dialog
-  [visible]="showJiraUploadDialog()"
-  [mode]="'search'"
-  [transactionData]="undefined"
-  (visibleChange)="showJiraUploadDialog.set($event)"
-  (searchRequested)="onJiraSearchRequested($event)">
-</app-jira-upload-dialog>
-
-<style>
