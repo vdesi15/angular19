@@ -1,196 +1,252 @@
 <!-- src/app/features/search-logs/components/jira-upload-dialog/jira-upload-dialog.component.html -->
-<p-dialog [header]="dialogTitle()" [visible]="visible" [modal]="true" [style]="{ width: '600px' }"
-    [height]="showExecutionsTable() ? '700px' : 'auto'" [maximizable]="false" [closable]="true" [draggable]="true"
-    [resizable]="false" styleClass="jira-upload-dialog" (onHide)="onDialogHide()">
+<p-dialog 
+  [header]="dialogTitle()" 
+  [visible]="visible" 
+  [modal]="true" 
+  [style]="{ width: '600px' }"
+  [height]="showExecutionsTable() ? '700px' : 'auto'"
+  [maximizable]="false"
+  [closable]="true"
+  [draggable]="true"
+  [resizable]="false"
+  styleClass="jira-upload-dialog"
+  (onHide)="onDialogHide()">
 
-    <div class="jira-dialog-content">
+  <div class="jira-dialog-content">
+    
+    <!-- SUCCESS/ERROR MESSAGES -->
+    @if (uploadState().successMessage) {
+      <p-message 
+        severity="success" 
+        [text]="uploadState().successMessage"
+        [closable]="true"
+        (onClose)="clearMessages()"
+        styleClass="mb-3 message-full-width">
+      </p-message>
+    }
 
-        <!-- SUCCESS/ERROR MESSAGES -->
-        @if (uploadState().successMessage) {
-        <p-message severity="success" [text]="uploadState().successMessage" [closable]="true"
-            (onClose)="clearMessages()" styleClass="mb-3 message-full-width">
-        </p-message>
-        }
+    @if (uploadState().errorMessage) {
+      <p-message 
+        severity="error" 
+        [text]="uploadState().errorMessage"
+        [closable]="true"
+        (onClose)="clearMessages()"
+        styleClass="mb-3 message-full-width">
+      </p-message>
+    }
 
-        @if (uploadState().errorMessage) {
-        <p-message severity="error" [text]="uploadState().errorMessage" [closable]="true" (onClose)="clearMessages()"
-            styleClass="mb-3 message-full-width">
-        </p-message>
-        }
-
-        <!-- JIRA ID INPUT SECTION -->
-        <div class="input-section">
-            <div class="field-group">
-                <label for="jiraInput" class="field-label">
-                    <i class="pi pi-ticket"></i>
-                    JIRA ID or URL
-                </label>
-
-                <div class="input-container">
-                    <input id="jiraInput" type="text" pInputText [(ngModel)]="jiraInput"
-                        (ngModelChange)="onJiraInputChange()" [placeholder]="inputPlaceholder()"
-                        [class.ng-invalid]="jiraInput() && !isValidInput()" class="jira-input" autocomplete="off" />
-                </div>
-
-                <!-- Validation feedback -->
-                @if (jiraInput()) {
-                <div class="validation-feedback">
-                    @if (isValidInput()) {
-                    <div class="validation-success">
-                        <i class="pi pi-check-circle"></i>
-                        <span class="validation-text">Valid {{ jiraTypeDisplay() }}</span>
-                        <p-badge [value]="jiraTypeDisplay()" severity="success" styleClass="ml-2"></p-badge>
-                    </div>
-                    } @else {
-                    <div class="validation-error">
-                        <i class="pi pi-exclamation-triangle"></i>
-                        <span class="validation-text">Invalid JIRA format. Expected: APP-123, APP-C123, APP-T123</span>
-                    </div>
-                    }
-                </div>
-                }
-            </div>
+    <!-- JIRA ID INPUT SECTION -->
+    <div class="input-section">
+      <div class="field-group">
+        <label for="jiraInput" class="field-label">
+          <i class="pi pi-ticket"></i>
+          JIRA ID or URL
+        </label>
+        
+        <div class="input-container">
+          <input 
+            id="jiraInput"
+            type="text" 
+            pInputText 
+            [(ngModel)]="jiraInput"
+            (ngModelChange)="onJiraInputChange()"
+            [placeholder]="inputPlaceholder()"
+            [class.ng-invalid]="jiraInput() && !isValidInput()"
+            class="jira-input" 
+            autocomplete="off" />
         </div>
 
-        <!-- LOADING PROGRESS -->
-        @if (uploadState().isLoading) {
-        <div class="progress-section">
-            <div class="progress-header">
-                <i class="pi pi-spin pi-spinner"></i>
-                <span>Loading test cycle executions...</span>
-            </div>
-            <p-progressBar mode="indeterminate"></p-progressBar>
-        </div>
-        }
-
-        <!-- TEST CYCLE EXECUTIONS TABLE -->
-        @if (showExecutionsTable()) {
-        <div class="executions-section">
-            <div class="section-header">
-                <h4>
-                    <i class="pi pi-list"></i>
-                    Test Executions ({{ testCycleExecutions().length }})
-                </h4>
-                <p class="section-description">
-                    @if (mode === 'search') {
-                    Click an execution to search for its transaction data, or search the entire cycle.
-                    } @else {
-                    Click executions to select them for upload.
-                    }
-                </p>
-            </div>
-
-            <div class="table-container">
-                <p-table [value]="testCycleExecutions()" [scrollable]="true" scrollHeight="300px"
-                    styleClass="executions-table" [trackBy]="trackByExecutionId">
-
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 3rem">Select</th>
-                            <th>Execution Key</th>
-                            <th>Test Case</th>
-                            <th>Status</th>
-                            <th>Assignee</th>
-                        </tr>
-                    </ng-template>
-
-                    <!-- MINIMAL CHANGES to your existing template -->
-
-                    <!-- 1. Update the table body (around line ~150): -->
-                    <ng-template pTemplate="body" let-execution let-i="rowIndex">
-                        <tr [class.selected-row]="isExecutionSelected(execution)"
-                            (click)="onExecutionRowSelect(execution)" style="cursor: pointer;">
-
-                            <td>
-                                @if (isExecutionSelected(execution)) {
-                                <i class="pi pi-check-circle text-green-500"></i>
-                                } @else {
-                                <i class="pi pi-circle text-gray-400"></i>
-                                }
-                            </td>
-
-                            <td>
-                                <a [href]="execution.testcaseUrl" target="_blank" class="test-case-link">
-                                    {{ execution.testCaseKey }}
-                                    <i class="pi pi-external-link ml-1"></i>
-                                </a>
-                            </td>
-
-                            <td>
-                                <a [href]="execution.keyUrl" target="_blank" class="execution-link">
-                                    <strong>{{ execution.key }}</strong>
-                                    <i class="pi pi-external-link ml-1"></i>
-                                </a>
-                            </td>
-
-                            <td>
-                                <p-badge [value]="execution.status" [severity]="getStatusSeverity(execution.status)">
-                                </p-badge>
-                            </td>
-                        </tr>
-                    </ng-template>
-
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="5" class="text-center p-4">
-                                <div class="empty-executions">
-                                    <i class="pi pi-info-circle"></i>
-                                    <p>No executions found for this test cycle.</p>
-                                </div>
-                            </td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-
-            <!-- Selection indicator -->
-            @if (selectedExecution()) {
-            <div class="selection-summary">
-                <p-badge [value]="'Selected: ' + selectedExecution()!.key" severity="info">
-                </p-badge>
-            </div>
+        <!-- Validation feedback -->
+        @if (jiraInput()) {
+          <div class="validation-feedback">
+            @if (isValidInput()) {
+              <div class="validation-success">
+                <i class="pi pi-check-circle"></i>
+                <span class="validation-text">Valid {{ jiraTypeDisplay() }}</span>
+                <p-badge [value]="jiraTypeDisplay()" severity="success" styleClass="ml-2"></p-badge>
+              </div>
+            } @else {
+              <div class="validation-error">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span class="validation-text">Invalid JIRA format. Expected: APP-123, APP-C123, APP-T123</span>
+              </div>
             }
-        </div>
-        } @else if (detectionResult()?.type === 'test-cycle' && !uploadState().isLoading) {
-        <!-- Empty state for test cycle with no executions -->
-        <div class="empty-executions">
-            <i class="pi pi-info-circle"></i>
-            <p>Click "Load Executions" to fetch test executions for this cycle.</p>
-            <button pButton type="button" label="Load Executions" icon="pi pi-refresh" class="p-button-outlined"
-                (click)="loadExecutions()" [disabled]="!isValidInput()">
-            </button>
-        </div>
+          </div>
         }
-
+      </div>
     </div>
 
-    <ng-template pTemplate="footer">
-  <div class="dialog-footer">
-    
-    <!-- Close Button -->
-    <button 
-      pButton 
-      type="button" 
-      label="Close" 
-      icon="pi pi-times"
-      class="p-button-text"
-      (click)="visibleChange.emit(false)">
-    </button>
+    <!-- LOADING PROGRESS -->
+    @if (uploadState().isUploading) {
+      <div class="progress-section">
+        <div class="progress-header">
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Loading test cycle executions...</span>
+        </div>
+        <p-progressBar mode="indeterminate"></p-progressBar>
+      </div>
+    }
 
-    <!-- Primary Action Button -->
-    @if (showPrimaryButton()) {
+    <!-- TEST CYCLE EXECUTIONS TABLE -->
+    @if (showExecutionsTable()) {
+      <div class="executions-section">
+        <div class="section-header">
+          <h4>
+            <i class="pi pi-list"></i>
+            Test Executions ({{ testCycleExecutions().length }})
+          </h4>
+          <p class="section-description">
+            @if (mode === 'search') {
+              Click an execution to search for its transaction data, or search the entire cycle.
+            } @else {
+              Click executions to select them for upload.
+            }
+          </p>
+        </div>
+
+        <div class="table-container">
+          <p-table 
+            [value]="testCycleExecutions()" 
+            [scrollable]="true" 
+            scrollHeight="300px"
+            styleClass="executions-table"
+            [trackBy]="trackByExecutionId">
+            
+            <ng-template pTemplate="header">
+              <tr>
+                <th style="width: 3rem">Select</th>
+                <th>Test Case</th>
+                <th>Test Execution</th>
+                <th>Status</th>
+              </tr>
+            </ng-template>
+            
+            <ng-template pTemplate="body" let-execution let-i="rowIndex">
+              <tr 
+                [class.selected-row]="isExecutionSelected(execution)"
+                (click)="onExecutionRowSelect(execution)"
+                style="cursor: pointer;">
+                
+                <td>
+                  @if (isExecutionSelected(execution)) {
+                    <i class="pi pi-check-circle text-green-500"></i>
+                  } @else {
+                    <i class="pi pi-circle text-gray-400"></i>
+                  }
+                </td>
+                
+                <td>
+                  <a 
+                    [href]="execution.testcaseUrl" 
+                    target="_blank" 
+                    class="test-case-link">
+                    {{ execution.testCaseKey }}
+                    <i class="pi pi-external-link ml-1"></i>
+                  </a>
+                </td>
+                
+                <td>
+                  <a 
+                    [href]="execution.keyUrl" 
+                    target="_blank" 
+                    class="execution-link">
+                    <strong>{{ execution.key }}</strong>
+                    <i class="pi pi-external-link ml-1"></i>
+                  </a>
+                </td>
+                
+                <td>
+                  <p-badge 
+                    [value]="execution.status" 
+                    [severity]="getStatusSeverity(execution.status)">
+                  </p-badge>
+                </td>
+              </tr>
+            </ng-template>
+            
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="4" class="text-center p-4">
+                  <div class="empty-executions">
+                    <i class="pi pi-info-circle"></i>
+                    <p>No executions found for this test cycle.</p>
+                  </div>
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+
+        <!-- Selection indicator -->
+        @if (selectedExecution()) {
+          <div class="selection-summary">
+            <p-badge 
+              [value]="'Selected: ' + selectedExecution()!.key" 
+              severity="info">
+            </p-badge>
+          </div>
+        }
+      </div>
+    } @else if (detectionResult()?.type === 'test-cycle' && !uploadState().isUploading) {
+      <!-- Empty state for test cycle with no executions -->
+      <div class="empty-executions">
+        <i class="pi pi-info-circle"></i>
+        <p>Click "Load Executions" to fetch test executions for this cycle.</p>
+        <button 
+          pButton 
+          type="button" 
+          label="Load Executions" 
+          icon="pi pi-refresh"
+          class="p-button-outlined"
+          (click)="loadExecutions()"
+          [disabled]="!isValidInput()">
+        </button>
+      </div>
+    }
+
+  </div>
+
+  <!-- DIALOG FOOTER - SIMPLIFIED -->
+  <ng-template pTemplate="footer">
+    <div class="dialog-footer">
+      
+      <!-- Close Button -->
       <button 
         pButton 
         type="button" 
-        [label]="primaryButtonText()"
-        [icon]="mode === 'search' ? 'pi pi-search' : 'pi pi-upload'"
-        class="p-button"
-        (click)="performPrimaryAction()"
-        [disabled]="uploadState().isUploading">
+        label="Close" 
+        icon="pi pi-times"
+        class="p-button-text"
+        (click)="onDialogHide()">
       </button>
-    }
-    
-  </div>
-</ng-template>
+
+      <!-- Load Executions Button (for test cycles without executions) -->
+      @if (detectionResult()?.type === 'test-cycle' && testCycleExecutions().length === 0 && !uploadState().isUploading) {
+        <button 
+          pButton 
+          type="button" 
+          label="Load Executions" 
+          icon="pi pi-refresh"
+          class="p-button-outlined"
+          (click)="loadExecutions()"
+          [disabled]="!isValidInput()">
+        </button>
+      }
+
+      <!-- Primary Action Button (Search/Upload) -->
+      @if (showPrimaryButton()) {
+        <button 
+          pButton 
+          type="button" 
+          [label]="primaryButtonText()"
+          [icon]="mode === 'search' ? 'pi pi-search' : 'pi pi-upload'"
+          class="p-button"
+          (click)="performPrimaryAction()"
+          [disabled]="uploadState().isUploading">
+        </button>
+      }
+      
+    </div>
+  </ng-template>
 
 </p-dialog>
