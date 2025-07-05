@@ -19,7 +19,7 @@ export class FiltersService {
 
   public readonly searchFilterMetadata = this._searchFilterMetadata.asReadonly();
   public readonly filters = this._filters.asReadonly();
-  
+
   private queryParams = toSignal(
     this.router.events.pipe(
       rxjsFilter((event): event is NavigationEnd => event instanceof NavigationEnd),
@@ -39,14 +39,14 @@ export class FiltersService {
     effect(() => {
       const fromUrl = filtersFromUrl();
       if (fromUrl) {
-        untracked(() => { 
+        untracked(() => {
           this._filters.set(fromUrl);
         });
       }
     });
 
     effect(() => {
-      this.queryParams(); 
+      this.queryParams();
       const activeRoute = this.findActiveRoute(this.router.routerState.snapshot.root);
       untracked(() => {
         if (this.filters()) {
@@ -60,10 +60,10 @@ export class FiltersService {
     console.log('[FiltersService] Setting metadata:', metadata);
     this._searchFilterMetadata.set(metadata);
   }
+  
+  public updateFilters(partialFilters: Partial<SearchFilterModel>, skipUrlUpdate = false): void {
+    console.log('[FiltersService] updateFilters called with:', partialFilters, 'skipUrlUpdate:', skipUrlUpdate);
 
-  public updateFilters(partialFilters: Partial<SearchFilterModel>): void {
-    console.log('[FiltersService] updateFilters called with:', partialFilters);
-    
     const currentFilters = this.filters();
     if (!currentFilters) {
       console.warn('[FiltersService] No current filters available');
@@ -71,12 +71,15 @@ export class FiltersService {
     }
 
     const newFilters = { ...currentFilters, ...partialFilters };
-    
+
     console.log('[FiltersService] Setting new filters:', newFilters);
     this._filters.set(newFilters);
-    
-    const activeRoute = this.findActiveRoute(this.router.routerState.snapshot.root);
-    this.updateQueryParams(newFilters, activeRoute);
+
+    // ONLY update URL if not skipped
+    if (!skipUrlUpdate) {
+      const activeRoute = this.findActiveRoute(this.router.routerState.snapshot.root);
+      this.updateQueryParams(newFilters, activeRoute);
+    }
   }
 
   private updateQueryParams(filters: SearchFilterModel, route: ActivatedRouteSnapshot): void {
@@ -145,57 +148,57 @@ export class FiltersService {
   }
 
   public parseAndApplyUrlParameters(params: Params): void {
-  console.log('[FiltersService] Parsing URL parameters:', params);
-  
-  const metadata = this.searchFilterMetadata();
-  if (!metadata) {
-    console.warn('[FiltersService] Cannot parse URL params without metadata');
-    return;
-  }
+    console.log('[FiltersService] Parsing URL parameters:', params);
 
-  try {
-    const parsedFilters = this.parseFiltersFromParams(params, metadata);
-    console.log('[FiltersService] Parsed filters from URL:', parsedFilters);
-    
-    // Apply the parsed filters without triggering URL updates
-    this._filters.set(parsedFilters);
-    console.log('[FiltersService] URL parameters successfully applied');
-    
-  } catch (error) {
-    console.error('[FiltersService] Error parsing URL parameters:', error);
-    // Fall back to default filters on error
-    this.initializeFiltersFromMetadata(metadata);
-  }
+    const metadata = this.searchFilterMetadata();
+    if (!metadata) {
+      console.warn('[FiltersService] Cannot parse URL params without metadata');
+      return;
+    }
+
+    try {
+      const parsedFilters = this.parseFiltersFromParams(params, metadata);
+      console.log('[FiltersService] Parsed filters from URL:', parsedFilters);
+
+      // Apply the parsed filters without triggering URL updates
+      this._filters.set(parsedFilters);
+      console.log('[FiltersService] URL parameters successfully applied');
+
+    } catch (error) {
+      console.error('[FiltersService] Error parsing URL parameters:', error);
+      // Fall back to default filters on error
+      this.initializeFiltersFromMetadata(metadata);
+    }
 
   /**
  * Initialize filters from metadata (fallback method)
  */
 private initializeFiltersFromMetadata(metadata: SearchFilterMetadata): void {
-  const defaultApp = metadata.applications?.[0]?.label || '';
-  const defaultEnv = Object.keys(metadata.environments)[0] || '';
-  const defaultLoc = defaultEnv ? (metadata.environments[defaultEnv]?.[0] || '') : '';
-  const timezone = defaultLoc && metadata.locationTimezone?.[defaultLoc] 
-    ? metadata.locationTimezone[defaultLoc] 
-    : 'UTC';
+    const defaultApp = metadata.applications?.[0]?.label || '';
+    const defaultEnv = Object.keys(metadata.environments)[0] || '';
+    const defaultLoc = defaultEnv ? (metadata.environments[defaultEnv]?.[0] || '') : '';
+    const timezone = defaultLoc && metadata.locationTimezone?.[defaultLoc]
+      ? metadata.locationTimezone[defaultLoc]
+      : 'UTC';
 
-  const filters: SearchFilterModel = {
-    application: defaultApp ? [defaultApp] : [],
-    environment: defaultEnv,
-    location: defaultLoc,
-    timezone,
-    dateRange: this.dateTimeService.getDefaultDateRange(),
-    streamFilters: ''
-  };
+    const filters: SearchFilterModel = {
+      application: defaultApp ? [defaultApp] : [],
+      environment: defaultEnv,
+      location: defaultLoc,
+      timezone,
+      dateRange: this.dateTimeService.getDefaultDateRange(),
+      streamFilters: ''
+    };
 
-  this._filters.set(filters);
-  console.log('[FiltersService] Initialized filters from metadata:', filters);
-}
-  
+    this._filters.set(filters);
+    console.log('[FiltersService] Initialized filters from metadata:', filters);
+  }
+
   private findActiveRoute(route: ActivatedRouteSnapshot): ActivatedRouteSnapshot {
     if (route.firstChild) return this.findActiveRoute(route.firstChild);
     return route;
   }
-  
+
   private encode = (v: string): string | null => v ? encodeURIComponent(v) : null;
   private decode = (v: string): string => v ? (decodeURIComponent(v) || '') : '';
 }

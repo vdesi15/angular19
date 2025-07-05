@@ -144,11 +144,19 @@ export class EnhancedJiraSearchStrategy implements SearchStrategy {
 
     return this.http.get<TransactionDetailsResponse>(url).pipe(
       map(response => {
-        // Extract and update global filters
+        
         this.updateGlobalFiltersFromResponse(response);
 
-        // Navigate to search results with JIRA context
-        this.navigateToJiraResults(jiraId, currentId);
+        // Extract current transaction ID if not provided
+        let extractedCurrentId = currentId;
+        if (!currentId && response?.transactionDetails?.TRANSACTION_TIMELINE) {
+          extractedCurrentId = this.extractCurrentTransactionId(response.transactionDetails.TRANSACTION_TIMELINE);
+        }
+
+        // 🆕 Update URL and search bar with extracted current ID
+        if (extractedCurrentId) {
+          this.updateUrlAndSearchBar(jiraId, extractedCurrentId);
+        }
 
         return {
           hits: response.hits?.hits || [],
@@ -174,6 +182,36 @@ export class EnhancedJiraSearchStrategy implements SearchStrategy {
         });
       })
     );
+  }
+
+  private extractCurrentTransactionId(timeline: any[]): string | undefined {
+    if (!Array.isArray(timeline)) return undefined;
+    
+    const currentTransaction = timeline.find(item => item.isCurrent === true);
+    if (currentTransaction) {
+      return currentTransaction.txnId || 
+            currentTransaction.txnid || 
+            currentTransaction.transactionId || 
+            currentTransaction.id;
+    }
+    return undefined;
+  }
+
+  private updateUrlAndSearchBar(jiraId: string, currentId: string): void {
+    // Update URL with current transaction ID
+    this.router.navigate([], {
+      queryParams: {
+        jiraid: btoa(jiraId),
+        searchText: btoa(currentId)
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true // Don't add to browser history
+    });
+
+    // Update search bar display (if you have the service)
+    // this.searchBarUpdateService.updateSearchBar(jiraId, currentId);
+    
+    console.log(`[EnhancedJiraSearchStrategy] Updated URL and search bar: ${jiraId}:${currentId}`);
   }
 
   // ================================
@@ -222,7 +260,7 @@ export class EnhancedJiraSearchStrategy implements SearchStrategy {
         application: app ? [app] : [],
         environment: env,
         location: location
-      });
+      }, true);
     }
   }
 
@@ -242,32 +280,7 @@ export class EnhancedJiraSearchStrategy implements SearchStrategy {
     
     return foundEntry ? foundEntry[0] : '';
   }
-
-  // ================================
-  // NAVIGATION HELPERS
-  // ================================
-
-  /**
-   * Navigate to JIRA search results
-   */
-  private navigateToJiraResults(jiraId: string, currentId?: string): void {
-    const encodedJiraId = btoa(jiraId);
-    const queryParams: any = {
-      jiraid: encodedJiraId
-    };
-
-    if (currentId) {
-      queryParams.searchText = btoa(currentId);
-    }
-
-    this.router.navigate(['/logs/search'], {
-      queryParams,
-      queryParamsHandling: 'merge'
-    });
-
-    console.log(`[EnhancedJiraSearchStrategy] Navigated to JIRA results for ${jiraId}`);
-  }
-
+  
   // ================================
   // PUBLIC METHODS FOR MANAGER INTEGRATION
   // ================================
