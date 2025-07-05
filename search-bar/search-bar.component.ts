@@ -123,7 +123,7 @@ export class SearchBarComponent {
   // ================================
 
   public async performSearch(): Promise<void> {
-    const query = this.searchTerm();
+    const query = this.searchQuery();
     if (!query.trim()) return;
 
     this.isSearching.set(true);

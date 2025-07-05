@@ -3,7 +3,7 @@
   [visible]="visible" 
   [modal]="true" 
   [style]="{ width: '600px' }"
-  [height]="uploadState().showExecutions ? '700px' : 'auto'"
+  [height]="testCycleExecutions().length > 0 ? '700px' : 'auto'"
   [maximizable]="false"
   [closable]="true"
   [draggable]="true"
@@ -14,7 +14,7 @@
   <div class="jira-dialog-content">
     
     <!-- ================================ -->
-    <!-- SUCCESS/ERROR MESSAGES -->
+    <!-- SUCCESS/ERROR MESSAGES (unchanged) -->
     <!-- ================================ -->
     
     @if (uploadState().successMessage) {
@@ -38,7 +38,7 @@
     }
 
     <!-- ================================ -->
-    <!-- JIRA ID INPUT SECTION -->
+    <!-- JIRA ID INPUT SECTION (unchanged) -->
     <!-- ================================ -->
     
     <div class="input-section">
@@ -60,7 +60,7 @@
             autocomplete="off" />
         </div>
 
-        <!-- Validation feedback below input -->
+        <!-- Validation feedback below input (unchanged) -->
         @if (jiraInput()) {
           <div class="validation-feedback">
             @if (isValidInput()) {
@@ -81,10 +81,10 @@
     </div>
 
     <!-- ================================ -->
-    <!-- TEST CYCLE EXECUTIONS SECTION -->
+    <!-- TEST CYCLE EXECUTIONS SECTION (enhanced) -->
     <!-- ================================ -->
     
-    @if (testCycleExecutions().length > 0 || uploadState().showExecutions) {
+    @if (testCycleExecutions().length > 0) {
       <div class="executions-section">
         <div class="executions-header">
           <h4>Test Executions</h4>
@@ -96,7 +96,7 @@
             <i class="pi pi-spin pi-spinner"></i>
             <span>Loading executions...</span>
           </div>
-        } @else if (testCycleExecutions().length > 0) {
+        } @else {
           <div class="executions-table-container">
             <p-table 
               [value]="testCycleExecutions()" 
@@ -106,7 +106,7 @@
               currentPageReportTemplate="Showing {first} to {last} of {totalRecords} executions"
               [rowsPerPageOptions]="[5, 10, 25]"
               selectionMode="single"
-              [(selection)]="selectedRows"
+              [(selection)]="selectedExecution"
               dataKey="id"
               styleClass="compact-table">
               
@@ -157,7 +157,7 @@
     }
 
     <!-- ================================ -->
-    <!-- UPLOAD PROGRESS (only shows in upload mode) -->
+    <!-- UPLOAD PROGRESS (unchanged - only shows in upload mode) -->
     <!-- ================================ -->
     
     @if (uploadState().isUploading && uploadState().uploadProgress > 0 && mode === 'upload') {
@@ -174,25 +174,15 @@
     }
 
     <!-- ================================ -->
-    <!-- ACTION BUTTONS (modified for dual mode) -->
+    <!-- ACTION BUTTONS (completely redesigned for dual mode) -->
     <!-- ================================ -->
     
     <div class="dialog-footer">
       <div class="button-group">
         
-        <!-- Cancel Button -->
-        <button 
-          type="button"
-          class="p-button p-button-text"
-          (click)="onDialogHide()"
-          [disabled]="uploadState().isUploading">
-          Cancel
-        </button>
-
-        <!-- CHANGED: Show executions button (only for test cycles and upload mode) -->
+        <!-- ENHANCED: Show executions button (only for test cycles in upload mode) -->
         @if (detectionResult()?.type === 'test-cycle' && 
               testCycleExecutions().length === 0 && 
-              !uploadState().showExecutions && 
               !uploadState().isUploading &&
               mode === 'upload') {
           <button 
@@ -204,70 +194,76 @@
           </button>
         }
 
-        <!-- MAIN ACTION BUTTON (modified text based on mode) -->
+        <!-- ENHANCED: Primary action button (execution-specific) -->
+        @if (selectedExecution() || !showBothActions()) {
+          <button 
+            type="button"
+            class="p-button"
+            [class.p-button-success]="mode === 'upload'"
+            [class.p-button-primary]="mode === 'search'"
+            (click)="performPrimaryAction()"
+            [disabled]="!isValidInput() || uploadState().isUploading">
+            
+            <!-- Icon based on mode -->
+            @if (mode === 'upload') {
+              <i class="pi pi-upload"></i>
+            } @else {
+              <i class="pi pi-search"></i>
+            }
+            
+            <!-- Dynamic text -->
+            {{ primaryActionText() }}
+          </button>
+        }
+
+        <!-- ENHANCED: Secondary action button (cycle-level, when execution is selected) -->
+        @if (showBothActions()) {
+          <button 
+            type="button"
+            class="p-button"
+            [class.p-button-success]="mode === 'upload'"
+            [class.p-button-primary]="mode === 'search'"
+            (click)="performPrimaryAction()"
+            [disabled]="!isValidInput() || uploadState().isUploading">
+            
+            @if (mode === 'upload') {
+              <i class="pi pi-upload"></i>
+            } @else {
+              <i class="pi pi-search"></i>
+            }
+            
+            {{ primaryActionText() }}
+          </button>
+
+          <button 
+            type="button"
+            class="p-button p-button-outlined"
+            [class.p-button-success]="mode === 'upload'"
+            [class.p-button-primary]="mode === 'search'"
+            (click)="performSecondaryAction()"
+            [disabled]="!isValidInput() || uploadState().isUploading">
+            
+            @if (mode === 'upload') {
+              <i class="pi pi-upload"></i>
+            } @else {
+              <i class="pi pi-search"></i>
+            }
+            
+            {{ secondaryActionText() }}
+          </button>
+        }
+
+        <!-- Cancel Button - positioned on the right -->
         <button 
           type="button"
-          class="p-button"
-          [class.p-button-success]="mode === 'upload'"
-          [class.p-button-primary]="mode === 'search'"
-          (click)="performAction()"
-          [disabled]="!isValidInput() || uploadState().isUploading">
-          
-          <!-- Icon based on mode -->
-          @if (mode === 'upload') {
-            <i class="pi pi-upload"></i>
-          } @else {
-            <i class="pi pi-search"></i>
-          }
-          
-          <!-- Dynamic text -->
-          {{ actionButtonText() }}
+          class="p-button p-button-text cancel-button"
+          (click)="onCancel()"
+          [disabled]="uploadState().isUploading">
+          Cancel
         </button>
+        
       </div>
     </div>
 
   </div>
 </p-dialog>
-
-<!-- ================================ -->
-<!-- ADD: Method for status severity (add to component) -->
-<!-- ================================ -->
-<style>
-/* Keep all existing styles and add minimal new ones */
-
-.external-link {
-  color: var(--primary-color);
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.external-link:hover {
-  text-decoration: underline;
-}
-
-.compact-table {
-  font-size: 0.875rem;
-}
-
-.compact-table .p-datatable-tbody > tr > td {
-  padding: 0.5rem;
-}
-
-/* Button styling for dual mode */
-.p-button-primary {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.p-button-success {
-  background: var(--green-500);
-  border-color: var(--green-500);
-}
-
-/* Dark mode support */
-.app-dark .external-link {
-  color: var(--primary-color-text);
-}
-</style>

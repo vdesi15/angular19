@@ -43,6 +43,7 @@ export class JiraUploadDialogComponent {
   @Input({ required: true }) visible = false;
   @Input({ required: true }) transactionData: TransactionDetailsResponse | undefined = undefined;
   @Input() mode: JiraDialogMode = 'upload';
+   @Input() initialJiraId: string = '';
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() searchRequested = new EventEmitter<{ query: string; type: 'cycle' | 'execution' }>();
   
@@ -55,7 +56,7 @@ export class JiraUploadDialogComponent {
   // ================================
 
   public jiraInput: WritableSignal<string> = signal('');
-  public selectedRows: WritableSignal<TestCycleExecution[]> = signal([]);
+  public selectedExecution: WritableSignal<TestCycleExecution[]> = signal([]);
 
   // ================================
   // COMPUTED SIGNALS
@@ -96,6 +97,42 @@ export class JiraUploadDialogComponent {
     }
   });
 
+  public readonly primaryActionText = computed(() => {
+    const selectedExec = this.selectedExecution();
+    
+    if (this.mode === 'upload') {
+      return selectedExec 
+        ? `Upload to ${selectedExec.key}` 
+        : `Upload to ${this.jiraInput()}`;
+    } else {
+      return selectedExec 
+        ? `Search ${selectedExec.key}`
+        : `Search ${this.jiraInput()}`;
+    }
+  });
+
+  public readonly secondaryActionText = computed(() => {
+    const result = this.detectionResult();
+    
+    if (!result?.isValid || result.type !== 'test-cycle') {
+      return null;
+    }
+    
+    return this.mode === 'upload' 
+      ? `Upload to ${result.id}` 
+      : `Search ${result.id}`;
+  });
+
+  public readonly showBothActions = computed(() => {
+    const result = this.detectionResult();
+    const hasSelectedExecution = this.selectedExecution() !== null;
+    
+    return result?.isValid && 
+           result.type === 'test-cycle' && 
+           hasSelectedExecution &&
+           this.testCycleExecutions().length > 0;
+  });
+
   public readonly actionButtonText = computed(() => {
     if (this.mode === 'upload') {
       const result = this.detectionResult();
@@ -109,7 +146,7 @@ export class JiraUploadDialogComponent {
       }
     } else {
       // Search mode
-      const selectedExecution = this.selectedRows()[0];
+      const selectedExecution = this.selectedExecution()[0];
       return selectedExecution 
         ? `Search ${selectedExecution.key}`
         : `Search ${this.jiraInput()}`;
@@ -131,11 +168,15 @@ export class JiraUploadDialogComponent {
 
   constructor() {
     // Reset state when dialog is opened/closed
-    effect(() => {
+     effect(() => {
       if (!this.visible) {
         this.jiraService.resetState();
         this.jiraInput.set('');
-        this.selectedRows.set([]);
+        this.selectedExecution.set(null);
+        this.jiraService.clearTestCycleExecutions();
+      } else if (this.visible && this.initialJiraId) {
+        console.log(`[JiraDialog] Auto-populating with: ${this.initialJiraId}`);
+        this.jiraInput.set(this.initialJiraId);
       }
     });
 
@@ -144,18 +185,21 @@ export class JiraUploadDialogComponent {
       const executions = this.testCycleExecutions();
       const selectedIds = this.uploadState().selectedExecutions;
       const selected = executions.filter(exec => selectedIds.includes(exec.id));
-      this.selectedRows.set(selected);
+      this.selectedExecution.set(selected);
     });
 
     effect(() => {
       const input = this.jiraInput();
       const result = this.detectionResult();
       
-      if (this.mode === 'search' && 
-          this.visible && 
-          result?.isValid && 
-          result.type === 'test-cycle') {
+      if (this.visible && result?.isValid && result.type === 'test-cycle') {
+        console.log(`[JiraDialog] Auto-loading executions for: ${result.id}`);
         this.autoLoadExecutions(result.id);
+      } else if (this.visible && input && (!result?.isValid || result.type !== 'test-cycle')) {
+        // Clear executions if input is no longer valid test cycle
+        console.log('[JiraDialog] Input no longer valid test cycle, clearing executions');
+        this.jiraService.clearTestCycleExecutions();
+        this.selectedExecution.set(null);
       }
     });
   }
@@ -165,10 +209,149 @@ export class JiraUploadDialogComponent {
   // ================================
 
   /**
-   * Handle dialog close (both X button and programmatic close)
+   * Handle dialog close properly
    */
   public onDialogHide(): void {
+    console.log('[JiraDialog] Dialog hide requested');
     this.visibleChange.emit(false);
+  }
+
+  /**
+   * Handle explicit cancel button
+   */
+  public onCancel(): void {
+    console.log('[JiraDialog] Cancel button clicked');
+    this.visibleChange.emit(false);
+  }
+
+  /**
+   * Handle execution selection change
+   */
+  public onExecutionSelect(execution: TestCycleExecution): void {
+    console.log('[JiraDialog] Execution selected:', execution.key);
+    this.selectedExecution.set(execution);
+  }
+
+  /**
+   * Handle execution deselection
+   */
+  public onExecutionDeselect(): void {
+    console.log('[JiraDialog] Execution deselected');
+    this.selectedExecution.set(null);
+  }
+
+  /**
+   * ENHANCED: Handle primary action (execution-specific)
+   */
+  public async performPrimaryAction(): Promise<void> {
+    const selectedExec = this.selectedExecution();
+    
+    if (this.mode === 'upload') {
+      if (selectedExec) {
+        return this.performExecutionUpload(selectedExec);
+      } else {
+        return this.performCycleUpload();
+      }
+    } else {
+      if (selectedExec) {
+        return this.performExecutionSearch(selectedExec);
+      } else {
+        return this.performCycleSearch();
+      }
+    }
+  }
+
+  /**
+   * ENHANCED: Handle secondary action (cycle-level)
+   */
+  public async performSecondaryAction(): Promise<void> {
+    if (this.mode === 'upload') {
+      return this.performCycleUpload();
+    } else {
+      return this.performCycleSearch();
+    }
+  }
+
+  /**
+   * Upload to specific execution
+   */
+  private async performExecutionUpload(execution: TestCycleExecution): Promise<void> {
+    console.log(`[JiraDialog] Uploading to execution: ${execution.key}`);
+    
+    try {
+      await this.jiraService.uploadToJira(execution.key, this.transactionData);
+      // ENHANCED: Don't close dialog after upload, stay open
+      console.log('[JiraDialog] Upload completed, staying in dialog');
+    } catch (error) {
+      console.error('[JiraDialog] Execution upload failed:', error);
+    }
+  }
+
+  /**
+   * Upload to test cycle
+   */
+  private async performCycleUpload(): Promise<void> {
+    const result = this.detectionResult();
+    if (!result?.isValid) {
+      console.error('[JiraDialog] Invalid JIRA input for cycle upload');
+      return;
+    }
+
+    console.log(`[JiraDialog] Uploading to cycle: ${result.id}`);
+    
+    try {
+      if (result.type === 'test-cycle') {
+        await this.jiraService.uploadToTestCycleExecutions(result.id, this.transactionData);
+      } else {
+        await this.jiraService.uploadToJira(result.id, this.transactionData);
+      }
+      // ENHANCED: Don't close dialog after upload, stay open
+      console.log('[JiraDialog] Upload completed, staying in dialog');
+    } catch (error) {
+      console.error('[JiraDialog] Cycle upload failed:', error);
+    }
+  }
+
+  /**
+   * Search specific execution
+   */
+  private async performExecutionSearch(execution: TestCycleExecution): Promise<void> {
+    console.log(`[JiraDialog] Searching execution: ${execution.key}`);
+    
+    this.searchRequested.emit({
+      query: execution.key,
+      type: 'execution'
+    });
+
+    this.visibleChange.emit(false);
+  }
+
+  /**
+   * Search test cycle
+   */
+  private async performCycleSearch(): Promise<void> {
+    const result = this.detectionResult();
+    if (!result?.isValid) {
+      console.error('[JiraDialog] Invalid JIRA input for cycle search');
+      return;
+    }
+
+    console.log(`[JiraDialog] Searching cycle: ${result.id}`);
+    
+    this.searchRequested.emit({
+      query: result.id,
+      type: 'cycle'
+    });
+
+    this.visibleChange.emit(false);
+  }
+
+  /**
+   * Set JIRA input from external source (for auto-population)
+   */
+  public setJiraInput(jiraId: string): void {
+    console.log(`[JiraDialog] Setting JIRA input: ${jiraId}`);
+    this.jiraInput.set(jiraId);
   }
 
   /**
@@ -195,69 +378,6 @@ export class JiraUploadDialogComponent {
     } catch (error) {
       console.error('[JiraUploadDialog] Auto-load executions failed:', error);
     }
-  }
-
-  /**
-   * Handle primary action (upload OR search)
-   */
-  public async performAction(): Promise<void> {
-    if (this.mode === 'upload') {
-      return this.performUpload();
-    } else {
-      return this.performSearch();
-    }
-  }
-
-  /**
-   * Keep existing upload logic
-   */
-  private async performUpload(): Promise<void> {
-    const result = this.detectionResult();
-    if (!result?.isValid) {
-      console.error('[JiraUploadDialog] Invalid JIRA input for upload');
-      return;
-    }
-
-    try {
-      if (result.type === 'test-cycle') {
-        await this.jiraService.uploadToTestCycleExecutions(result.id, this.transactionData);
-      } else {
-        await this.jiraService.uploadToJira(result.id, this.transactionData);
-      }
-    } catch (error) {
-      console.error('[JiraUploadDialog] Upload failed:', error);
-    }
-  }
-
-  /**
-   * ADD: Handle search action
-   */
-  private async performSearch(): Promise<void> {
-    const result = this.detectionResult();
-    if (!result?.isValid) {
-      console.error('[JiraUploadDialog] Invalid JIRA input for search');
-      return;
-    }
-
-    const selectedExecution = this.selectedRows()[0];
-    
-    if (result.type === 'test-cycle' && selectedExecution) {
-      // Search specific execution
-      console.log(`[JiraUploadDialog] Searching execution: ${selectedExecution.key}`);
-      this.searchRequested.emit({
-        query: selectedExecution.key,
-        type: 'execution'
-      });
-    } else {
-      // Search the cycle/ticket itself
-      console.log(`[JiraUploadDialog] Searching cycle/ticket: ${result.id}`);
-      this.searchRequested.emit({
-        query: result.id,
-        type: 'cycle'
-      });
-    }
-
-    this.visibleChange.emit(false);
   }
 
   /**

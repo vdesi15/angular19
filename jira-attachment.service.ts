@@ -621,4 +621,40 @@ export class EnhancedJiraService {
       errorMessage: ''
     }));
   }
+
+  /**
+ * Clear test cycle executions and reset state
+ */
+public clearTestCycleExecutions(): void {
+  console.log('[EnhancedJiraService] Clearing test cycle executions');
+  this._testCycleExecutions.set([]);
+  this._uploadState.update(state => ({
+    ...state,
+    showExecutions: false,
+    selectedExecutions: []
+  }));
+}
+
+/**
+ * Set JIRA input for external components (like auto-population)
+ */
+public setJiraInput(jiraId: string): void {
+  console.log(`[EnhancedJiraService] External JIRA input set: ${jiraId}`);
+  // This is mainly for external coordination, 
+  // the actual input is managed by the dialog component
+}
+
+/**
+ * Check if executions are currently loaded
+ */
+public hasExecutions(): boolean {
+  return this._testCycleExecutions().length > 0;
+}
+
+/**
+ * Get current execution count
+ */
+public getExecutionCount(): number {
+  return this._testCycleExecutions().length;
+}
 }
