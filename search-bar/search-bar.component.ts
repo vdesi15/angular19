@@ -26,6 +26,7 @@ export class SearchBarComponent {
   public showJiraUploadDialog: WritableSignal<boolean> = signal(false);
   public showTestCycleDialog: WritableSignal<boolean> = signal(false);
   public currentTestCycleId: WritableSignal<string> = signal('');
+  public initialJiraId: WritableSignal<string> = signal(''); 
 
   // ================================
   // REACTIVE STATE SIGNALS

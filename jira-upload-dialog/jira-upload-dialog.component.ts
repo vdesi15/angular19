@@ -186,14 +186,15 @@ export class JiraUploadDialogComponent implements OnInit {
         */
 
         effect(() => {
-            const initialId = this.initialJiraId;
             const isVisible = this.visible;
-
-            if (isVisible && initialId && initialId.trim()) {
-                console.log(`[JiraDialog] Setting initial JIRA ID: ${initialId}`);
-                this.jiraInput.set(initialId);
+            const initial = this.initialJiraId;
+            
+            if (isVisible && initial && initial.trim() && !this.jiraInput()) {
+                console.log(`[JiraDialog] Effect - Setting initial JIRA ID: ${initial}`);
+                this.jiraInput.set(initial);
+                this.autoLoadExecutionsIfNeeded(initial);
             }
-        });
+            });
 
         effect(() => {
             const input = this.jiraInput();
@@ -203,7 +204,6 @@ export class JiraUploadDialogComponent implements OnInit {
                 console.log(`[JiraDialog] Auto-loading executions for: ${result.id}`);
                 this.autoLoadExecutions(result.id);
             } else if (this.visible && input && (!result?.isValid || result.type !== 'test-cycle')) {
-                // Clear executions if input is no longer valid test cycle
                 console.log('[JiraDialog] Input no longer valid test cycle, clearing executions');
                 this.jiraService.clearTestCycleExecutions();
                 this.selectedExecution.set(null);
