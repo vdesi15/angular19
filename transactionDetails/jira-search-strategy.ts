@@ -161,18 +161,20 @@ export class EnhancedJiraSearchStrategy extends BaseSearchStrategy {
       map(response => {
         
         // 🛠️ SIMPLE: Extract hits (handle response.hits.hits.hits)
-        let hits = [];
-        if (response?.hits?.hits?.hits) {
-          // Your case: 3 levels deep
-          hits = Array.isArray(response.hits.hits.hits) ? 
-                response.hits.hits.hits : 
-                Object.values(response.hits.hits.hits || {});
-        } else if (response?.hits?.hits) {
-          // Standard case: 2 levels deep
-          hits = Array.isArray(response.hits.hits) ? 
-                response.hits.hits : 
-                Object.values(response.hits.hits || {});
-        }
+        // 🔧 Fix nested hits and convert objects to ElkHit array
+      let hits: ElkHit[] = [];
+      if (response?.hits?.hits?.hits) {
+        const deepHits = response.hits.hits.hits;
+        hits = Array.isArray(deepHits) 
+          ? deepHits 
+          : Object.values(deepHits).map(hit => ({
+              _index: hit._index || '',
+              _type: hit._type || '_doc',
+              _id: hit._id || '',
+              _score: hit._score || 0,
+              _source: hit._source || hit
+            }));
+      }
         
         console.log('[JiraStrategy] Extracted hits:', hits.length, 'items');
 
