@@ -45,6 +45,8 @@ export class FiltersService {
       }
     });
 
+    /*
+
     effect(() => {
       this.queryParams();
       const activeRoute = this.findActiveRoute(this.router.routerState.snapshot.root);
@@ -54,13 +56,14 @@ export class FiltersService {
         }
       });
     });
+    */
   }
 
   public setSearchFilterMetadata(metadata: SearchFilterMetadata): void {
     console.log('[FiltersService] Setting metadata:', metadata);
     this._searchFilterMetadata.set(metadata);
   }
-  
+
   public updateFilters(partialFilters: Partial<SearchFilterModel>, skipUrlUpdate = false): void {
     console.log('[FiltersService] updateFilters called with:', partialFilters, 'skipUrlUpdate:', skipUrlUpdate);
 

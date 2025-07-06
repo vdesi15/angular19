@@ -31,6 +31,11 @@ export class EnhancedTransactionSearchStrategy implements SearchStrategy {
   // STRATEGY INTERFACE IMPLEMENTATION
   // ================================
 
+  public generateSearchKey(query: string, filters: any): string {
+    const filterKey = filters ? `${filters.application.join(',') || ''}:${filters.environment || ''}:${filters.location || ''}` : '';
+    return `transaction:${query}:${filterKey}`;
+  }
+
   canHandle(query: any, context?: any): boolean {
     if (typeof query !== 'string') return false;
     

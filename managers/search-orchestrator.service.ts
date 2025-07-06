@@ -51,7 +51,7 @@ export class SearchOrchestratorService {
    */
   public performSearch(request: SearchRequest): void {
     console.log('[SearchOrchestrator] Performing search:', request);
-    
+
     // Use strategy manager to determine approach
     const enhancedRequest = this.strategyManager.enhanceRequest(request);
     
@@ -69,8 +69,23 @@ export class SearchOrchestratorService {
     // Use history manager to save
     this.historyManager.saveSearch(activeSearch);
     
-    // Use execution manager to run the search
-    this.executionManager.executeSearch(activeSearch);
+    const canExecute = await this.executionManager.canExecuteSearch(request);
+    if (!canExecute) {
+      console.log('[SearchOrchestrator] Search blocked by execution gating');
+      return;
+    }
+    try {
+      // Use execution manager to run the search
+      this.executionManager.executeSearch(activeSearch);
+
+      // Mark as completed
+      this.executionManager.markSearchCompleted(request, result);
+    }
+    catch (error) {
+      // Mark as completed even on error
+      this.executionManager.markSearchCompleted(request, null);
+      throw error;
+    }
   }
 
   /**

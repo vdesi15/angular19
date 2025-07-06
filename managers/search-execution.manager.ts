@@ -42,7 +42,6 @@ export class SearchExecutionManager {
   private activeSseSubscriptions = new Map<string, Subscription>();
   private executionContexts = new Map<string, SearchExecutionContext>();
   
-  // Angular 19 signals for execution state
   private isExecuting: WritableSignal<Set<string>> = signal(new Set());
   private executionStats: WritableSignal<Map<string, SearchResultMetadata>> = signal(new Map());
 
@@ -57,6 +56,44 @@ export class SearchExecutionManager {
   // ================================
   // MAIN EXECUTION METHODS - ENHANCED
   // ================================
+
+   // Delegate canSearch to strategy
+  public async canExecuteSearch(request: ActiveSearch, selectedStrategy: any): Promise<boolean> {
+
+    // Generate search key using strategy
+    const searchKey = selectedStrategy.strategy.generateSearchKey(
+      request.query, 
+      this.getGlobalFilters(),
+      request.metadata?.currentId
+    );
+
+    // Ask strategy if it can execute
+    const canExecute = selectedStrategy.strategy.canSearch(searchKey);
+    
+    if (canExecute) {
+      // Mark as executing in strategy
+      selectedStrategy.strategy.markExecuting(searchKey);
+    }
+    
+    return canExecute;
+  }
+
+  // Mark search as completed in strategy
+  public markSearchCompleted(request: ActiveSearch, selectedStrategy: any, result?: any): void {    
+    if (selectedStrategy.strategy) {
+      const searchKey = selectedStrategy.strategy.generateSearchKey(
+        request.query, 
+        this.getGlobalFilters(),
+        request.metadata?.currentId
+      );
+      selectedStrategy.strategy.markCompleted(searchKey, result);
+    }
+  }
+
+  private getGlobalFilters(): any {
+    // Get current global filters from service
+    return this.searchFilterService.filters() || {};
+  }
 
   /**
    * Execute a search using the enhanced strategy system
@@ -86,29 +123,41 @@ export class SearchExecutionManager {
       return;
     }
 
-    // Create execution context
-    const executionContext = this.createExecutionContext(search, selectedStrategy);
-    this.executionContexts.set(search.id, executionContext);
+    this.canExecuteSearch(search, selectedStrategy);
 
-    console.log(`[ExecutionManager] Using strategy: ${selectedStrategy.strategyName} for search: ${search.id}`);
+    try {
+      // Create execution context
+      const executionContext = this.createExecutionContext(search, selectedStrategy);
+      this.executionContexts.set(search.id, executionContext);
 
-    // Update search metadata with strategy info
-    this.updateSearchState(search.id, {
-      searchMetadata: {
-        ...search.searchMetadata,
-        searchStrategy: selectedStrategy.strategyType,
-        strategyName: selectedStrategy.strategyName,
-        confidence: selectedStrategy.confidence,
-        executionTime: undefined // Will be set on completion
+      console.log(`[ExecutionManager] Using strategy: ${selectedStrategy.strategyName} for search: ${search.id}`);
+
+      // Update search metadata with strategy info
+      this.updateSearchState(search.id, {
+        searchMetadata: {
+          ...search.searchMetadata,
+          searchStrategy: selectedStrategy.strategyType,
+          strategyName: selectedStrategy.strategyName,
+          confidence: selectedStrategy.confidence,
+          executionTime: undefined // Will be set on completion
+        }
+      });
+
+      // Execute based on search type
+      if (search.isStreaming) {
+        this.executeStreamingSearch(search, selectedStrategy);
+      } else {
+        this.executeHttpSearch(search, selectedStrategy);
       }
-    });
 
-    // Execute based on search type
-    if (search.isStreaming) {
-      this.executeStreamingSearch(search, selectedStrategy);
-    } else {
-      this.executeHttpSearch(search, selectedStrategy);
+      this.executionManager.markSearchCompleted(request, result);
     }
+    catch (error) {
+      // Mark as completed even on error
+      this.executionManager.markSearchCompleted(request, null);
+      throw error;
+    }
+    
   }
 
   /**

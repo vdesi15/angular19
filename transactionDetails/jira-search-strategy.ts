@@ -30,7 +30,7 @@ export interface JiraSearchResponse {
 }
 
 @Injectable({ providedIn: 'root' })
-export class EnhancedJiraSearchStrategy implements SearchStrategy {
+export class EnhancedJiraSearchStrategy extends BaseSearchStrategy {
   private http = inject(HttpClient);
   private router = inject(Router);
   private configService = inject(ConfigService);
@@ -40,6 +40,21 @@ export class EnhancedJiraSearchStrategy implements SearchStrategy {
   // ================================
   // STRATEGY INTERFACE IMPLEMENTATION
   // ================================
+
+  /**
+   * Generate SearchKey for gating.
+   * @param query 
+   * @param filters 
+   * @param currentId 
+   * @returns 
+   */
+  public generateSearchKey(query: string, filters: any, currentId?: string): string {
+    const jiraDetection = this.jiraService.detectJiraId(query);
+    const baseKey = jiraDetection.isValid ? jiraDetection.id : query;
+    const currentIdKey = currentId ? `:${currentId}` : '';
+    
+    return `jira:${baseKey}:${currentIdKey}`;
+  }
 
   canHandle(query: any, context?: any): boolean {
     if (typeof query !== 'string') return false;

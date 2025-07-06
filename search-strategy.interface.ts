@@ -12,6 +12,12 @@ export interface SearchStrategy {
   getStrategyName(): string;
   getMetadata?(): any;
   
+  // Methods for gating searches within a strategy
+  canSearch(searchKey: string): boolean;
+  markExecuting(searchKey: string): void;
+  markCompleted(searchKey: string, result?: any): void;
+  generateSearchKey(query: string, filters: any, currentId?: string): string;
+
   // NEW: URL handling methods
   handleUrlParams?(params: Record<string, string>): UrlHandlingResult | null;
   updateUrlForSearch?(query: string, currentParams: Record<string, string>): Record<string, string>;
