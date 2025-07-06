@@ -160,6 +160,30 @@ export class EnhancedJiraSearchStrategy extends BaseSearchStrategy {
     return this.http.get<TransactionDetailsResponse>(url).pipe(
       map(response => {
         
+        // 🛠️ SIMPLE: Extract hits (handle response.hits.hits.hits)
+        let hits = [];
+        if (response?.hits?.hits?.hits) {
+          // Your case: 3 levels deep
+          hits = Array.isArray(response.hits.hits.hits) ? 
+                response.hits.hits.hits : 
+                Object.values(response.hits.hits.hits || {});
+        } else if (response?.hits?.hits) {
+          // Standard case: 2 levels deep
+          hits = Array.isArray(response.hits.hits) ? 
+                response.hits.hits : 
+                Object.values(response.hits.hits || {});
+        }
+        
+        console.log('[JiraStrategy] Extracted hits:', hits.length, 'items');
+
+        // 🛠️ SIMPLE: Build transaction details from root level
+        const transactionDetails = {
+          TRANSACTION_TIMELINE: response.TRANSACTION_TIMELINE || [],
+          FORMATTED_PAYLOADS: response.FORMATTED_PAYLOADS || [],
+          overflow: response.overflow,
+          call_count: response.call_count
+        };
+
         this.updateGlobalFiltersFromResponse(response);
 
         // Extract current transaction ID if not provided
@@ -237,7 +261,7 @@ export class EnhancedJiraSearchStrategy extends BaseSearchStrategy {
    * Extract and update global filters from response
    */
   private updateGlobalFiltersFromResponse(response: TransactionDetailsResponse): void {
-    if (!response?.hits?.hits?.length) return;
+    if (!response?.hits?.hits) return;
 
     const hits = response.hits.hits;
     let app = '';
