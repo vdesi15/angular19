@@ -1,34 +1,23 @@
-// managers/search-state.manager.ts
-// ================================
 // STATE MANAGER - Search State & Lifecycle
-// ================================
-
 import { Injectable, inject, signal, WritableSignal, effect, untracked } from '@angular/core';
 import { ActiveSearch, SearchRequest, EnhancedSearchRequest } from '../../models/search.model';
-import { FiltersService } from 'src/app/core/services/filters.service';
+import { SearchFiltersService } from '../../../shared/services/search-filters.service';
 
 // Forward declaration to avoid circular dependency
 let SearchExecutionManager: any;
 
 @Injectable({ providedIn: 'root' })
 export class SearchStateManager {
-  
-  // ================================
-  // STATE SIGNALS
-  // ================================
-  
+
   public readonly activeSearches: WritableSignal<ActiveSearch[]> = signal([]);
-  private filtersService = inject(FiltersService);
+  private filtersService = inject(SearchFiltersService);
   private executionManager: any; // Will be set via setExecutionManager
 
   constructor() {
     this.setupGlobalFilterEffect();
   }
-
-  // ================================
+  
   // DEPENDENCY INJECTION (avoiding circular deps)
-  // ================================
-
   public setExecutionManager(manager: any): void {
     this.executionManager = manager;
   }
@@ -42,7 +31,7 @@ export class SearchStateManager {
    */
   public createActiveSearch(request: SearchRequest | EnhancedSearchRequest): ActiveSearch {
     const enhancedRequest = request as EnhancedSearchRequest;
-    
+
     return {
       ...enhancedRequest,
       id: this.generateSearchId(),
@@ -68,7 +57,7 @@ export class SearchStateManager {
   public addSearch(search: ActiveSearch): void {
     // Close existing search of same type if needed
     this.closeExistingSearchOfType(search.type);
-    
+
     // Collapse all existing searches
     this.activeSearches.update(searches => {
       const collapsedSearches = searches.map(s => ({ ...s, isExpanded: false }));
@@ -82,7 +71,7 @@ export class SearchStateManager {
    * Update search state
    */
   public updateSearch(id: string, partialState: Partial<ActiveSearch>): void {
-    this.activeSearches.update(searches => 
+    this.activeSearches.update(searches =>
       searches.map(s => s.id === id ? { ...s, ...partialState } : s)
     );
   }
@@ -142,7 +131,7 @@ export class SearchStateManager {
   private setupGlobalFilterEffect(): void {
     effect(() => {
       const currentGlobalFilters = this.filtersService.filters();
-      
+
       if (!currentGlobalFilters) {
         console.log('[StateManager] No filters available yet, skipping');
         return;
@@ -150,38 +139,38 @@ export class SearchStateManager {
 
       untracked(() => {
         console.log('[StateManager] Global filters changed, re-triggering active searches');
-        
+
         const activeSearches = this.activeSearches();
         if (activeSearches.length === 0) {
           console.log('[StateManager] No active searches to re-trigger');
           return;
         }
-        
-        // ✨ SIMPLE FIX: Just generate new IDs and clear data
-        this.activeSearches.update(searches => 
+
+        //  SIMPLE FIX: Just generate new IDs and clear data
+        this.activeSearches.update(searches =>
           searches.map(search => ({
             ...search,
-            id: this.generateSearchId(), // ✨ New ID forces component refresh
+            id: this.generateSearchId(), //  New ID forces component refresh
             isLoading: true,
-            data: [], // ✨ Clear existing data
+            data: [], //  Clear existing data
             error: undefined,
             totalRecords: 0,
             aggregatedFilterValues: new Map()
           }))
         );
-        
+
         // Re-execute all searches
         const updatedSearches = this.activeSearches();
         updatedSearches.forEach(search => {
-          console.log(`[StateManager] Re-triggering search: ${search.title} (new ID: ${search.id})`);
-          
+          //console.log(`[StateManager] Re-triggering search: ${search.title} (new ID: ${search.id})`);
+
           if (this.executionManager) {
             // Small delay to ensure state is updated
             setTimeout(() => this.executionManager.executeSearch(search), 0);
           }
         });
       });
-    }, { allowSignalWrites: true });
+    });
   }
 
   // ================================
@@ -221,7 +210,7 @@ export class SearchStateManager {
    */
   public validateState(): boolean {
     const searches = this.activeSearches();
-    
+
     // Check for duplicate IDs
     const ids = searches.map(s => s.id);
     const uniqueIds = new Set(ids);
@@ -231,7 +220,7 @@ export class SearchStateManager {
     }
 
     // Check for required properties
-    const invalidSearches = searches.filter(s => 
+    const invalidSearches = searches.filter(s =>
       !s.id || !s.title || !s.appName || !s.type
     );
     if (invalidSearches.length > 0) {
@@ -276,13 +265,13 @@ export class SearchStateManager {
    */
   public importState(state: any): void {
     if (!state?.searches) return;
-    
+
     const restoredSearches = state.searches.map((search: any) => ({
       ...search,
       // Restore Map from serialized data
       aggregatedFilterValues: new Map(search.aggregatedFilterValues || [])
     }));
-    
+
     this.activeSearches.set(restoredSearches);
     console.log(`[StateManager] Imported ${restoredSearches.length} searches from state`);
   }
