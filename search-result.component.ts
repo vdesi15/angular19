@@ -123,41 +123,60 @@ export class SearchResultComponent {
   return this.streamingVisibleColumns();
 });
 
-  public getRecordsSummary(): string {
-    if (!this.search) return '';
-    
-    const totalLoaded = this.search.data.length;
+  public filteredCount = 0;
+  public totalLoadedCount = 0;
+
+  public updateFilteredCount(count: number): void {
+    console.log('🔥 updateFilteredCount:', count);
+    this.filteredCount = count;
+    this.updateRecordsSummary(); // Force update
+  }
+
+  // 🔥 SIMPLE: Regular method that updates when needed
+  public updateRecordsSummary(): void {
+    if (!this.search) {
+      this.recordsSummaryText = '';
+      return;
+    }
+
+    this.totalLoadedCount = this.search.data.length;
     const totalRecords = this.search.totalRecords;
-    const filteredCount = this.filteredCount(); // This will always get latest value
     
-    console.log('🔥 getRecordsSummary called:', {
-      totalLoaded,
-      filteredCount
+    console.log('🔥 updateRecordsSummary:', {
+      totalLoaded: this.totalLoadedCount,
+      filteredCount: this.filteredCount
     });
     
     if (this.search.isStreaming) {
-      let summary = `Loaded: ${totalLoaded.toLocaleString()}`;
-      if (totalRecords > totalLoaded) {
+      let summary = `Loaded: ${this.totalLoadedCount.toLocaleString()}`;
+      if (totalRecords > this.totalLoadedCount) {
         summary += ` of ${totalRecords.toLocaleString()}`;
       }
-      if (filteredCount < totalLoaded && filteredCount > 0) {
-        summary += ` (Filtered: ${filteredCount.toLocaleString()})`;
+      if (this.filteredCount < this.totalLoadedCount && this.filteredCount > 0) {
+        summary += ` (Filtered: ${this.filteredCount.toLocaleString()})`;
       }
-      return `(${summary})`;
+      this.recordsSummaryText = `(${summary})`;
     } else {
-      let summary = `${totalLoaded.toLocaleString()} record${totalLoaded !== 1 ? 's' : ''}`;
-      if (filteredCount < totalLoaded && filteredCount > 0) {
-        summary += ` (${filteredCount.toLocaleString()} visible)`;
+      let summary = `${this.totalLoadedCount.toLocaleString()} record${this.totalLoadedCount !== 1 ? 's' : ''}`;
+      if (this.filteredCount < this.totalLoadedCount && this.filteredCount > 0) {
+        summary += ` (${this.filteredCount.toLocaleString()} visible)`;
       }
-      return `(${summary})`;
+      this.recordsSummaryText = `(${summary})`;
     }
   }
 
-  public updateFilteredCount(count: number): void {
-    this.filteredCount.set(count);
-    // 🔥 FORCE: Trigger change detection
-    this.cdr.detectChanges();
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['search']) {
+      this.updateRecordsSummary();
+    }
   }
+
+  ngOnInit(): void {
+    this.updateRecordsSummary();
+  }
+
+  // 🔥 SIMPLE: Just a string property
+  public recordsSummaryText = '';
 
   constructor() {
     effect(() => {
