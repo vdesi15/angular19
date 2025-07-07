@@ -100,81 +100,109 @@ import { OidcSecurityService } from 'angular-auth-oidc-client';
   `]
 })
 export class OidcCallbackComponent implements OnInit {
-  private readonly oidcSecurityService = inject(OidcSecurityService);
   private readonly router = inject(Router);
+  private readonly oidcSecurityService = inject(OidcSecurityService);
 
-  public errorMessage: string | null = null;
+  // ================================
+  // ANGULAR 19 SIGNALS
+  // ================================
+  
+  public statusMessage = signal('Completing Sign In...');
+  public subMessage = signal('Processing your authentication, please wait.');
+  public errorMessage = signal('');
+  public isDarkMode = signal(this.detectDarkMode());
 
   ngOnInit(): void {
-    console.log('[OidcCallback] Processing OIDC callback');
+    console.log('[OidcCallbackComponent] Starting OIDC callback processing');
     this.processCallback();
   }
 
   private async processCallback(): Promise<void> {
     try {
-      // Let the OIDC service handle the callback
-      const result = await this.oidcSecurityService.checkAuth().toPromise();
+      this.statusMessage.set('Completing Sign In...');
+      this.subMessage.set('Processing your authentication, please wait.');
+
+      const loginResponse = await this.oidcSecurityService.checkAuth().toPromise();
       
-      console.log('[OidcCallback] Auth check result:', {
-        isAuthenticated: result?.isAuthenticated,
-        hasAccessToken: !!result?.accessToken,
-        errorMessage: result?.errorMessage
+      console.log('[OidcCallbackComponent] Login response:', {
+        isAuthenticated: loginResponse.isAuthenticated,
+        hasAccessToken: !!loginResponse.accessToken,
+        errorMessage: loginResponse.errorMessage,
+        configId: loginResponse.configId
       });
 
-      if (result?.isAuthenticated) {
-        console.log('[OidcCallback] Authentication successful');
+      if (loginResponse.isAuthenticated) {
+        this.statusMessage.set('Sign In Successful!');
+        this.subMessage.set('Redirecting to application...');
+        
         await this.handleSuccessfulAuth();
       } else {
-        console.error('[OidcCallback] Authentication failed:', result?.errorMessage);
-        this.errorMessage = result?.errorMessage || 'Authentication failed';
-        setTimeout(() => this.fallbackRedirect(), 3000);
+        // Handle authentication failure
+        const error = loginResponse.errorMessage || 'Authentication failed';
+        console.error('[OidcCallbackComponent] Authentication failed:', error);
+        
+        this.statusMessage.set('Sign In Failed');
+        this.subMessage.set('There was a problem completing your sign in.');
+        this.errorMessage.set(error);
+        
+        // Redirect to main page after showing error
+        setTimeout(() => {
+          this.router.navigate(['/logs/search']);
+        }, 3000);
       }
     } catch (error) {
-      console.error('[OidcCallback] Error processing callback:', error);
-      this.errorMessage = 'An error occurred during authentication';
-      setTimeout(() => this.fallbackRedirect(), 3000);
+      console.error('[OidcCallbackComponent] Error processing callback:', error);
+      
+      this.statusMessage.set('Sign In Error');
+      this.subMessage.set('An unexpected error occurred.');
+      this.errorMessage.set('Please try signing in again.');
+      
+      // Redirect after error
+      setTimeout(() => {
+        this.router.navigate(['/logs/search']);
+      }, 3000);
     }
   }
 
   private async handleSuccessfulAuth(): Promise<void> {
+    // Small delay to show success message
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     // Check for stored URL from before authentication
     const savedUrl = sessionStorage.getItem('pre_auth_url');
     
     if (savedUrl && !this.isCallbackUrl(savedUrl)) {
-      console.log('[OidcCallback] Redirecting to saved URL:', savedUrl);
+      console.log('[OidcCallbackComponent] Redirecting to saved URL:', savedUrl);
       sessionStorage.removeItem('pre_auth_url');
       
       try {
         const success = await this.router.navigateByUrl(savedUrl);
         if (!success) {
-          console.warn('[OidcCallback] Failed to navigate to saved URL, using default');
+          console.warn('[OidcCallbackComponent] Failed to navigate to saved URL');
           this.router.navigate(['/logs/search']);
         }
       } catch (error) {
-        console.error('[OidcCallback] Error navigating to saved URL:', error);
+        console.error('[OidcCallbackComponent] Error navigating to saved URL:', error);
         this.router.navigate(['/logs/search']);
       }
     } else {
-      console.log('[OidcCallback] No saved URL found, redirecting to default');
+      console.log('[OidcCallbackComponent] No saved URL, using default');
       this.router.navigate(['/logs/search']);
     }
   }
 
-  private fallbackRedirect(): void {
-    console.log('[OidcCallback] Performing fallback redirect');
-    sessionStorage.removeItem('pre_auth_url'); // Clean up
-    this.router.navigate(['/logs/search']);
-  }
-
-  public retryAuth(): void {
-    console.log('[OidcCallback] Retrying authentication');
-    this.errorMessage = null;
-    this.oidcSecurityService.authorize();
-  }
-
   private isCallbackUrl(url: string): boolean {
-    return url.includes('signin-oidc') || 
-           url.includes('auth/callback') || 
-           url.includes('code=');
+    return url.includes('code=') || 
+           url.includes('signin-oidc') || 
+           url.includes('access_token=') ||
+           url.includes('id_token=');
+  }
+
+  private detectDarkMode(): boolean {
+    // Check for existing dark mode class or system preference
+    const htmlElement = document.querySelector('html');
+    return htmlElement?.classList.contains('app-dark') || 
+           htmlElement?.classList.contains('my-app-dark') ||
+           window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 }
