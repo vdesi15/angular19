@@ -1,310 +1,294 @@
-// ================================
-// STRATEGY MANAGER - Registry and Detection
-// ================================
+// STATE MANAGER - Search State & Lifecycle
+import { Injectable, inject, signal, WritableSignal, effect, untracked } from '@angular/core';
+import { ActiveSearch, SearchRequest, EnhancedSearchRequest } from '../../models/search.model';
+import { SearchFiltersService } from '../../../shared/services/search-filters.service';
+import { query } from 'jsonpath';
 
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { SearchRequest, SearchType, EnhancedSearchRequest } from '../../models/search.model';
-import { SearchQueryDetectionService, QueryDetectionResult } from '../search-query-detection.service';
-import { TransactionSearchStrategy } from '../../strategies/transaction-details-strategy';
-import { JiraSearchStrategy } from '../../strategies/jira-search-strategy';
-import { LotSearchStrategy } from '../../strategies/lot-search-strategy';
-import { NaturalLanguageSearchStrategy } from '../../strategies/nlp-search-strategy';
-import { SearchStrategy, UrlHandlingResult } from '../../strategies/search-strategy.interface';
-import { SseStrategy } from '../../strategies/sse-strategy';
+// Forward declaration to avoid circular dependency
+let SearchExecutionManager: any;
 
 @Injectable({ providedIn: 'root' })
-export class SearchStrategyManager {
-  
-  private queryDetectionService = inject(SearchQueryDetectionService);
-  private strategies = signal(new Map<string, SearchStrategy>());
-  private readonly lastUsedStrategy = signal<string | null>(null);
+export class SearchStateManager {
 
-  public readonly availableStrategies = computed(() =>
-    Array.from(this.strategies().keys())
-  );
+  public readonly activeSearches: WritableSignal<ActiveSearch[]> = signal([]);
+  private filtersService = inject(SearchFiltersService);
+  private executionManager: any; // Will be set via setExecutionManager
 
   constructor() {
-    this.initializeStrategies();
+    this.setupGlobalFilterEffect();
+  }
+  
+  // DEPENDENCY INJECTION (avoiding circular deps)
+  public setExecutionManager(manager: any): void {
+    this.executionManager = manager;
   }
 
   // ================================
-  // STRATEGY REGISTRY
-  // ================================
-
-  private initializeStrategies(): void {
-    const strategiesMap = new Map<string, SearchStrategy>();
-
-    const transactionStrategy = inject(TransactionSearchStrategy);
-    const jiraStrategy = inject(JiraSearchStrategy);
-    const lotStrategy = inject(LotSearchStrategy);
-    const naturalLanguageStrategy = inject(NaturalLanguageSearchStrategy);
-    const sseStrategy = inject(SseStrategy);
-
-    strategiesMap.set('transaction', transactionStrategy);
-    strategiesMap.set('jira', jiraStrategy);
-    strategiesMap.set('lot', lotStrategy);
-    strategiesMap.set('natural', naturalLanguageStrategy);
-    strategiesMap.set('browse', sseStrategy);
-    strategiesMap.set('error', sseStrategy);
-
-    this.strategies.set(strategiesMap);
-
-    console.log('[StrategyManager] Modern strategies initialized:', this.availableStrategies());
-  }
-
-
-  // ================================
-  // URL Handling
+  // SEARCH LIFECYCLE MANAGEMENT
   // ================================
 
   /**
-   * 
-   * @param params 
-   * @returns 
+   * Create a new active search from a request
    */
-  public handleUrlParameters(params: Record<string, string>): UrlHandlingResult | null {
-    const currentStrategies = this.strategies();
+  public createActiveSearch(request: SearchRequest | EnhancedSearchRequest): ActiveSearch {
+    const enhancedRequest = request as EnhancedSearchRequest;
 
-    // Try each strategy to see if it can handle the URL params
-    for (const [strategyType, strategy] of currentStrategies) {
-      if (strategy.handleUrlParams) {
-        const result = strategy.handleUrlParams(params);
-        if (result) {
-          console.log(`[StrategyManager] URL handled by ${strategyType} strategy:`, result);
-          return result;
+    return {
+      ...enhancedRequest,
+      id: this.generateSearchId(request),
+      isLoading: true,
+      isStreaming: this.isStreamingType(request.type),
+      isExpanded: true,
+      data: [],
+      totalRecords: 0,
+      streamFilters: [],
+      aggregatedFilterValues: new Map<string, Set<any>>(),
+      searchMetadata: {
+        detectionResult: enhancedRequest.detectionResult,
+        searchStrategy: request.type,
+        confidence: enhancedRequest.detectionResult?.confidence,
+        originalQuery: enhancedRequest.originalQuery
+      }
+    };
+  }
+
+  /**
+   * Add a search to the active list
+   */
+  public addSearch(search: ActiveSearch): void {
+    // Close existing search of same type if needed
+    this.closeExistingSearchOfType(search.type);
+
+    // Collapse all existing searches
+    this.activeSearches.update(searches => {
+      const collapsedSearches = searches.map(s => ({ ...s, isExpanded: false }));
+      return [search, ...collapsedSearches];
+    });
+
+    console.log(`[StateManager] Added search: ${search.title} (${search.id})`);
+  }
+
+  /**
+   * Update search state
+   */
+  public updateSearch(id: string, partialState: Partial<ActiveSearch>): void {
+    this.activeSearches.update(searches =>
+      searches.map(s => s.id === id ? { ...s, ...partialState } : s)
+    );
+  }
+
+  /**
+   * Remove a search
+   */
+  public removeSearch(id: string): void {
+    this.activeSearches.update(searches => searches.filter(s => s.id !== id));
+    console.log(`[StateManager] Removed search: ${id}`);
+  }
+
+  /**
+   * Clear all searches
+   */
+  public clearAll(): void {
+    this.activeSearches.set([]);
+    console.log('[StateManager] Cleared all searches');
+  }
+
+  // ================================
+  // SEARCH QUERYING
+  // ================================
+
+  /**
+   * Get search by ID
+   */
+  public getSearchById(id: string): ActiveSearch | undefined {
+    return this.activeSearches().find(s => s.id === id);
+  }
+
+  /**
+   * Get searches by type
+   */
+  public getSearchesByType(type: string): ActiveSearch[] {
+    return this.activeSearches().filter(s => s.type === type);
+  }
+
+  /**
+   * Get streaming searches
+   */
+  public getStreamingSearches(): ActiveSearch[] {
+    return this.activeSearches().filter(s => s.isStreaming);
+  }
+
+  /**
+   * Check if any searches are loading
+   */
+  public hasLoadingSearches(): boolean {
+    return this.activeSearches().some(s => s.isLoading);
+  }
+
+  // ================================
+  // GLOBAL FILTER EFFECTS
+  // ================================
+
+  private setupGlobalFilterEffect(): void {
+    effect(() => {
+      const currentGlobalFilters = this.filtersService.filters();
+
+      if (!currentGlobalFilters) {
+        console.log('[StateManager] No filters available yet, skipping');
+        return;
+      }
+
+      untracked(() => {
+        console.log('[StateManager] Global filters changed, re-triggering active searches');
+
+        const activeSearches = this.activeSearches();
+        if (activeSearches.length === 0) {
+          console.log('[StateManager] No active searches to re-trigger');
+          return;
         }
-      }
-    }
 
-    console.log('[StrategyManager] No strategy could handle URL parameters');
-    return null;
-  }
+        //  SIMPLE FIX: Just generate new IDs and clear data
+        this.activeSearches.update(searches =>
+          searches.map(search => ({
+            ...search,
+            id: this.generateSearchId(), //  New ID forces component refresh
+            isLoading: true,
+            data: [], //  Clear existing data
+            error: undefined,
+            totalRecords: 0,
+            aggregatedFilterValues: new Map()
+          }))
+        );
 
-  /**
-   * Update URL using the appropriate strategy
-   * @param query 
-   * @param currentParams 
-   * @returns 
-   */
-  public updateUrlForSearch(query: string, currentParams: Record<string, string>): Record<string, string> {
-    const selectedStrategy = this.selectBestStrategy(query);
+        // Re-execute all searches
+        const updatedSearches = this.activeSearches();
+        updatedSearches.forEach(search => {
+          //console.log(`[StateManager] Re-triggering search: ${search.title} (new ID: ${search.id})`);
 
-    if (selectedStrategy && selectedStrategy.updateUrlForSearch) {
-      return selectedStrategy.updateUrlForSearch(query, currentParams);
-    }
-
-    // Fallback: basic encoding
-    return {
-      ...currentParams,
-      searchText: btoa(query)
-    };
-  }
-
-  /**
-   *  Cleanup URL using the appropriate strategy
-   * @param query 
-   * @param currentParams 
-   * @returns 
-   */
-  public cleanupUrlParams(query: string, currentParams: Record<string, string>): Record<string, string> {
-    const selectedStrategy = this.selectBestStrategy(query);
-
-    if (selectedStrategy && selectedStrategy.cleanupUrlParams) {
-      return selectedStrategy.cleanupUrlParams(currentParams);
-    }
-
-    // Fallback: remove common search params
-    const cleanedParams = { ...currentParams };
-    delete cleanedParams['searchText'];
-    delete cleanedParams['jiraId'];
-    return cleanedParams;
-  }
-
-  // ================================
-  // STRATEGY SELECTION & ENHANCEMENT
-  // ================================
-
-  public enhanceRequest(request: SearchRequest): EnhancedSearchRequest {
-    // For streaming searches, no enhancement needed
-    if (request.type === 'browse' || request.type === 'error') {
-      return request as EnhancedSearchRequest;
-    }
-
-    // For query-based searches, use strategy selection
-    if (request.query && typeof request.query === 'string') {
-      const selectedStrategy = this.selectBestStrategy(request.query);
-
-      if (selectedStrategy) {
-        const detectedType = this.getStrategyType(selectedStrategy);
-
-        return {
-          ...request,
-          type: detectedType,
-          query: request.query.trim(),
-          title: this.generateTitleFromType(detectedType, request.query, request.title),
-          strategy: selectedStrategy.getStrategyName?.() || 'unknown',
-          originalQuery: request.query
-        };
-      }
-    }
-
-    // Return as-is if no enhancement possible
-    return request as EnhancedSearchRequest;
-  }
-
-  public selectBestStrategy(query: string, context?: any): SearchStrategy | null {
-    const currentStrategies = this.strategies();
-
-    // Iterate through strategies in priority order
-    for (const [strategyName, strategy] of currentStrategies) {
-      if (strategy.canHandle && strategy.canHandle(query, context)) {
-        this.lastUsedStrategy.set(strategyName);
-        console.log(`[StrategyManager] Selected strategy: ${strategyName} for query: ${query.substring(0, 50)}...`);
-        return strategy;
-      }
-    }
-
-    console.warn('[StrategyManager] No strategy can handle query:', query);
-    return null;
-  }
-
-  /**
-   * Get strategy by type - fallback method
-   */
-  public getStrategy(searchType: SearchType): SearchStrategy | null {
-    return this.strategies().get(searchType) || null;
-  }
-
-  // ================================
-  // STRATEGY UTILITIES
-  // ================================
-
-  /**
-   * Get strategy type from strategy instance
-   */
-  private getStrategyType(strategy: SearchStrategy): SearchType {
-    const currentStrategies = this.strategies();
-
-    for (const [type, strategyInstance] of currentStrategies) {
-      if (strategyInstance === strategy) {
-        return type as SearchType;
-      }
-    }
-
-    return 'transaction'; // Fallback
-  }
-
-  /**
-   * Generate title based on detected type and query
-   */
-  private generateTitleFromType(type: SearchType, query: string, fallbackTitle?: string): string {
-    const truncatedQuery = query.length > 20 ? `${query.substring(0, 20)}...` : query;
-
-    switch (type) {
-      case 'transaction':
-        return `Transaction: ${truncatedQuery}`;
-      case 'jira':
-        return `JIRA: ${truncatedQuery}`;
-      case 'lot':
-        return `Lot: ${truncatedQuery}`;
-      case 'natural':
-        return `Search: ${truncatedQuery}`;
-      case 'browse':
-        return 'Browse Logs';
-      case 'error':
-        return 'Error Stream';
-      default:
-        return fallbackTitle || `Search: ${truncatedQuery}`;
-    }
-  }
-
-  // ================================
-  // STRATEGY TESTING & VALIDATION
-  // ================================
-
-  /**
-   * Test which strategies can handle a query (development helper)
-   */
-  public testStrategiesForQuery(query: string): Array<{ strategy: string, canHandle: boolean, name: string }> {
-    const currentStrategies = this.strategies();
-    const results: Array<{ strategy: string, canHandle: boolean, name: string }> = [];
-
-    for (const [strategyType, strategy] of currentStrategies) {
-      const canHandle = strategy.canHandle ? strategy.canHandle(query) : false;
-      const name = strategy.getStrategyName?.() || strategyType;
-
-      results.push({
-        strategy: strategyType,
-        canHandle,
-        name
+          if (this.executionManager) {
+            // Small delay to ensure state is updated
+            setTimeout(() => this.executionManager.executeSearch(search), 0);
+          }
+        });
       });
-    }
-
-    return results.sort((a, b) => Number(b.canHandle) - Number(a.canHandle));
-  }
-
-  /**
-   * Validate that all required strategies are registered
-   */
-  public validateStrategies(): { isValid: boolean, missing: string[], extra: string[] } {
-    const requiredStrategies = ['transaction', 'jira', 'lot', 'natural', 'browse', 'error'];
-    const currentStrategies = Array.from(this.strategies().keys());
-
-    const missing = requiredStrategies.filter(strategy => !currentStrategies.includes(strategy));
-    const extra = currentStrategies.filter(strategy => !requiredStrategies.includes(strategy) && strategy !== 'guid');
-
-    const isValid = missing.length === 0;
-
-    if (!isValid) {
-      console.error('[StrategyManager] Validation failed:', { missing, extra });
-    }
-
-    return { isValid, missing, extra };
-  }
-
-  /**
-   * Get strategy information for debugging
-   */
-  public getStrategyInfo(): Array<{ type: string, name: string, canHandleMethod: boolean }> {
-    const currentStrategies = this.strategies();
-
-    return Array.from(currentStrategies.entries()).map(([type, strategy]) => ({
-      type,
-      name: strategy.getStrategyName?.() || 'Unknown',
-      canHandleMethod: typeof strategy.canHandle === 'function'
-    }));
+    });
   }
 
   // ================================
-  // REACTIVE GETTERS - Angular 19 Signal Access
+  // SEARCH STATE UTILITIES
   // ================================
 
   /**
-   * Get last used strategy name (reactive)
+   * Generate unique search ID
    */
-  public getLastUsedStrategy() {
-    return this.lastUsedStrategy();
+  private generateSearchId(request: SearchRequest): string {
+    const filters = this.filtersService.filters();
+    const signature = {
+      type: request.type,
+      query: request.query || '',
+      apps: filters?.applications || [],
+      env: filters?.environment || '',
+      loc: filters?.location || ''
+    }
+
+    const str = JSON.stringify(signature);
+    let hash = 0;
+    for (let index = 0; index < str.length; index++) {      
+      hash = ((hash << 5) - hash) + str.charCodeAt(index);
+      hash = hash & hash;
+    }
+    return `search_${Math.abs(hash).toString(36)}`;
   }
 
   /**
-   * Check if a specific strategy exists (reactive)
+   * Check if search type is streaming
    */
-  public hasStrategy(strategyType: string): boolean {
-    return this.strategies().has(strategyType);
+  private isStreamingType(type: string): boolean {
+    return type === 'browse' || type === 'error';
   }
 
   /**
-   * Get strategy statistics (reactive)
+   * Close existing search of the same type
    */
-  public getStrategyStats() {
-    const currentStrategies = this.strategies();
-    const withCanHandle = Array.from(currentStrategies.values())
-      .filter(strategy => typeof strategy.canHandle === 'function').length;
+  private closeExistingSearchOfType(type: string): void {
+    const existingSearch = this.activeSearches().find(s => s.type === type);
+    if (existingSearch) {
+      this.removeSearch(existingSearch.id);
+    }
+  }
 
+  // ================================
+  // STATE VALIDATION & DEBUGGING
+  // ================================
+
+  /**
+   * Validate search state consistency
+   */
+  public validateState(): boolean {
+    const searches = this.activeSearches();
+
+    // Check for duplicate IDs
+    const ids = searches.map(s => s.id);
+    const uniqueIds = new Set(ids);
+    if (ids.length !== uniqueIds.size) {
+      console.error('[StateManager] Duplicate search IDs detected');
+      return false;
+    }
+
+    // Check for required properties
+    const invalidSearches = searches.filter(s =>
+      !s.id || !s.title || !s.appName || !s.type
+    );
+    if (invalidSearches.length > 0) {
+      console.error('[StateManager] Invalid searches detected:', invalidSearches);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Get state summary for debugging
+   */
+  public getStateSummary(): any {
+    const searches = this.activeSearches();
     return {
-      total: currentStrategies.size,
-      withCanHandle,
-      lastUsed: this.lastUsedStrategy()
+      totalSearches: searches.length,
+      streamingSearches: searches.filter(s => s.isStreaming).length,
+      loadingSearches: searches.filter(s => s.isLoading).length,
+      expandedSearches: searches.filter(s => s.isExpanded).length,
+      searchTypes: [...new Set(searches.map(s => s.type))],
+      searchIds: searches.map(s => ({ id: s.id, title: s.title, type: s.type }))
     };
+  }
+
+  /**
+   * Export state for persistence (future feature)
+   */
+  public exportState(): any {
+    return {
+      searches: this.activeSearches().map(search => ({
+        ...search,
+        // Remove non-serializable properties
+        aggregatedFilterValues: Array.from(search.aggregatedFilterValues.entries())
+      })),
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Import state from persistence (future feature)
+   */
+  public importState(state: any): void {
+    if (!state?.searches) return;
+
+    const restoredSearches = state.searches.map((search: any) => ({
+      ...search,
+      // Restore Map from serialized data
+      aggregatedFilterValues: new Map(search.aggregatedFilterValues || [])
+    }));
+
+    this.activeSearches.set(restoredSearches);
+    console.log(`[StateManager] Imported ${restoredSearches.length} searches from state`);
   }
 }
