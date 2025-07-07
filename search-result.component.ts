@@ -82,16 +82,22 @@ export class SearchResultComponent {
 
   // Derived Signals
   public allColumnsForViewType: Signal<ColumnDefinition[]> = computed(() => {
+    const activeSearchs = this.orchestrator.activeSearches()
+    if(!this.search) return [];
     const app = this.search.appName;
     const viewType = this.getViewType();
     return this.colDefService.getColumnsFor(app, viewType);
   });
   
   public availableViews: Signal<ViewDefinition[]> = computed(() => {
+    const activeSearchs = this.orchestrator.activeSearches()
+    if(!this.search) return [];
     return this.viewDefService.getViewsForApp(this.search.appName);
   });
 
   public accordionActiveIndex = computed(() => {
+    const activeSearchs = this.orchestrator.activeSearches()
+    if(!this.search) return [];
     const expanded = this.search?.isExpanded ?? false;
     return expanded ? [0] : [];
   });
@@ -117,11 +123,17 @@ export class SearchResultComponent {
   return this.streamingVisibleColumns();
 });
 
-  // Records summary for display
-  public recordsSummary = computed(() => {
+  public getRecordsSummary(): string {
+    if (!this.search) return '';
+    
     const totalLoaded = this.search.data.length;
     const totalRecords = this.search.totalRecords;
-    const filteredCount = this.filteredCount;
+    const filteredCount = this.filteredCount(); // This will always get latest value
+    
+    console.log('🔥 getRecordsSummary called:', {
+      totalLoaded,
+      filteredCount
+    });
     
     if (this.search.isStreaming) {
       let summary = `Loaded: ${totalLoaded.toLocaleString()}`;
@@ -139,7 +151,13 @@ export class SearchResultComponent {
       }
       return `(${summary})`;
     }
-  });
+  }
+
+  public updateFilteredCount(count: number): void {
+    this.filteredCount.set(count);
+    // 🔥 FORCE: Trigger change detection
+    this.cdr.detectChanges();
+  }
 
   constructor() {
     effect(() => {
@@ -190,12 +208,7 @@ export class SearchResultComponent {
     }
   }
 
-  public updateFilteredCount(count: number): void {
-    setTimeout(() => {
-      this.filteredCount = count;
-      this.cdr.detectChanges();
-    }, 0);
-  }
+ 
 
   // Event Handlers
   resetStreamingColumns(): void {
