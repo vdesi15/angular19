@@ -1,113 +1,55 @@
-// src/app/app.config.ts
-import { ApplicationConfig, importProvidersFrom, APP_INITIALIZER } from '@angular/core';
-import { provideRouter, withEnabledBlockingInitialNavigation, withInMemoryScrolling } from '@angular/router';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { ApplicationConfig, ErrorHandler, importProvidersFrom, provideZoneChangeDetection } from '@angular/core';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
-
+import Aura from '@primeng/themes/aura';
 import { routes } from './app.routes';
-import { CustomPreset } from './theme/custom-preset';
-import { PostAuthRedirectService } from './core/services/post-auth-redirect.service';
-import { ThemeService } from './core/services/theme.service';
-import { LoadingService } from './core/services/loading.service';
+import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { OidcSecurityService, provideAuth, OpenIdConfiguration } from 'angular-auth-oidc-client';
+import { ApmModule, ApmErrorHandler } from '@elastic/apm-rum-angular'
+import { ConfigService } from './core/services/config.service';
+import { mockApiInterceptor } from './core/interceptors/mock-api.interceptor';
+import { ConfirmationService, MessageService } from 'primeng/api';
 
-/**
- * Enhanced application configuration using Angular 19 features.
- * 
- * Key improvements:
- * - Proper service initialization order
- * - Better router configuration with blocking navigation
- * - Enhanced HTTP client setup
- * - Optimized PrimeNG configuration
- * - Service initialization via APP_INITIALIZER
- */
+const runtimeConfig = new ConfigService();
 
-/**
- * Application initializer function
- */
-function initializeApplication(): () => Promise<void> {
-  return () => {
-    console.log('[AppConfig] Initializing application services');
-    
-    // Perform any synchronous initialization here
-    // Services with DI will auto-initialize when injected
-    
-    return Promise.resolve();
-  };
-}
+const oauthConfig: OpenIdConfiguration = {
+        authority: runtimeConfig.get('oauth').authority,
+        redirectUrl: runtimeConfig.get('oauth').redirectUrl,
+        postLogoutRedirectUri: runtimeConfig.get('oauth').postLogoutRedirectUri,
+        clientId: runtimeConfig.get('oauth').clientId,
+        scope: runtimeConfig.get('oauth').scope,
+        responseType: runtimeConfig.get('oauth').responseType,
+        silentRenew: runtimeConfig.get('oauth').silentRenew,
+        useRefreshToken: runtimeConfig.get('oauth').useRefreshToken,
+        renewTimeBeforeTokenExpiresInSeconds: runtimeConfig.get('oauth').renewTimeBeforeTokenExpiresInSeconds,
+        logLevel: runtimeConfig.get('oauth').logLevel ?? 0,
+        autoCleanStateAfterAuthentication: true
+      }
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    // ================================
-    // ROUTER CONFIGURATION
-    // ================================
-    provideRouter(
-      routes,
-      withEnabledBlockingInitialNavigation(), // Prevents flicker during initial load
-      withInMemoryScrolling({
-        scrollPositionRestoration: 'enabled',
-        anchorScrolling: 'enabled'
-      })
-    ),
-
-    // ================================
-    // HTTP CLIENT CONFIGURATION
-    // ================================
-    provideHttpClient(
-      // Add interceptors here when needed
-      // withInterceptors([authInterceptor, errorInterceptor])
-    ),
-
-    // ================================
-    // ANIMATIONS
-    // ================================
+    provideZoneChangeDetection({ eventCoalescing: true }), 
+    provideRouter(routes, withComponentInputBinding()),
     provideAnimationsAsync(),
-    
-    // ================================
-    // PRIMENG CONFIGURATION
-    // ================================
     providePrimeNG({
       theme: {
-        preset: CustomPreset,
+        preset: Aura,
         options: {
-          prefix: 'p',
           darkModeSelector: '.app-dark',
+          prefix: 'p',
           cssLayer: false
         }
       },
-      ripple: {
-        disabled: false // Enable ripple effects
-      },
-      inputStyle: 'outlined', // Use outlined input style
-      locale: 'en' // Set default locale
+      ripple: true
     }),
-
-    // ================================
-    // APPLICATION INITIALIZERS
-    // ================================
-    {
-      provide: APP_INITIALIZER,
-      useFactory: initializeApplication,
-      multi: true
-    },
-
-    // ================================
-    // CORE SERVICES
-    // ================================
-    // These services are provided here to ensure they're available app-wide
-    // and initialized in the correct order
-    
-    PostAuthRedirectService,
-    ThemeService,
-    LoadingService,
-
-    // ================================
-    // DEVELOPMENT/DEBUG PROVIDERS
-    // ================================
-    // Add development-specific providers here
-    // {
-    //   provide: 'DEBUG_MODE',
-    //   useValue: !environment.production
-    // }
+    provideHttpClient(
+      withInterceptors([mockApiInterceptor])
+    ),
+    importProvidersFrom(ApmModule),
+    provideAuth({config: oauthConfig }),
+    {provide: ErrorHandler, useClass: ApmErrorHandler},
+    MessageService,
+    ConfirmationService
   ]
 };
