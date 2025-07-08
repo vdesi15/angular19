@@ -87,12 +87,28 @@ export class AuthService {
         return;
       }
 
+      // Ensure discovery document is loaded first
+      if (!this.oauthService.hasValidIdToken()) {
+        console.log('[AuthService] Loading discovery document...');
+        await this.oauthService.loadDiscoveryDocument();
+      }
+
       // Try to login and exchange code for token
+      console.log('[AuthService] Attempting tryLoginCodeFlow...');
       const loginResult = await this.oauthService.tryLoginCodeFlow();
       console.log('[AuthService] tryLoginCodeFlow result:', loginResult);
 
+      // Check multiple times with a small delay as token might not be immediately available
+      let tokenAttempts = 0;
+      while (!this.oauthService.hasValidAccessToken() && tokenAttempts < 3) {
+        console.log(`[AuthService] Waiting for token... attempt ${tokenAttempts + 1}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        tokenAttempts++;
+      }
+
       if (this.oauthService.hasValidAccessToken()) {
         console.log('[AuthService] Token obtained successfully');
+        console.log('[AuthService] Access token:', this.oauthService.getAccessToken()?.substring(0, 20) + '...');
         
         // Update state
         this.isAuthenticated.set(true);
@@ -115,7 +131,13 @@ export class AuthService {
         await this.router.navigateByUrl(targetUrl, { replaceUrl: true });
         
       } else {
-        console.error('[AuthService] Failed to obtain valid token');
+        console.error('[AuthService] Failed to obtain valid token after multiple attempts');
+        console.error('[AuthService] Token state:', {
+          hasIdToken: this.oauthService.hasValidIdToken(),
+          hasAccessToken: this.oauthService.hasValidAccessToken(),
+          idToken: this.oauthService.getIdToken()?.substring(0, 20) + '...',
+          accessToken: this.oauthService.getAccessToken()
+        });
         await this.router.navigate(['/access-denied']);
       }
       
@@ -149,11 +171,7 @@ export class AuthService {
         const userInfo: UserInfo = {
           name: claims.name || 'Unknown User',
           email: claims.email || 'No email',
-          groups: claims.groups || [],
-          sub: claims.sub,
-          roles: claims.roles || [],
-          department: claims.department,
-          location: claims.location
+          groups: claims.groups || []
         };
         this.userInfo.set(userInfo);
         console.log('[AuthService] User profile loaded:', userInfo);
