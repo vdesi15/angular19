@@ -15,8 +15,8 @@ export interface SearchStrategy {
   // Methods for gating searches within a strategy
   canSearch(searchKey: string): boolean;
   markExecuting(searchKey: string): void;
-  markCompleted(searchKey: string, result?: any): void;
-  generateSearchKey(query: string, filters: any, currentId?: string): string;
+  markCompleted(searchKey: string): void;
+  generateSearchKey(query: string, filters: any): string;
 
   // NEW: URL handling methods
   handleUrlParams?(params: Record<string, string>): UrlHandlingResult | null;

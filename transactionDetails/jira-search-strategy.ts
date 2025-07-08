@@ -169,6 +169,7 @@ export class EnhancedJiraSearchStrategy extends BaseSearchStrategy {
           ? deepHits 
           : Object.values(deepHits).map(hit => ({
               _index: hit._index || '',
+              _index: hit._index || '',
               _type: hit._type || '_doc',
               _id: hit._id || '',
               _score: hit._score || 0,

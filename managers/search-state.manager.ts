@@ -151,7 +151,7 @@ export class SearchStateManager {
         this.activeSearches.update(searches =>
           searches.map(search => ({
             ...search,
-            id: this.generateSearchId(), //  New ID forces component refresh
+            id: this.generateSearchId({type: search?.type?? '', query: search?.query??''}), //  New ID forces component refresh
             isLoading: true,
             data: [], //  Clear existing data
             error: undefined,

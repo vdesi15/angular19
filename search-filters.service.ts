@@ -45,8 +45,6 @@ export class FiltersService {
       }
     });
 
-    /*
-
     effect(() => {
       this.queryParams();
       const activeRoute = this.findActiveRoute(this.router.routerState.snapshot.root);
@@ -56,7 +54,7 @@ export class FiltersService {
         }
       });
     });
-    */
+    
   }
 
   public setSearchFilterMetadata(metadata: SearchFilterMetadata): void {

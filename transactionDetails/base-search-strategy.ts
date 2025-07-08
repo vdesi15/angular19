@@ -9,7 +9,7 @@ export abstract class BaseSearchStrategy implements SearchStrategy {
   // Abstract methods that each strategy must implement
   abstract canHandle(query: any, context?: any): boolean;
   abstract getStrategyName(): string;
-  abstract execute(query: string, globalFilters: SearchFilterModel, streamFilters?: StreamFilter[], preFilter?: string): Observable<any>;
+  abstract execute(query: string, globalFilters: any, streamFilters?: any[], preFilter?: any): Observable<any>;
 
   // =====================================
   // EXECUTION GATING IMPLEMENTATION
