@@ -12,6 +12,20 @@
   <link href="https://unpkg.com/quill@1.3.7/dist/quill.snow.css" rel="stylesheet" />
   
   <style>
+    :root {
+      --app-blue: #0171c5;
+    }
+    
+    /* Auto-apply dark mode for splash if saved theme is dark */
+    html {
+      background: #ffffff; /* Default light background */
+    }
+    
+    /* This will apply dark mode to splash screen if theme was saved as dark */
+    html:has(script[data-theme="dark"]) {
+      background: #1d1d1f;
+    }
+
     body {
       margin: 0;
       padding: 0;
@@ -21,9 +35,18 @@
       transition: background-color 0.3s ease, color 0.3s ease;
     }
 
-    /* Simple Clean Splash Screen - uses existing CSS variables */
+    /* Dark mode support - ONLY when .app-dark class is present */
+    .app-dark {
+      --surface-ground: #1d1d1f;
+      --surface-card: #1e1e1e;
+      --text-color: #f5f5f7;
+      --text-color-secondary: #a1a1a6;
+      --surface-border: #374151;
+    }
+
+    /* Simple Clean Splash Screen */
     .app-splash-screen {
-      background: var(--surface-ground, #ffffff);
+      background: var(--splash-bg, var(--surface-ground, #ffffff));
       position: fixed;
       top: 0;
       left: 0;
@@ -45,14 +68,14 @@
     .app-splash-screen-title {
       font-size: 2.5rem;
       font-weight: 600;
-      color: #0171c5; /* Your blue color */
+      color: var(--app-blue);
       margin: 0 0 16px 0;
       letter-spacing: -0.02em;
     }
 
     .app-splash-screen-message {
       font-size: 1rem;
-      color: var(--text-color-secondary, #86868b);
+      color: var(--splash-text-secondary, var(--text-color-secondary, #86868b));
       margin: 0 0 32px 0;
       font-weight: 400;
     }
@@ -61,7 +84,7 @@
       width: 24px;
       height: 24px;
       border: 2px solid transparent;
-      border-top: 2px solid #0171c5;
+      border-top: 2px solid var(--app-blue);
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 0 auto;
@@ -108,21 +131,15 @@
     </div>
   </div>
 
+  <!-- Simple theme detection without modifying classes -->
   <script>
-    // Use the same logic as your existing ThemeService
+    // Only set a data attribute to help CSS detect saved theme
     (function() {
       const savedTheme = localStorage.getItem('app-theme-mode');
-      
-      // Only apply dark mode if explicitly saved as 'dark' (matching ThemeService default)
-      if (savedTheme === 'dark') {
-        document.documentElement.classList.add('app-dark');
-        document.body.classList.add('app-dark');
-      }
-      
-      // If no saved theme, ThemeService defaults to 'dark', so apply it
-      if (!savedTheme) {
-        document.documentElement.classList.add('app-dark');
-        document.body.classList.add('app-dark');
+      if (savedTheme === 'dark' || !savedTheme) {
+        // Add a temporary class just for splash screen
+        document.documentElement.style.setProperty('--splash-bg', '#1d1d1f');
+        document.documentElement.style.setProperty('--splash-text-secondary', '#a1a1a6');
       }
     })();
   </script>
