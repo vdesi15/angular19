@@ -1,35 +1,169 @@
-import { inject, Injectable } from "@angular/core";
-import { toSignal } from "@angular/core/rxjs-interop";
-import { OidcSecurityService } from "angular-auth-oidc-client";
-import { map, shareReplay } from "rxjs";
-import { UserInfo } from "../models/user.model";
+import { inject, Injectable, signal, computed } from '@angular/core';
+import { Router } from '@angular/router';
+import { OAuthService, AuthConfig } from 'angular-oauth2-oidc';
+import { ConfigService } from './config.service';
+import { UserInfo } from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-    private oidcSecurityService = inject(OidcSecurityService);
+  private readonly oauthService = inject(OAuthService);
+  private readonly router = inject(Router);
+  private readonly configService = inject(ConfigService);
 
-    public isAuthenticated = toSignal(
-        this.oidcSecurityService.isAuthenticated$,
-        { initialValue: undefined}
-    );
+  // Signals for reactive state
+  public readonly isAuthenticated = signal(false);
+  public readonly userInfo = signal<UserInfo | null>(null);
+  public readonly isLoading = signal(true);
 
-    public userInfo$ = this.oidcSecurityService.userData$.pipe(
-            map(userDataResult => {
-                if(!userDataResult) {
-                    return null; // Return null if not authenticated or missing data.
-                }
-                console.log("In Auth service.")
+  // Computed properties
+  public readonly hasValidSession = computed(() => 
+    this.isAuthenticated() && !!this.oauthService.getAccessToken()
+  );
 
-                // Map OIDC claims
-                return {
-                    name: userDataResult?.userData?.name ?? "Unknown User",
-                    email: userDataResult?.userData?.email ?? "No email",
-                    groups: userDataResult?.userData?.groups ?? []
-                } as UserInfo;
-            }),
-            shareReplay(1)
-        );
+  constructor() {
+    this.configureOAuth();
+    this.initializeAuth();
+  }
 
-    public userInfo = toSignal(this.userInfo$, {initialValue:null}
-    );
+  private configureOAuth(): void {
+    const config = this.configService.get('oauth');
+    
+    const authConfig: AuthConfig = {
+      // Map your existing config to angular-oauth2-oidc format
+      issuer: config.authority,
+      redirectUri: config.redirectUrl,
+      postLogoutRedirectUri: config.postLogoutRedirectUri,
+      clientId: config.clientId,
+      scope: config.scope,
+      responseType: config.responseType,
+      
+      // These work much better in angular-oauth2-oidc
+      silentRefreshRedirectUri: window.location.origin + '/silent-refresh.html',
+      useSilentRefresh: config.silentRenew,
+      silentRefreshTimeout: (config.renewTimeBeforeTokenExpiresInSeconds || 300) * 1000,
+      
+      // Better session management
+      sessionChecksEnabled: true,
+      clearHashAfterLogin: true,
+      
+      // Token validation
+      requireHttps: window.location.protocol === 'https:',
+      strictDiscoveryDocumentValidation: false
+    };
+
+    this.oauthService.configure(authConfig);
+    
+    // Set log level
+    if (config.logLevel > 0) {
+      this.oauthService.setLogging(true);
+    }
+  }
+
+  private async initializeAuth(): Promise<void> {
+    try {
+      // Load discovery document
+      await this.oauthService.loadDiscoveryDocument();
+      
+      // Try silent refresh first
+      const result = await this.oauthService.tryLoginImplicitFlow();
+      
+      if (this.oauthService.hasValidAccessToken()) {
+        await this.loadUserProfile();
+        this.isAuthenticated.set(true);
+      }
+      
+    } catch (error) {
+      console.error('[AuthService] Initialization error:', error);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  public async login(preserveRoute: boolean = true): Promise<void> {
+    if (preserveRoute) {
+      // Save current URL with ALL parameters
+      const currentUrl = this.router.url;
+      if (!this.isCallbackUrl(currentUrl)) {
+        sessionStorage.setItem('pre_auth_url', currentUrl);
+      }
+    }
+
+    // Start the login flow - NO STATE ISSUES!
+    this.oauthService.initLoginFlow();
+  }
+
+  public async logout(): Promise<void> {
+    sessionStorage.removeItem('pre_auth_url');
+    this.isAuthenticated.set(false);
+    this.userInfo.set(null);
+    this.oauthService.logOut();
+  }
+
+  public async handleCallback(): Promise<void> {
+    try {
+      // Process the callback - MUCH more reliable!
+      const result = await this.oauthService.tryLoginImplicitFlow();
+      
+      if (this.oauthService.hasValidAccessToken()) {
+        await this.loadUserProfile();
+        this.isAuthenticated.set(true);
+        
+        // Restore the original URL with ALL parameters
+        const savedUrl = sessionStorage.getItem('pre_auth_url');
+        if (savedUrl && !this.isCallbackUrl(savedUrl)) {
+          sessionStorage.removeItem('pre_auth_url');
+          this.router.navigateByUrl(savedUrl);
+        } else {
+          this.router.navigate(['/logs/search']);
+        }
+      } else {
+        throw new Error('No valid access token received');
+      }
+      
+    } catch (error) {
+      console.error('[AuthService] Callback error:', error);
+      this.router.navigate(['/logs/search']);
+    }
+  }
+
+  private async loadUserProfile(): Promise<void> {
+    try {
+      const claims = this.oauthService.getIdentityClaims() as any;
+      
+      if (claims) {
+        const userInfo: UserInfo = {
+          name: claims.name || claims.preferred_username || 'Unknown User',
+          email: claims.email || 'No email',
+          groups: claims.groups || [],
+          sub: claims.sub,
+          roles: claims.roles || [],
+          department: claims.department,
+          location: claims.location
+        };
+        
+        this.userInfo.set(userInfo);
+        console.log('[AuthService] User profile loaded:', userInfo);
+      }
+    } catch (error) {
+      console.error('[AuthService] Failed to load user profile:', error);
+    }
+  }
+
+  public getAccessToken(): string | null {
+    return this.oauthService.getAccessToken();
+  }
+
+  public hasValidToken(): boolean {
+    return this.oauthService.hasValidAccessToken();
+  }
+
+  public hasPermission(requiredGroups: string[]): boolean {
+    const user = this.userInfo();
+    if (!user?.groups) return false;
+    return user.groups.some(group => requiredGroups.includes(group));
+  }
+
+  private isCallbackUrl(url: string): boolean {
+    return url.includes('/signin-oidc') || url.includes('/auth/callback');
+  }
 }
