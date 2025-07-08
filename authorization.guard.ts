@@ -11,35 +11,35 @@ export const authorizationGuard: CanActivateFn = (): boolean | UrlTree => {
   const configService = inject(ConfigService);
   const router = inject(Router);
 
-  // The authenticationGuard has already run and waited for isLoading to be false.
-  // We can safely check the session status now.
-  if (!authService.hasValidSession()) {
-    console.log('[AuthorizationGuard] No valid session. Denying access.');
-    // This is a safeguard, but the previous guard should have caught this.
-    return of(router.parseUrl('/access-denied'));
-  }
-
-  // Now, we wait for the user profile (which is loaded asynchronously) to be available.
-  return toObservable(authService.userInfo).pipe(
-    // Wait until the userInfo signal is populated (is not null).
-    filter(user => user !== null),
-    // We only need the first valid user object to make a decision.
+  // --- KEY CHANGE: WAIT FOR INITIALIZATION FIRST ---
+  // We must wait for the auth service to finish its initial check (isLoading === false)
+  // before we can trust any of its state signals (like isAuthenticated or userInfo).
+  return toObservable(authService.isLoading).pipe(
+    // 1. Wait for loading to be complete.
+    filter(loading => !loading),
     take(1),
-    map(user => {
-      // The `filter` operator guarantees `user` is not null here.
-      const requiredGroups = configService.get('requiredGroups');
-      const userGroups = user!.groups || []; // Use non-null assertion for type safety.
+    // 2. Once loading is done, switch to a new observable sequence to check permissions.
+    switchMap(() => {
+      // 3. NOW it is safe to check hasValidSession().
+      if (!authService.hasValidSession()) {
+        console.log('[AuthorizationGuard] No valid session after init. Denying access.');
+        return of(router.parseUrl('/access-denied'));
+      }
 
-      const hasAccess = userGroups.some(userGroup => requiredGroups.includes(userGroup));
+      // 4. If the session is valid, proceed to check the user profile for groups.
+      return toObservable(authService.userInfo).pipe(
+        filter(user => user !== null), // Wait for the user profile to be loaded.
+        take(1),
+        map(user => {
+          const requiredGroups = configService.get('requiredGroups');
+          const userGroups = user!.groups || [];
+          const hasAccess = userGroups.some(userGroup => requiredGroups.includes(userGroup));
 
-      console.log('[AuthorizationGuard]', {
-        hasAccess,
-        userGroups,
-        requiredGroups
-      });
+          console.log('[AuthorizationGuard] Permission check result:', { hasAccess });
 
-      // If the user has the required group, return true. Otherwise, redirect.
-      return hasAccess ? true : router.parseUrl('/access-denied');
+          return hasAccess ? true : router.parseUrl('/access-denied');
+        })
+      );
     })
   );
 };
