@@ -84,39 +84,45 @@ export class AuthService {
    * This should ONLY be called from the OidcCallbackComponent.
    */
   public async handleLoginCallback(): Promise<void> {
+    // --- KEY FIX: WAIT FOR INITIALIZATION ---
+    // We must ensure the discovery document is loaded before calling tryLogin.
+    // The `isLoading` signal tells us when the initial `initializeAuth` is complete.
+    if (this.isLoading()) {
+      console.log('[AuthService] Callback invoked, but service is still initializing. Waiting...');
+      // Convert the signal to an observable and wait for it to be false.
+      await firstValueFrom(toObservable(this.isLoading).pipe(filter(loading => !loading)));
+      console.log('[AuthService] Service initialization complete. Proceeding with callback handling.');
+    } else {
+       console.log('[AuthService] Callback invoked, and service was already initialized.');
+    }
+
     try {
-      // We define all post-login logic within the onTokenReceived callback.
-      // This ensures our actions are executed in the correct sequence within the library's flow.
+      // Now it is safe to call tryLogin, as the library is fully configured.
       await this.oauthService.tryLogin({
         onTokenReceived: async (info) => {
           console.log('[AuthService] Token received successfully inside onTokenReceived hook.', info);
 
-          // 1. Immediately update the authentication state.
           this.isAuthenticated.set(true);
-
-          // 2. Load the user's profile data. This is critical to do before navigating,
-          // so the authorization guard has the data it needs on the next page.
           await this.loadUserProfile();
 
-          // 3. Retrieve the saved URL and clean up sessionStorage.
           const savedUrl = sessionStorage.getItem('pre_auth_url');
-          sessionStorage.removeItem('pre_auth_url');
+          sessionStorage.removeItem('pre_auth_url'); // Always clean up
           const targetUrl = savedUrl && !this.isCallbackUrl(savedUrl) ? savedUrl : '/logs/search';
 
           console.log(`[AuthService] Post-login navigation. Target: ${targetUrl}`);
-
-          // 4. Perform the one and only navigation. The library will not interfere.
-          // We must await this to ensure the promise from tryLogin resolves correctly.
           await this.router.navigateByUrl(targetUrl);
+        },
+        // Add a handler for cases where tryLogin is called but there's nothing to do
+        // (e.g., if the user refreshes the callback page after logging in).
+        // This prevents hangs and ensures a redirect.
+        onLoginError: async () => {
+            console.warn('[AuthService] onLoginError triggered. Redirecting to home.');
+            await this.router.navigateByUrl('/logs/search');
         }
       });
-
-      console.log('[AuthService] tryLogin() process with onTokenReceived completed.');
-
     } catch (error) {
       console.error('[AuthService] Critical error during login callback handling:', error);
-      // On any failure during the process, redirect to a safe error page.
-      this.router.navigate(['/access-denied']);
+      await this.router.navigate(['/access-denied']);
     }
   }
 
