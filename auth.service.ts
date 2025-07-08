@@ -25,13 +25,12 @@ export class AuthService {
     this.initializeAuth();
   }
 
-  
   private configureOAuth(): void {
     const config = this.configService.get('oauth');
 
     const authConfig: AuthConfig = {
       issuer: config.authority,
-      redirectUri: window.location.origin + '/signin-oidc', // Ensure this matches your route exactly
+      redirectUri: window.location.origin + '/signin-oidc',
       postLogoutRedirectUri: config.postLogoutRedirectUri,
       clientId: config.clientId,
       scope: config.scope,
@@ -43,7 +42,8 @@ export class AuthService {
       silentRefreshRedirectUri: window.location.origin + '/silent-refresh.html',
       useSilentRefresh: config.silentRenew,
       silentRefreshTimeout: (config.renewTimeBeforeTokenExpiresInSeconds || 300) * 1000,
-      strictDiscoveryDocumentValidation: false
+      strictDiscoveryDocumentValidation: false,
+      nonceStateSeparator: 'semicolon' // Add this to help with state management
     };
 
     this.oauthService.configure(authConfig);
@@ -53,142 +53,99 @@ export class AuthService {
     }
   }
 
-  /**
-   * Passively checks for an existing session on any page load.
-   * Does NOT perform navigation.
-   */
   private async initializeAuth(): Promise<void> {
     try {
-      // loadDiscoveryDocumentAndTryLogin is a passive check.
-      await this.oauthService.loadDiscoveryDocumentAndTryLogin();
+      // Only do passive check if NOT on callback URL
+      if (!this.isCallbackUrl(window.location.pathname)) {
+        await this.oauthService.loadDiscoveryDocumentAndTryLogin();
 
-      if (this.oauthService.hasValidAccessToken()) {
-        console.log('[AuthService] Session is valid from initial load.');
-        this.isAuthenticated.set(true);
-        await this.loadUserProfile();
-      } else {
-        console.log('[AuthService] No valid session on initial load.');
-        this.isAuthenticated.set(false);
+        if (this.oauthService.hasValidAccessToken()) {
+          console.log('[AuthService] Session is valid from initial load.');
+          this.isAuthenticated.set(true);
+          await this.loadUserProfile();
+        } else {
+          console.log('[AuthService] No valid session on initial load.');
+          this.isAuthenticated.set(false);
+        }
       }
     } catch (error) {
       console.error('[AuthService] Passive initialization error:', error);
     } finally {
-      // This MUST be the last thing to happen here.
       this.isLoading.set(false);
     }
   }
 
-   /**
-   * Actively processes the OIDC callback, exchanges the code for a token,
-   * and navigates to the originally requested URL.
-   * This should ONLY be called from the OidcCallbackComponent.
-   */
   public async handleLoginCallback(): Promise<void> {
-  try {
-    console.log('[AuthService] Starting handleLoginCallback');
-    
-    // Check if we're actually on the callback URL with auth code
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const state = urlParams.get('state');
-    
-    if (!code || !state) {
-      console.error('[AuthService] Missing code or state in callback URL');
-      await this.router.navigate(['/access-denied']);
-      return;
-    }
-    
-    // Process the OAuth callback
-    await this.oauthService.tryLogin({
-      onTokenReceived: async (info) => {
-        console.log('[AuthService] Token received successfully', info);
+    try {
+      console.log('[AuthService] handleLoginCallback started');
+      
+      // First, check if we have the required OAuth parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      if (!urlParams.has('code') || !urlParams.has('state')) {
+        console.error('[AuthService] Missing OAuth parameters');
+        await this.router.navigate(['/access-denied']);
+        return;
+      }
+
+      // Try to login and exchange code for token
+      const loginResult = await this.oauthService.tryLoginCodeFlow();
+      console.log('[AuthService] tryLoginCodeFlow result:', loginResult);
+
+      if (this.oauthService.hasValidAccessToken()) {
+        console.log('[AuthService] Token obtained successfully');
         
-        // 1. Update authentication state
+        // Update state
         this.isAuthenticated.set(true);
         
-        // 2. Load user profile
+        // Load user profile
         await this.loadUserProfile();
         
-        // 3. Retrieve the saved URL
+        // Get the saved URL from sessionStorage
         const savedUrl = sessionStorage.getItem('pre_auth_url');
         sessionStorage.removeItem('pre_auth_url');
         
-        // Parse the saved URL to extract path and query params
-        let targetPath = '/logs/search';
-        let queryParams: any = {};
-        
+        // Parse and navigate
+        let targetUrl = '/logs/search';
         if (savedUrl && !this.isCallbackUrl(savedUrl)) {
-          try {
-            // Handle both relative and absolute URLs
-            const url = savedUrl.startsWith('http') 
-              ? new URL(savedUrl) 
-              : new URL(savedUrl, window.location.origin);
-            
-            targetPath = url.pathname;
-            
-            // Preserve all query parameters
-            url.searchParams.forEach((value, key) => {
-              queryParams[key] = value;
-            });
-            
-            console.log('[AuthService] Restored path:', targetPath);
-            console.log('[AuthService] Restored params:', queryParams);
-          } catch (e) {
-            console.error('[AuthService] Error parsing saved URL:', e);
-            targetPath = savedUrl.split('?')[0] || '/logs/search';
-          }
+          targetUrl = savedUrl;
+          console.log('[AuthService] Navigating to saved URL:', targetUrl);
         }
         
-        // 4. Navigate with preserved query parameters
-        console.log('[AuthService] Navigating to:', targetPath, 'with params:', queryParams);
-        await this.router.navigate([targetPath], { 
-          queryParams,
-          queryParamsHandling: 'merge' 
-        });
-      },
-      
-      // Add error handling
-      onLoginError: (error) => {
-        console.error('[AuthService] Login error:', error);
-        this.router.navigate(['/access-denied']);
+        // Use navigateByUrl to preserve query parameters
+        await this.router.navigateByUrl(targetUrl, { replaceUrl: true });
+        
+      } else {
+        console.error('[AuthService] Failed to obtain valid token');
+        await this.router.navigate(['/access-denied']);
       }
-    });
-    
-  } catch (error) {
-    console.error('[AuthService] Critical error during login callback:', error);
-    await this.router.navigate(['/access-denied']);
-  }
-}
-
-// Updated login method to better preserve the full URL
-public async login(preserveRoute: boolean = true): Promise<void> {
-  console.log('[AuthService] login() called');
-  
-  if (preserveRoute) {
-    // Get the full URL including query parameters
-    const currentUrl = window.location.href;
-    const currentPath = this.router.url;
-    
-    // Don't save the callback URL
-    if (!this.isCallbackUrl(currentPath)) {
-      // Save the complete URL with all parameters
-      sessionStorage.setItem('pre_auth_url', currentPath);
-      console.log('[AuthService] Saved complete URL:', currentPath);
+      
+    } catch (error) {
+      console.error('[AuthService] Error in handleLoginCallback:', error);
+      await this.router.navigate(['/access-denied']);
     }
   }
-  
-  // Start the OAuth flow
-  this.oauthService.initCodeFlow();
-}
 
-  // THIS METHOD IS NO LONGER NEEDED AND HAS BEEN REMOVED.
-  // public async handleCallback(): Promise<void> { ... }
+  public async login(preserveRoute: boolean = true): Promise<void> {
+    console.log('[AuthService] login() called');
+
+    if (preserveRoute) {
+      // Save the COMPLETE current URL including query parameters
+      const currentUrl = this.router.url;
+      
+      if (!this.isCallbackUrl(currentUrl)) {
+        sessionStorage.setItem('pre_auth_url', currentUrl);
+        console.log('[AuthService] Saved URL with params:', currentUrl);
+      }
+    }
+    
+    // Start the OAuth flow
+    this.oauthService.initCodeFlow();
+  }
 
   private async loadUserProfile(): Promise<void> {
     try {
-      const claims = this.oauthService.getIdentityClaims() as UserInfo | null;
+      const claims = this.oauthService.getIdentityClaims() as any;
       if (claims) {
-        // Map claims to your UserInfo model
         const userInfo: UserInfo = {
           name: claims.name || 'Unknown User',
           email: claims.email || 'No email',
@@ -221,9 +178,11 @@ public async login(preserveRoute: boolean = true): Promise<void> {
   }
 
   private isCallbackUrl(url: string): boolean {
-    // Check if the given URL path is the configured redirect URI path.
-    const redirectPath = new URL(this.oauthService.redirectUri).pathname;
-    const urlPath = url.split('?')[0].split('#')[0];
-    return urlPath === redirectPath;
+    const callbackPath = '/signin-oidc';
+    return url.includes(callbackPath);
+  }
+
+  public logout(): void {
+    this.oauthService.logOut();
   }
 }

@@ -9,13 +9,12 @@ export const authenticationGuard: CanActivateFn = (): Observable<boolean | UrlTr
 
   console.log('[AuthGuard] Running...');
 
-  // Convert the isLoading signal to an observable.
+  // Convert the isLoading signal to an observable
   return toObservable(authService.isLoading).pipe(
-    // We only want to proceed when loading is complete.
+    // Wait for loading to complete
     filter(isLoading => !isLoading),
-    // We only need the first emission of `false`.
     take(1),
-    // Once loading is false, perform the actual authentication check.
+    // Check authentication status
     map(() => {
       console.log('[AuthGuard] Auth service finished loading. Checking session...');
 
@@ -24,10 +23,9 @@ export const authenticationGuard: CanActivateFn = (): Observable<boolean | UrlTr
         return true;
       } else {
         console.log('[AuthGuard] User is NOT authenticated. Starting login flow...');
-        // Start the login flow, which will redirect the user.
+        // Start the login flow
         authService.login(true);
-        // Prevent the router from navigating to the component.
-        // The page will redirect to the login provider anyway.
+        // Return false to prevent navigation
         return false;
       }
     })
