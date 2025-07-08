@@ -1,4 +1,3 @@
-// src/app/core/guards/authorization.guard.ts - FIXED VERSION
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -7,20 +6,13 @@ import { OidcSecurityService } from 'angular-auth-oidc-client';
 import { AuthService } from '../services/auth.service';
 import { ConfigService } from '../services/config.service';
 
-/**
- * Fixed authorization guard that waits for token exchange to complete
- * before checking user permissions.
- */
-export const authorizationGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
-  const oidcSecurityService = inject(OidcSecurityService);
-  const authService = inject(AuthService);
-  const configService = inject(ConfigService);
-  const router = inject(Router);
+export const authorizationGuard: CanActivateFn = (): Observable<boolean|UrlTree> => {
+    const oidcSecurityService = inject(OidcSecurityService);
+    const authService = inject(AuthService);
+    const configService = inject(ConfigService);
+    const router = inject(Router);
 
-  console.log('[AuthorizationGuard] Starting authorization check');
-
-  // 🔥 KEY FIX: Wait for OIDC to complete token exchange first
-  return oidcSecurityService.checkAuth().pipe(
+    return oidcSecurityService.checkAuth().pipe(
     filter(result => {
       console.log('[AuthorizationGuard] OIDC Auth Result:', {
         isAuthenticated: result.isAuthenticated,
@@ -65,4 +57,4 @@ export const authorizationGuard: CanActivateFn = (): Observable<boolean | UrlTre
       );
     })
   );
-};
+}
