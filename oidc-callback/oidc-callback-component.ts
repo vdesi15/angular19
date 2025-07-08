@@ -7,65 +7,85 @@ import { AuthService } from '../../core/services/auth.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="callback-container" [class.app-dark]="isDarkMode">
-      <div class="callback-content">
-        <div class="loading-spinner"></div>
-        <h2>Completing Sign In...</h2>
-        <p>Please wait while we complete your authentication.</p>
+    <div class="auth-container" [class.app-dark]="themeService.isDarkMode()">
+      <div class="auth-content">
+        <h2 class="auth-title">SEAL</h2>
+        <p class="auth-subtitle">{{ currentMessage() }}</p>
+        <div class="auth-spinner"></div>
       </div>
     </div>
   `,
   styles: [`
-    .callback-container {
+    .auth-container {
+      min-height: 100vh;
+      background: var(--surface-ground, #ffffff);
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      background: var(--surface-ground, #f8f9fa);
-      transition: background-color 0.3s ease;
+      padding: 20px;
     }
 
-    .callback-container.app-dark {
-      background: var(--surface-ground, #121212);
-    }
-
-    .callback-content {
+    .auth-content {
       text-align: center;
-      padding: 2rem;
-      background: var(--surface-card, white);
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      max-width: 400px;
-      border: 1px solid var(--surface-border, #e1e5e9);
+      max-width: 300px;
     }
 
-    .app-dark .callback-content {
-      background: var(--surface-card, #1e1e1e);
-      border-color: var(--surface-border, #374151);
+    .auth-title {
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--app-blue, #0171c5);
+      margin: 0 0 12px 0;
+      letter-spacing: -0.02em;
     }
 
-    .callback-content h2 {
-      color: var(--text-color, #212529);
-      margin-bottom: 1rem;
+    .auth-subtitle {
+      font-size: 1rem;
+      color: var(--text-color-secondary, #86868b);
+      margin: 0 0 32px 0;
+      font-weight: 400;
+      min-height: 1.2em;
     }
 
-    .callback-content p {
-      color: var(--text-color-secondary, #6c757d);
-    }
-
-    .loading-spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid var(--surface-300, #e1e5e9);
-      border-top: 4px solid var(--primary-color, #0171c5);
+    .auth-spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid transparent;
+      border-top: 2px solid var(--app-blue, #0171c5);
       border-radius: 50%;
       animation: spin 1s linear infinite;
-      margin: 0 auto 1rem;
+      margin: 0 auto;
     }
 
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Dark mode */
+    .app-dark .auth-container {
+      background: var(--surface-ground, #1d1d1f);
+    }
+
+    .app-dark .auth-subtitle {
+      color: var(--text-color-secondary, #a1a1a6);
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .auth-title {
+        font-size: 1.75rem;
+      }
+      
+      .auth-subtitle {
+        font-size: 0.9rem;
+      }
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .auth-spinner {
+        animation: none;
+        opacity: 0.6;
+      }
     }
   `]
 })
@@ -73,7 +93,16 @@ export class OidcCallbackComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
+  public readonly themeService = inject(ThemeService);
 
+  // Simple message state
+  public readonly currentMessage = signal('Authenticating...');
+
+  private readonly authMessages = [
+    'Authenticating...',
+    'Securing session...',
+    'Preparing workspace...'
+  ];
   ngOnInit(): void {    
     this.handlePostLoginNavigation();
   }
@@ -107,5 +136,16 @@ export class OidcCallbackComponent implements OnInit {
       console.error("[OidcCallback] An error occurred while waiting for auth service.", error);
       await this.router.navigateByUrl('/access-denied');
     }
+  }
+
+  private cycleMessages(): void {
+    let index = 0;
+    const interval = setInterval(() => {
+      this.currentMessage.set(this.authMessages[index]);
+      index = (index + 1) % this.authMessages.length;
+    }, 1000);
+
+    // Stop cycling after auth completes (max 5 seconds)
+    setTimeout(() => clearInterval(interval), 5000);
   }
 }
