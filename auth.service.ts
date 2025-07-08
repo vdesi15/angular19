@@ -72,18 +72,46 @@ export class AuthService {
       await this.oauthService.loadDiscoveryDocument();
       console.log('[AuthService] Discovery document loaded');
       
+      // Check current URL for debug
+      console.log('[AuthService] Current URL:', window.location.href);
+      
       // For PKCE flow, try to login (this handles both callback and silent refresh)
       const success = await this.oauthService.tryLogin();
-      console.log('[AuthService] Login attempt result:', success);
+      console.log('[AuthService] tryLogin() result:', success);
+      
+      // Detailed token debugging
+      const hasAccessToken = this.oauthService.hasValidAccessToken();
+      const accessToken = this.oauthService.getAccessToken();
+      const idToken = this.oauthService.getIdToken();
+      
+      console.log('[AuthService] Token status:', {
+        hasValidAccessToken: hasAccessToken,
+        accessTokenLength: accessToken?.length || 0,
+        hasIdToken: !!idToken,
+        idTokenLength: idToken?.length || 0
+      });
       
       // Check if we have a valid token after tryLogin
-      if (this.oauthService.hasValidAccessToken()) {
+      if (hasAccessToken) {
         console.log('[AuthService] Valid access token found');
         await this.loadUserProfile();
         this.isAuthenticated.set(true);
       } else {
-        console.log('[AuthService] No valid access token found');
-        // Don't automatically redirect - let guards handle it
+        console.log('[AuthService] No valid access token - checking for errors');
+        
+        // Check for specific error conditions
+        const tokenError = (this.oauthService as any).getTokenError?.();
+        if (tokenError) {
+          console.error('[AuthService] Token error:', tokenError);
+        }
+        
+        // Check localStorage for any stored tokens
+        const storedAccessToken = localStorage.getItem('access_token');
+        const storedIdToken = localStorage.getItem('id_token');
+        console.log('[AuthService] LocalStorage tokens:', {
+          hasStoredAccessToken: !!storedAccessToken,
+          hasStoredIdToken: !!storedIdToken
+        });
       }
       
     } catch (error) {
@@ -96,6 +124,8 @@ export class AuthService {
   }
 
   public async login(preserveRoute: boolean = true): Promise<void> {
+    console.log('[AuthService] login() called with preserveRoute:', preserveRoute);
+    
     if (preserveRoute) {
       // Save current URL with ALL parameters
       const currentUrl = this.router.url;
@@ -105,20 +135,70 @@ export class AuthService {
       }
     }
 
+    // Check if OAuth is configured
+    const config = (this.oauthService as any).authConfig;
+    console.log('[AuthService] OAuth config check:', {
+      hasConfig: !!config,
+      issuer: config?.issuer,
+      clientId: config?.clientId,
+      redirectUri: config?.redirectUri,
+      responseType: config?.responseType
+    });
+
     // Start PKCE login flow
-    console.log('[AuthService] Starting PKCE login flow...');
-    this.oauthService.initCodeFlow();
+    console.log('[AuthService] About to call initCodeFlow()...');
+    
+    try {
+      // This should trigger the /authorize call
+      this.oauthService.initCodeFlow();
+      console.log('[AuthService] initCodeFlow() completed - check network tab for /authorize call');
+    } catch (error) {
+      console.error('[AuthService] Error in initCodeFlow():', error);
+    }
   }
 
   public async handleCallback(): Promise<void> {
     try {
       console.log('[AuthService] Processing PKCE callback...');
+      console.log('[AuthService] Callback URL:', window.location.href);
+      
+      // Check URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+      
+      console.log('[AuthService] URL parameters:', {
+        hasCode: !!code,
+        codeLength: code?.length || 0,
+        hasState: !!state,
+        error: error
+      });
+      
+      if (error) {
+        throw new Error(`OAuth error: ${error}`);
+      }
+      
+      if (!code) {
+        throw new Error('No authorization code in callback URL');
+      }
       
       // For PKCE, use tryLogin instead of tryLoginImplicitFlow
       const success = await this.oauthService.tryLogin();
-      console.log('[AuthService] Callback processing result:', success);
+      console.log('[AuthService] tryLogin() result:', success);
       
-      if (this.oauthService.hasValidAccessToken()) {
+      // Detailed token check
+      const hasAccessToken = this.oauthService.hasValidAccessToken();
+      const accessToken = this.oauthService.getAccessToken();
+      
+      console.log('[AuthService] After tryLogin token status:', {
+        success: success,
+        hasValidAccessToken: hasAccessToken,
+        accessTokenExists: !!accessToken,
+        accessTokenLength: accessToken?.length || 0
+      });
+      
+      if (hasAccessToken && accessToken) {
         console.log('[AuthService] Access token received via PKCE');
         await this.loadUserProfile();
         this.isAuthenticated.set(true);
@@ -133,6 +213,16 @@ export class AuthService {
           this.router.navigate(['/logs/search']);
         }
       } else {
+        // Debug why we don't have a token
+        console.error('[AuthService] Token exchange failed');
+        console.log('[AuthService] Attempting manual token info...');
+        
+        // Check what the OAuth service knows about tokens
+        const tokenResponse = (this.oauthService as any).getTokenResponse?.();
+        if (tokenResponse) {
+          console.log('[AuthService] Token response object:', tokenResponse);
+        }
+        
         throw new Error('PKCE flow completed but no valid access token received');
       }
       
