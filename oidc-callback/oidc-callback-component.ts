@@ -70,13 +70,12 @@ import { AuthService } from '../../core/services/auth.service';
   `]
 })
 export class OidcCallbackComponent implements OnInit {
-  private readonly authService = inject(AuthService);
-  
+   // Check dark mode for styling purposes
   public isDarkMode = document.documentElement.classList.contains('app-dark');
 
   ngOnInit(): void {
-    console.log('[OidcCallback] Processing callback');
-    // Just let the auth service handle everything - NO STATE ISSUES!
-    this.authService.handleCallback();
-  }
+    // NO LOGIC NEEDED HERE.
+    // The root-provided AuthService already started its `initializeAuth` process
+    // automatically when the application loaded on this callback route.
+    console.log('[OidcCallback] Component initialized. AuthService is handling the authentication process.');
 }
