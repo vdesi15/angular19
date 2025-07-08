@@ -70,12 +70,42 @@ import { AuthService } from '../../core/services/auth.service';
   `]
 })
 export class OidcCallbackComponent implements OnInit {
-  private authService = inject(AuthService);
-  public isDarkMode = document.documentElement.classList.contains('app-dark');
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
 
-  ngOnInit(): void {
-    console.log('[OidcCallback] Component initialized');
-    // Call handleLoginCallback immediately
-    this.authService.handleLoginCallback();
+  ngOnInit(): void {    
+    this.handlePostLoginNavigation();
+  }
+
+  private async handlePostLoginNavigation(): Promise<void> {
+    try {
+      // 1. Subscribe to the shared, replayed observable from the service.
+      console.log('[OidcCallback] Waiting for AuthService to finish initialization...');
+      await firstValueFrom(this.authService.isLoading$.pipe(
+        filter(loading => !loading) // This will now receive the replayed `false` value reliably.
+      ));
+      console.log('[OidcCallback] AuthService is ready.');
+
+      // 2. Proceed with navigation.
+      if (this.authService.hasValidSession()) {
+        const savedUrl = sessionStorage.getItem('pre_auth_url') || '/logs/search';
+        sessionStorage.removeItem('pre_auth_url');
+        console.log(`[OidcCallback] Login successful. Navigating to: ${savedUrl}`);
+        setTimeout(() => {
+          this.router.navigateByUrl(savedUrl).catch(err => {
+              console.error(`[OidcCallback] (from timeout) Navigation to ${savedUrl} threw an error.`, err);
+              this.router.navigateByUrl('/logs/search'); // Fallback
+          });
+      }, 0); 
+      } else {
+        console.error('[OidcCallback] Login failed. Redirecting to access-denied.');
+        await this.router.navigateByUrl('/access-denied');
+      }
+    } catch (error) {
+      // This catch block will now correctly handle the EmptyError if it were to occur.
+      console.error("[OidcCallback] An error occurred while waiting for auth service.", error);
+      await this.router.navigateByUrl('/access-denied');
+    }
   }
 }
