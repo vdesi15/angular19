@@ -1,5 +1,5 @@
-// src/app/app.component.ts - UPDATED TO PREVENT WHITE FLASH
-import { Component, inject, OnInit, effect } from '@angular/core';
+// src/app/app.component.ts - Independent theme detection for loading state
+import { Component, inject, OnInit, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from './core/services/auth.service';
@@ -13,7 +13,7 @@ import { ThemeService } from './core/services/theme.service';
     <div class="app-container" [class.app-dark]="themeService.isDarkMode()">
       <!-- Show loading until auth is ready -->
       @if (authService.isLoading()) {
-        <div class="app-loading">
+        <div class="app-loading" [class.dark-loading]="isInitialDarkMode()">
           <div class="loading-content">
             <h1 class="loading-title">SEAL</h1>
             <div class="loading-message">Loading application...</div>
@@ -29,9 +29,14 @@ import { ThemeService } from './core/services/theme.service';
   styles: [`
     .app-container {
       min-height: 100vh;
-      background: var(--splash-bg, var(--surface-ground, #ffffff));
+      background: var(--surface-ground, #ffffff);
       color: var(--text-color, #1d1d1f);
       transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .app-container.app-dark {
+      background: var(--surface-ground, #121212);
+      color: var(--text-color, #ffffff);
     }
 
     .app-loading {
@@ -39,7 +44,12 @@ import { ThemeService } from './core/services/theme.service';
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      background: var(--splash-bg, var(--surface-ground, #ffffff));
+      background: #ffffff; /* Default light */
+    }
+
+    /* Dark loading state - matches splash screen */
+    .app-loading.dark-loading {
+      background: #1d1d1f;
     }
 
     .loading-content {
@@ -57,9 +67,14 @@ import { ThemeService } from './core/services/theme.service';
 
     .loading-message {
       font-size: 1rem;
-      color: var(--splash-text-secondary, var(--text-color-secondary, #86868b));
+      color: #86868b; /* Default light */
       margin: 0 0 32px 0;
       font-weight: 400;
+    }
+
+    /* Dark loading text */
+    .app-loading.dark-loading .loading-message {
+      color: #a1a1a6;
     }
 
     .loading-spinner {
@@ -99,8 +114,14 @@ import { ThemeService } from './core/services/theme.service';
 export class AppComponent implements OnInit {
   public readonly authService = inject(AuthService);
   public readonly themeService = inject(ThemeService);
-
+  
+  // Signal to track initial dark mode state (before ThemeService loads)
+  private readonly _isInitialDarkMode = signal(false);
+  
   constructor() {
+    // Detect initial theme state for loading screen
+    this.detectInitialTheme();
+    
     // Effect to log user data when available
     effect(() => {
       const user = this.authService.userInfo();
@@ -120,6 +141,22 @@ export class AppComponent implements OnInit {
 
   ngOnInit(): void {
     console.log('[AppComponent] Application starting...');
+  }
+
+  private detectInitialTheme(): void {
+    try {
+      const savedTheme = localStorage.getItem('app-theme-mode');
+      // Match the same logic as your splash screen
+      if (savedTheme === 'dark' || !savedTheme) {
+        this._isInitialDarkMode.set(true);
+      }
+    } catch (error) {
+      console.warn('[AppComponent] Could not detect initial theme:', error);
+    }
+  }
+
+  public isInitialDarkMode(): boolean {
+    return this._isInitialDarkMode();
   }
 
   private processUserData(user: any): void {
