@@ -1,33 +1,28 @@
-// src/app/core/guards/authentication.guard.ts - SIMPLIFIED VERSION
-import { inject } from '@angular/core';
-import { CanActivateFn, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
-import { AuthService } from '../services/auth.service';
+import { inject } from "@angular/core";
+import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot, UrlTree } from "@angular/router";
+import { AuthService } from "../services/auth.service";
+import { toObservable } from "@angular/core/rxjs-interop";
+import { filter, map, Observable, take } from "rxjs";
 
-export const authenticationGuard: CanActivateFn = (): Observable<boolean | UrlTree> => {
-  const authService = inject(AuthService);
-  const router = inject(Router);
+export const authenticationGuard: CanActivateFn = (route: ActivatedRouteSnapshot,
+    state: RouterStateSnapshot): Observable<boolean> => {
+    const authService = inject(AuthService);
+    // Use the public, shared observable from the service
+    return authService.isLoading$.pipe(
+        filter(loading => !loading),
+        take(1),
+        map(() => {
+            // ... rest of the logic is the same
+            if (authService.hasValidSession()) {
+                return true;
+            } else {
+                const redirectUrl = state.url;
+                console.log(`[AuthGuard] User not authenticated. Intended URL: ${redirectUrl}`);
 
-  console.log('[AuthGuard] Running...');
-
-  // Convert the isLoading signal to an observable
-  return toObservable(authService.isLoading).pipe(
-    // Wait for loading to complete
-    filter(isLoading => !isLoading),
-    take(1),
-    // Check authentication status
-    map(() => {
-      console.log('[AuthGuard] Auth service finished loading. Checking session...');
-
-      if (authService.hasValidSession()) {
-        console.log('[AuthGuard] User is authenticated. Access granted.');
-        return true;
-      } else {
-        console.log('[AuthGuard] User is NOT authenticated. Starting login flow...');
-        // Start the login flow
-        authService.login(true);
-        // Return false to prevent navigation
-        return false;
-      }
-    })
-  );
-};
+                // Pass the reliable URL to the login method.
+                authService.login(redirectUrl); 
+                return false;
+            }
+        })
+    );
+  };
