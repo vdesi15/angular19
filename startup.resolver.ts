@@ -1,77 +1,53 @@
-// src/app/core/guards/startup.resolver.ts - Final version
 import { inject } from '@angular/core';
-import { ResolveFn, ActivatedRouteSnapshot } from '@angular/router';
-import { filter, switchMap, take, tap, forkJoin, map } from 'rxjs';
-import { OidcSecurityService } from 'angular-auth-oidc-client';
+import { ResolveFn } from '@angular/router';
+import { filter, switchMap, take, tap, forkJoin, map, of } from 'rxjs';
+import { toObservable } from '@angular/core/rxjs-interop';
 
+import { AuthService } from '../services/auth.service';
+import { SplashScreenService } from '../services/splash-screen.service';
 import { SearchFilterService } from '../services/filters.service';
 import { SearchFilterMetadataApiService } from '../services/search-filter-metadata-api.service';
 import { ColumnDefinitionService } from '../services/column-definition.service';
 import { ViewDefinitionService } from '../services/view-definition.service';
 
-export const startupResolver: ResolveFn<boolean> = (route: ActivatedRouteSnapshot) => {
-  const oidcService = inject(OidcSecurityService);
+export const startupResolver: ResolveFn<boolean> = () => {
+  const authService = inject(AuthService);
+  const splashScreenService = inject(SplashScreenService);
   const searchFilterService = inject(SearchFilterService);
   const searchFilterMetadataApi = inject(SearchFilterMetadataApiService);
   const columnDefinitionService = inject(ColumnDefinitionService);
   const viewDefinitionService = inject(ViewDefinitionService);
 
-  return oidcService.checkAuth().pipe(
-    filter(({ isAuthenticated }) => isAuthenticated),
+  // Wait for the initial authentication check to complete.
+  return toObservable(authService.isLoading).pipe(
+    filter(isLoading => !isLoading), // Proceed only when loading is false
     take(1),
     switchMap(() => {
-      console.log('[StartupResolver] Authenticated. Fetching all startup data in parallel...');
-      
-      return forkJoin({
-        filterMetadata: searchFilterMetadataApi.getSearchFilterMetadata(),
-        columnDefinitions: columnDefinitionService.loadDefinitions(),
-        viewDefinitions: viewDefinitionService.loadViews()
-      });
-    }),
-    tap(startupData => {
-      searchFilterService.setSearchFilterMetadata(startupData.filterMetadata);
-      console.log('[StartupResolver] All startup data loaded and services populated.');
-      
-      // 🔥 Process URL parameters AFTER data is loaded
-      const queryParams = findQueryParams(route);
-      if (queryParams && Object.keys(queryParams).length > 0) {
-        console.log('[StartupResolver] Processing URL parameters:', queryParams);
-        try {
-          searchFilterService.parseAndApplyUrlParameters(queryParams);
-          console.log('[StartupResolver] URL parameters applied successfully');
-        } catch (error) {
-          console.error('[StartupResolver] Error applying URL parameters:', error);
-        }
+      // The authentication guard has already run, so we should have a valid session.
+      if (authService.hasValidSession()) {
+        console.log('[StartupResolver] Authenticated. Fetching all startup data...');
+        // Let the user know what's happening.
+        splashScreenService.setMessage('Preparing your workspace...');
+
+        // Fetch all necessary data in parallel for maximum speed.
+        return forkJoin({
+          filterMetadata: searchFilterMetadataApi.getSearchFilterMetadata(),
+          columnDefinitions: columnDefinitionService.loadDefinitions(),
+          viewDefinitions: viewDefinitionService.loadViews()
+        }).pipe(
+          tap(startupData => {
+            // Once data arrives, populate the necessary services.
+            searchFilterService.setSearchFilterMetadata(startupData.filterMetadata);
+            console.log('[StartupResolver] Startup data loaded and services populated.');
+          }),
+          map(() => true) // Signal to the router that resolution is successful.
+        );
+      } else {
+        // This case should not be hit if the auth guard is working correctly,
+        // but it's a safe fallback.
+        console.warn('[StartupResolver] User is not authenticated. Skipping data fetch.');
+        return of(true); // Allow navigation to continue (guard will redirect).
       }
-    }),
-    map(() => true)
+    })
   );
 };
-
-// Helper to find query parameters in route tree
-function findQueryParams(route: ActivatedRouteSnapshot): any {
-  // Check current route first
-  if (route.queryParams && Object.keys(route.queryParams).length > 0) {
-    return route.queryParams;
-  }
-  
-  // Check all child routes
-  let current = route;
-  while (current.firstChild) {
-    current = current.firstChild;
-    if (current.queryParams && Object.keys(current.queryParams).length > 0) {
-      return current.queryParams;
-    }
-  }
-  
-  // Check parent routes
-  let parent = route.parent;
-  while (parent) {
-    if (parent.queryParams && Object.keys(parent.queryParams).length > 0) {
-      return parent.queryParams;
-    }
-    parent = parent.parent;
-  }
-  
-  return null;
-}
