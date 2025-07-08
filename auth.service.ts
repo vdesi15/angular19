@@ -6,7 +6,7 @@ import { UserInfo } from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly oauthService = inject(OAuthService);
+   private readonly oauthService = inject(OAuthService);
   private readonly router = inject(Router);
   private readonly configService = inject(ConfigService);
 
@@ -61,21 +61,28 @@ export class AuthService {
 
   private async initializeAuth(): Promise<void> {
     try {
+      console.log('[AuthService] Initializing authentication...');
+      
       // Load discovery document
       await this.oauthService.loadDiscoveryDocument();
       
-      // Try silent refresh first
+      // Try to process any existing callback or silent refresh
       const result = await this.oauthService.tryLoginImplicitFlow();
       
       if (this.oauthService.hasValidAccessToken()) {
+        console.log('[AuthService] Valid access token found');
         await this.loadUserProfile();
         this.isAuthenticated.set(true);
+      } else {
+        console.log('[AuthService] No valid access token found');
       }
       
     } catch (error) {
       console.error('[AuthService] Initialization error:', error);
     } finally {
+      // Always set loading to false so app can start
       this.isLoading.set(false);
+      console.log('[AuthService] Auth initialization complete');
     }
   }
 
@@ -161,6 +168,29 @@ export class AuthService {
     const user = this.userInfo();
     if (!user?.groups) return false;
     return user.groups.some(group => requiredGroups.includes(group));
+  }
+
+  public hasRole(requiredRoles: string[]): boolean {
+    const user = this.userInfo();
+    if (!user?.roles) return false;
+    return user.roles.some(role => requiredRoles.includes(role));
+  }
+
+  public isAdmin(): boolean {
+    const user = this.userInfo();
+    if (!user) return false;
+    
+    return user.groups?.includes('admin') || 
+           user.roles?.includes('administrator') ||
+           user.roles?.includes('admin') || false;
+  }
+
+  public getUserPermissions(): { groups: string[], roles: string[] } {
+    const user = this.userInfo();
+    return {
+      groups: user?.groups || [],
+      roles: user?.roles || []
+    };
   }
 
   private isCallbackUrl(url: string): boolean {
