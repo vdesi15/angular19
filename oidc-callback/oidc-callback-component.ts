@@ -124,13 +124,16 @@ export class OidcCallbackComponent implements OnInit {
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
       const state = urlParams.get('state');
+      const iss = urlParams.get('iss');
       const error = urlParams.get('error');
 
-      console.log('[OidcCallback] URL params:', { 
+      console.log('[OidcCallback] OAuth callback parameters:', { 
         hasCode: !!code, 
-        hasState: !!state, 
+        hasState: !!state,
+        hasIss: !!iss,
         error,
-        fullUrl: window.location.href
+        codeLength: code?.length,
+        stateLength: state?.length
       });
 
       // Check for OAuth error first
@@ -139,125 +142,54 @@ export class OidcCallbackComponent implements OnInit {
         throw new Error(`OAuth Error: ${error} - ${errorDesc}`);
       }
 
-      // WORKAROUND: Handle the state parameter issue with angular-auth-oidc-client
-      if (code && state) {
-        console.log('[OidcCallback] Code and state present, attempting manual state validation bypass');
-        
-        // Try to process with a small delay to let the library settle
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // Validate we have the required OAuth parameters
+      if (!code) {
+        throw new Error('Missing authorization code in callback URL');
       }
 
-      // Process the callback with retry logic for state issues
-      const result = await this.processCallbackWithRetry();
+      if (!state) {
+        throw new Error('Missing state parameter in callback URL');
+      }
+
+      console.log('[OidcCallback] Valid OAuth callback detected, processing...');
+
+      // Give the OIDC library a moment to process the URL
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Process the callback
+      const result = await this.oidcSecurityService.checkAuth().toPromise();
       
-      console.log('[OidcCallback] Auth result:', {
+      console.log('[OidcCallback] OIDC library result:', {
         isAuthenticated: result?.isAuthenticated,
         hasAccessToken: !!result?.accessToken,
-        errorMessage: result?.errorMessage
+        errorMessage: result?.errorMessage,
+        configId: result?.configId
       });
 
-      if (result?.isAuthenticated) {
+      if (result?.isAuthenticated && result?.accessToken) {
         console.log('[OidcCallback] Authentication successful');
         await this.handleSuccessfulAuth();
-      } else {
-        // Handle known state validation errors
-        if (result?.errorMessage?.toLowerCase().includes('state')) {
-          console.warn('[OidcCallback] State validation failed - attempting recovery');
-          await this.handleStateValidationError(code, state);
+      } else if (result?.errorMessage) {
+        console.error('[OidcCallback] OIDC library error:', result.errorMessage);
+        
+        // Handle specific state validation errors
+        if (result.errorMessage.toLowerCase().includes('state')) {
+          throw new Error('Authentication state validation failed. This can happen if you switched browser tabs during login.');
         } else {
-          throw new Error(result?.errorMessage || 'Authentication verification failed');
+          throw new Error(result.errorMessage);
         }
+      } else {
+        throw new Error('Authentication completed but no access token received');
       }
 
     } catch (error) {
-      console.error('[OidcCallback] Authentication error:', error);
+      console.error('[OidcCallback] Authentication processing failed:', error);
       
-      // Check if it's a state-related error
       const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
-      if (errorMessage.toLowerCase().includes('state')) {
-        this.errorMessage = 'Session expired or browser tab conflict. Please try signing in again.';
-      } else {
-        this.errorMessage = errorMessage;
-      }
+      this.errorMessage = errorMessage;
       
-      // Auto redirect to default after error timeout
-      setTimeout(() => this.fallbackRedirect(), 5000);
-    }
-  }
-
-  /**
-   * Process callback with retry logic for state validation issues
-   */
-  private async processCallbackWithRetry(maxRetries: number = 2): Promise<any> {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`[OidcCallback] Auth check attempt ${attempt}/${maxRetries}`);
-        const result = await this.oidcSecurityService.checkAuth().toPromise();
-        
-        // If we get a result (success or clear error), return it
-        if (result?.isAuthenticated || result?.errorMessage) {
-          return result;
-        }
-        
-        // If no clear result and we have retries left, wait and try again
-        if (attempt < maxRetries) {
-          console.log('[OidcCallback] Unclear result, retrying after delay...');
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-        
-        return result;
-        
-      } catch (error) {
-        console.warn(`[OidcCallback] Auth check attempt ${attempt} failed:`, error);
-        
-        // If it's the last attempt, throw the error
-        if (attempt === maxRetries) {
-          throw error;
-        }
-        
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-    }
-  }
-
-  /**
-   * Handle state validation errors - common issue with tab switching
-   */
-  private async handleStateValidationError(code: string | null, state: string | null): Promise<void> {
-    console.log('[OidcCallback] Handling state validation error');
-    
-    // Clear any stored state that might be corrupted
-    try {
-      // Clear OIDC storage (this helps with the tab switching issue)
-      sessionStorage.removeItem('oidc.silent.redirect');
-      sessionStorage.removeItem('oidc.redirect');
-      
-      // Clear any state-related items (adjust keys based on your OIDC lib version)
-      const storageKeys = Object.keys(sessionStorage);
-      storageKeys.forEach(key => {
-        if (key.includes('oidc') && (key.includes('state') || key.includes('nonce'))) {
-          sessionStorage.removeItem(key);
-        }
-      });
-      
-      console.log('[OidcCallback] Cleared potentially corrupted OIDC storage');
-      
-    } catch (storageError) {
-      console.warn('[OidcCallback] Failed to clear storage:', storageError);
-    }
-    
-    // If we have a code, we can try to restart the auth flow
-    if (code) {
-      console.log('[OidcCallback] Code present but state invalid - redirecting to restart auth');
-      this.errorMessage = 'Restarting authentication due to session conflict...';
-      
-      // Give user feedback then restart
-      setTimeout(() => {
-        this.oidcSecurityService.authorize();
-      }, 2000);
-    } else {
-      throw new Error('State validation failed and no authorization code present');
+      // Auto redirect after error (longer timeout for user to read message)
+      setTimeout(() => this.fallbackRedirect(), 8000);
     }
   }
 
@@ -293,8 +225,13 @@ export class OidcCallbackComponent implements OnInit {
   }
 
   public retryAuth(): void {
-    console.log('[OidcCallback] Retrying authentication');
+    console.log('[OidcCallback] Retrying authentication - clearing URL and starting fresh');
     this.errorMessage = null;
+    
+    // Clear the current URL to avoid callback loop
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // Start fresh auth flow
     this.oidcSecurityService.authorize();
   }
 
