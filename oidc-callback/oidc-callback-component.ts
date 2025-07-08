@@ -78,4 +78,6 @@ export class OidcCallbackComponent implements OnInit {
     // The root-provided AuthService already started its `initializeAuth` process
     // automatically when the application loaded on this callback route.
     console.log('[OidcCallback] Component initialized. AuthService is handling the authentication process.');
+    this.authService.handleLoginCallback();
+  }
 }

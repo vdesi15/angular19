@@ -22,9 +22,10 @@ export class AuthService {
 
   constructor() {
     this.configureOAuth();
-    this.initializeAuth(); // This single call will now handle all auth scenarios
+    this.initializeAuth();
   }
 
+  
   private configureOAuth(): void {
     const config = this.configService.get('oauth');
 
@@ -52,46 +53,64 @@ export class AuthService {
     }
   }
 
+  /**
+   * Passively checks for an existing session on any page load.
+   * Does NOT perform navigation.
+   */
   private async initializeAuth(): Promise<void> {
     try {
-      console.log('[AuthService] Initializing authentication...');
-      await this.oauthService.loadDiscoveryDocument();
-
-      // tryLogin() handles both session checks and the PKCE callback flow.
-      // It returns true if a login has just been completed (i.e., code was exchanged for a token).
-      const hasLoggedIn = await this.oauthService.tryLogin();
-      console.log(`[AuthService] tryLogin() result: ${hasLoggedIn}`);
+      // loadDiscoveryDocumentAndTryLogin is a passive check.
+      await this.oauthService.loadDiscoveryDocumentAndTryLogin();
 
       if (this.oauthService.hasValidAccessToken()) {
-        console.log('[AuthService] Session is valid.');
+        console.log('[AuthService] Session is valid from initial load.');
+        this.isAuthenticated.set(true);
+        await this.loadUserProfile();
+      } else {
+        console.log('[AuthService] No valid session on initial load.');
+        this.isAuthenticated.set(false);
+      }
+    } catch (error) {
+      console.error('[AuthService] Passive initialization error:', error);
+    } finally {
+      // This MUST be the last thing to happen here.
+      this.isLoading.set(false);
+    }
+  }
+
+   /**
+   * Actively processes the OIDC callback, exchanges the code for a token,
+   * and navigates to the originally requested URL.
+   * This should ONLY be called from the OidcCallbackComponent.
+   */
+  public async handleLoginCallback(): Promise<void> {
+    try {
+      // This tryLogin is now called explicitly and only on the callback route.
+      // It exchanges the code for tokens.
+      const hasLoggedIn = await this.oauthService.tryLogin();
+
+      if (hasLoggedIn && this.oauthService.hasValidAccessToken()) {
+        console.log('[AuthService] Login successful via callback.');
         this.isAuthenticated.set(true);
         await this.loadUserProfile();
 
-        // --- KEY CHANGE ---
-        // Only redirect if a login flow has just completed. This prevents
-        // redirection on every page refresh when already logged in.
-        if (hasLoggedIn) {
-          const savedUrl = sessionStorage.getItem('pre_auth_url');
-          sessionStorage.removeItem('pre_auth_url'); // Always clean up
+        // --- THE REDIRECT LOGIC NOW LIVES HERE ---
+        const savedUrl = sessionStorage.getItem('pre_auth_url');
+        sessionStorage.removeItem('pre_auth_url'); // Clean up immediately
 
-          const targetUrl = savedUrl && !this.isCallbackUrl(savedUrl) ? savedUrl : '/logs/search';
+        const targetUrl = savedUrl && !this.isCallbackUrl(savedUrl) ? savedUrl : '/logs/search';
 
-          console.log(`[AuthService] Login successful, redirecting to: ${targetUrl}`);
-          // Use navigateByUrl to handle full paths with query params
-          this.router.navigateByUrl(targetUrl);
-        }
+        console.log(`[AuthService] Login successful, redirecting to: ${targetUrl}`);
+        // This navigation will happen only once, and correctly.
+        this.router.navigateByUrl(targetUrl);
       } else {
-        console.log('[AuthService] No valid session found.');
-        this.isAuthenticated.set(false);
-        this.userInfo.set(null);
+         console.error('[AuthService] Callback handling failed. Could not log in.');
+         // On failure, send to a safe page.
+         this.router.navigate(['/logs/search']);
       }
     } catch (error) {
-      console.error('[AuthService] Initialization error:', error);
-      this.isAuthenticated.set(false);
-      this.userInfo.set(null);
-    } finally {
-      this.isLoading.set(false);
-      console.log('[AuthService] Auth initialization complete.');
+        console.error('[AuthService] Critical error during login callback handling:', error);
+        this.router.navigate(['/access-denied']);
     }
   }
 
