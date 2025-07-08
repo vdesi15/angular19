@@ -1,3 +1,4 @@
+// src/app/core/services/auth.service.ts - NEW VERSION
 import { inject, Injectable, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { OAuthService, AuthConfig } from 'angular-oauth2-oidc';
@@ -6,7 +7,7 @@ import { UserInfo } from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-   private readonly oauthService = inject(OAuthService);
+  private readonly oauthService = inject(OAuthService);
   private readonly router = inject(Router);
   private readonly configService = inject(ConfigService);
 
@@ -35,46 +36,54 @@ export class AuthService {
       postLogoutRedirectUri: config.postLogoutRedirectUri,
       clientId: config.clientId,
       scope: config.scope,
-      responseType: config.responseType,
+      responseType: 'code', // PKCE requires 'code' response type
       
-      // These work much better in angular-oauth2-oidc
+      // PKCE Configuration (correct property names)
+      disablePKCE: false, // This enables PKCE (false = PKCE enabled)
+      showDebugInformation: config.logLevel > 0,
+      
+      // Session management
+      sessionChecksEnabled: true,
+      clearHashAfterLogin: true,
+      
+      // Silent refresh for token renewal
       silentRefreshRedirectUri: window.location.origin + '/silent-refresh.html',
       useSilentRefresh: config.silentRenew,
       silentRefreshTimeout: (config.renewTimeBeforeTokenExpiresInSeconds || 300) * 1000,
       
-      // Better session management
-      sessionChecksEnabled: true,
-      clearHashAfterLogin: true,
-      
-      // Token validation
+      // Security settings
       requireHttps: window.location.protocol === 'https:',
       strictDiscoveryDocumentValidation: false
     };
 
     this.oauthService.configure(authConfig);
     
-    // Set log level
-    if (config.logLevel > 0) {
-      this.oauthService.setLogging(true);
+    // Set up automatic token refresh
+    if (config.silentRenew) {
+      this.oauthService.setupAutomaticSilentRefresh();
     }
   }
 
   private async initializeAuth(): Promise<void> {
     try {
-      console.log('[AuthService] Initializing authentication...');
+      console.log('[AuthService] Initializing PKCE authentication...');
       
-      // Load discovery document
+      // Load discovery document first
       await this.oauthService.loadDiscoveryDocument();
+      console.log('[AuthService] Discovery document loaded');
       
-      // Try to process any existing callback or silent refresh
-      const result = await this.oauthService.tryLoginImplicitFlow();
+      // For PKCE flow, try to login (this handles both callback and silent refresh)
+      const success = await this.oauthService.tryLogin();
+      console.log('[AuthService] Login attempt result:', success);
       
+      // Check if we have a valid token after tryLogin
       if (this.oauthService.hasValidAccessToken()) {
         console.log('[AuthService] Valid access token found');
         await this.loadUserProfile();
         this.isAuthenticated.set(true);
       } else {
         console.log('[AuthService] No valid access token found');
+        // Don't automatically redirect - let guards handle it
       }
       
     } catch (error) {
@@ -92,26 +101,25 @@ export class AuthService {
       const currentUrl = this.router.url;
       if (!this.isCallbackUrl(currentUrl)) {
         sessionStorage.setItem('pre_auth_url', currentUrl);
+        console.log('[AuthService] Saved URL before login:', currentUrl);
       }
     }
 
-    // Start the login flow - NO STATE ISSUES!
-    this.oauthService.initLoginFlow();
-  }
-
-  public async logout(): Promise<void> {
-    sessionStorage.removeItem('pre_auth_url');
-    this.isAuthenticated.set(false);
-    this.userInfo.set(null);
-    this.oauthService.logOut();
+    // Start PKCE login flow
+    console.log('[AuthService] Starting PKCE login flow...');
+    this.oauthService.initCodeFlow();
   }
 
   public async handleCallback(): Promise<void> {
     try {
-      // Process the callback - MUCH more reliable!
-      const result = await this.oauthService.tryLoginImplicitFlow();
+      console.log('[AuthService] Processing PKCE callback...');
+      
+      // For PKCE, use tryLogin instead of tryLoginImplicitFlow
+      const success = await this.oauthService.tryLogin();
+      console.log('[AuthService] Callback processing result:', success);
       
       if (this.oauthService.hasValidAccessToken()) {
+        console.log('[AuthService] Access token received via PKCE');
         await this.loadUserProfile();
         this.isAuthenticated.set(true);
         
@@ -119,16 +127,17 @@ export class AuthService {
         const savedUrl = sessionStorage.getItem('pre_auth_url');
         if (savedUrl && !this.isCallbackUrl(savedUrl)) {
           sessionStorage.removeItem('pre_auth_url');
+          console.log('[AuthService] Restoring URL:', savedUrl);
           this.router.navigateByUrl(savedUrl);
         } else {
           this.router.navigate(['/logs/search']);
         }
       } else {
-        throw new Error('No valid access token received');
+        throw new Error('PKCE flow completed but no valid access token received');
       }
       
     } catch (error) {
-      console.error('[AuthService] Callback error:', error);
+      console.error('[AuthService] PKCE callback error:', error);
       this.router.navigate(['/logs/search']);
     }
   }
