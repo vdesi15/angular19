@@ -85,32 +85,38 @@ export class AuthService {
    */
   public async handleLoginCallback(): Promise<void> {
     try {
-      // This tryLogin is now called explicitly and only on the callback route.
-      // It exchanges the code for tokens.
-      const hasLoggedIn = await this.oauthService.tryLogin();
+      // We define all post-login logic within the onTokenReceived callback.
+      // This ensures our actions are executed in the correct sequence within the library's flow.
+      await this.oauthService.tryLogin({
+        onTokenReceived: async (info) => {
+          console.log('[AuthService] Token received successfully inside onTokenReceived hook.', info);
 
-      if (hasLoggedIn && this.oauthService.hasValidAccessToken()) {
-        console.log('[AuthService] Login successful via callback.');
-        this.isAuthenticated.set(true);
-        await this.loadUserProfile();
+          // 1. Immediately update the authentication state.
+          this.isAuthenticated.set(true);
 
-        // --- THE REDIRECT LOGIC NOW LIVES HERE ---
-        const savedUrl = sessionStorage.getItem('pre_auth_url');
-        sessionStorage.removeItem('pre_auth_url'); // Clean up immediately
+          // 2. Load the user's profile data. This is critical to do before navigating,
+          // so the authorization guard has the data it needs on the next page.
+          await this.loadUserProfile();
 
-        const targetUrl = savedUrl && !this.isCallbackUrl(savedUrl) ? savedUrl : '/logs/search';
+          // 3. Retrieve the saved URL and clean up sessionStorage.
+          const savedUrl = sessionStorage.getItem('pre_auth_url');
+          sessionStorage.removeItem('pre_auth_url');
+          const targetUrl = savedUrl && !this.isCallbackUrl(savedUrl) ? savedUrl : '/logs/search';
 
-        console.log(`[AuthService] Login successful, redirecting to: ${targetUrl}`);
-        // This navigation will happen only once, and correctly.
-        this.router.navigateByUrl(targetUrl);
-      } else {
-         console.error('[AuthService] Callback handling failed. Could not log in.');
-         // On failure, send to a safe page.
-         this.router.navigate(['/logs/search']);
-      }
+          console.log(`[AuthService] Post-login navigation. Target: ${targetUrl}`);
+
+          // 4. Perform the one and only navigation. The library will not interfere.
+          // We must await this to ensure the promise from tryLogin resolves correctly.
+          await this.router.navigateByUrl(targetUrl);
+        }
+      });
+
+      console.log('[AuthService] tryLogin() process with onTokenReceived completed.');
+
     } catch (error) {
-        console.error('[AuthService] Critical error during login callback handling:', error);
-        this.router.navigate(['/access-denied']);
+      console.error('[AuthService] Critical error during login callback handling:', error);
+      // On any failure during the process, redirect to a safe error page.
+      this.router.navigate(['/access-denied']);
     }
   }
 
