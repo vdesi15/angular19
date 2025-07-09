@@ -37,20 +37,25 @@
                 <p-table [value]="data.rules" styleClass="rules-table">
                   <ng-template pTemplate="header">
                     <tr>
-                      <th>Name</th>
-                      <th>Passed</th>
-                      <th>Message (Click to view details)</th>
+                      @for (col of rulesColumns(); track col.id) {
+                        @if (col.visible) {
+                          <th [style.width]="col.width">{{ col.displayName }}</th>
+                        }
+                      }
                     </tr>
                   </ng-template>
                   <ng-template pTemplate="body" let-rule>
                     <tr>
-                      <td>{{ rule.name }}</td>
-                      <td [ngClass]="getRuleCellClass(rule.pass)">
-                        {{ rule.pass }}
-                      </td>
-                      <td class="clickable-cell" (click)="onRuleMessageClick(rule)">
-                        {{ rule.message }}
-                      </td>
+                      @for (col of rulesColumns(); track col.id) {
+                        @if (col.visible) {
+                          <td [style.width]="col.width"
+                              [ngClass]="col.field === 'pass' ? getRuleCellClass(rule.pass) : ''"
+                              [class.clickable-cell]="col.onClick"
+                              (click)="col.onClick && col.field === 'message' ? onRuleMessageClick(rule) : null">
+                            {{ getFieldValue(rule, col.field) | transform:col.transform:rule }}
+                          </td>
+                        }
+                      }
                     </tr>
                   </ng-template>
                 </p-table>
@@ -62,24 +67,22 @@
                 <p-table [value]="data.agg" styleClass="agg-table">
                   <ng-template pTemplate="header">
                     <tr>
-                      <th>Time</th>
-                      <th>Type</th>
-                      <th>Good Qty</th>
-                      <th>US Qty</th>
-                      <th>RJ Qty</th>
-                      <th>TQ</th>
-                      <th>LDL</th>
+                      @for (col of aggColumns(); track col.id) {
+                        @if (col.visible) {
+                          <th [style.width]="col.width">{{ col.displayName }}</th>
+                        }
+                      }
                     </tr>
                   </ng-template>
                   <ng-template pTemplate="body" let-agg>
                     <tr>
-                      <td>{{ formatLocalTime(agg.time) }}</td>
-                      <td>{{ agg.type }}</td>
-                      <td>{{ agg.agg_total_g }}</td>
-                      <td>{{ agg.agg_total_ud }}</td>
-                      <td>{{ agg.agg_total_rj }}</td>
-                      <td>{{ agg.agg_total_d }}</td>
-                      <td>{{ agg.agg_ld }}</td>
+                      @for (col of aggColumns(); track col.id) {
+                        @if (col.visible) {
+                          <td [style.width]="col.width">
+                            {{ getFieldValue(agg, col.field) | transform:col.transform:agg }}
+                          </td>
+                        }
+                      }
                     </tr>
                   </ng-template>
                 </p-table>
@@ -107,35 +110,28 @@
                        styleClass="summary-table">
                 <ng-template pTemplate="header">
                   <tr>
-                    <th>Time</th>
-                    <th>Type</th>
-                    <th>ID</th>
-                    <th>Slot</th>
-                    <th>FID</th>
-                    <th>DLSummary</th>
-                    <th>USQ</th>
-                    <th>GQ</th>
-                    <th>TQ</th>
-                    <th>Status</th>
+                    @for (col of summaryColumns(); track col.id) {
+                      @if (col.visible) {
+                        <th [style.width]="col.width">{{ col.displayName }}</th>
+                      }
+                    }
                   </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-summary let-rowgroup="rowgroup">
                   <tr>
-                    @if (rowgroup && selectedGroupColumns().includes('type')) {
-                      <td>{{ formatLocalTime(summary.time) }}</td>
-                      <td>{{ summary.type }}</td>
-                    } @else if (!rowgroup) {
-                      <td>{{ formatLocalTime(summary.time) }}</td>
-                      <td>{{ summary.type }}</td>
+                    @for (col of summaryColumns(); track col.id) {
+                      @if (col.visible) {
+                        @if (rowgroup && selectedGroupColumns().includes(col.field)) {
+                          <td [style.width]="col.width">
+                            {{ getFieldValue(summary, col.field) | transform:col.transform:summary }}
+                          </td>
+                        } @else if (!rowgroup) {
+                          <td [style.width]="col.width">
+                            {{ getFieldValue(summary, col.field) | transform:col.transform:summary }}
+                          </td>
+                        }
+                      }
                     }
-                    <td>{{ summary.id }}</td>
-                    <td>{{ summary.sid }}</td>
-                    <td>{{ summary.front_id }}</td>
-                    <td>{{ summary.dsummary }}</td>
-                    <td>{{ summary.usummary }}</td>
-                    <td>{{ summary.gd }}</td>
-                    <td>{{ summary.total_d }}</td>
-                    <td>{{ summary.status }}</td>
                   </tr>
                 </ng-template>
               </p-table>

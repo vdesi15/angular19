@@ -11,6 +11,7 @@ import { BatchSSEData } from '../../models/batch-sse.model';
 import { ColumnDefinitionService } from '../../services/column-definition.service';
 import { SearchOrchestratorService } from '../../services/search-orchestrator.service';
 import { EditorDialogComponent } from '../editor-dialog/editor-dialog.component';
+import { TransformPipe } from 'src/app/shared/pipes/transform.pipe';
 
 @Component({
   selector: 'app-batch-viewer',
@@ -23,7 +24,8 @@ import { EditorDialogComponent } from '../editor-dialog/editor-dialog.component'
     MultiSelectModule,
     ButtonModule,
     DialogModule,
-    EditorDialogComponent
+    EditorDialogComponent,
+    TransformPipe
   ],
   templateUrl: './batch-viewer.component.html',
   styleUrls: ['./batch-viewer.component.scss']
@@ -46,11 +48,20 @@ export class BatchViewerComponent {
   
   // Group by state for summary table
   selectedGroupColumns = signal<string[]>(['type']);
-  availableGroupColumns = [
-    { label: 'Type', value: 'type' },
-    { label: 'Slot', value: 'sid' },
-    { label: 'Status', value: 'status' }
-  ];
+  
+  // Computed available group columns from summary columns
+  availableGroupColumns = computed(() => {
+    const summaryColDefs = this.summaryColumns();
+    // Only allow grouping by specific columns that make sense
+    const groupableFields = ['type', 'sid', 'status'];
+    
+    return summaryColDefs
+      .filter(col => groupableFields.includes(col.field))
+      .map(col => ({
+        label: col.displayName,
+        value: col.field
+      }));
+  });
 
   // Column definitions from API
   rulesColumns = computed(() => 
@@ -120,6 +131,7 @@ export class BatchViewerComponent {
 
   // Transform functions for table data
   getFieldValue(row: any, field: string): any {
+    // Handle nested field paths like 'data.agg.time'
     return field.split('.').reduce((obj, key) => obj?.[key], row);
   }
 }
