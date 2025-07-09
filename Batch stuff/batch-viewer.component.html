@@ -1,7 +1,43 @@
+<!-- batch-viewer.component.html - Updated with individual accordion control and filtering -->
 <div class="batch-viewer-container">
-  <!-- Header with time range selector -->
+  <!-- Header with time range selector and streaming controls -->
   <div class="batch-header">
-    <h2>U & M Timeline Search</h2>
+    <div class="header-left">
+      <h2>U & M Timeline Search</h2>
+      
+      <!-- Fix #6: Streaming indicator and control -->
+      @if(search.isStreaming) {
+        <div class="streaming-indicator">
+          <button 
+            pButton 
+            type="button" 
+            class="p-button-sm streaming-control-btn" 
+            [ngClass]="{
+              'p-button-success': !isStopButtonHovered(),
+              'p-button-danger': isStopButtonHovered()
+            }" 
+            (mouseenter)="isStopButtonHovered.set(true)" 
+            (mouseleave)="isStopButtonHovered.set(false)"
+            (click)="stopStreaming($event)" 
+            pTooltip="Stop the live data stream" 
+            tooltipPosition="top">
+
+            @if (isStopButtonHovered()) {
+              <span class="flex align-items-center gap-2">
+                <i class="pi pi-stop-circle"></i>
+                <span>Stop</span>
+              </span>
+            } @else {
+              <span class="flex align-items-center gap-2">
+                <i class="pi pi-spin pi-spinner"></i>
+                <span>Streaming...</span>
+              </span>
+            }
+          </button>
+        </div>
+      }
+    </div>
+    
     <div class="time-range-selector">
       <span class="time-range-label">Time Range:</span>
       @for (range of timeRanges; track range) {
@@ -17,129 +53,220 @@
   <div class="batch-content">
     <h3>Following are U & M data</h3>
     
-    <!-- Batch Data Accordions -->
-    <p-accordion [multiple]="true" styleClass="batch-accordions">
-      @for (data of batchData(); track data.api_txnid) {
-        <p-accordion-panel [ngClass]="getAccordionClass(data)">
-          <p-accordion-header>
-            <span [innerHTML]="getAccordionTitle(data)"></span>
-          </p-accordion-header>
-          <p-accordion-content>
-            <div class="txn-info">
-              <p><strong>Txn id:</strong> {{ data.api_txnid }}</p>
-              <p><strong>DLEnabled:</strong> {{ data.dl_enable }}</p>
+    <!-- Fix #1 & #2: Manual accordion implementation for individual control -->
+    <div class="custom-accordions">
+      @for (data of batchData(); track trackByTxnId($index, data)) {
+        <div class="custom-accordion-panel" 
+             [ngClass]="[getAccordionClass(data), isAccordionExpanded(data.api_txnid) ? 'expanded' : '']">
+          
+          <!-- Custom accordion header with individual control -->
+          <div 
+            class="custom-accordion-header" 
+            [style]="getAccordionHeaderStyle(data)"
+            (click)="toggleAccordion(data.api_txnid, $event)">
+            
+            <div class="accordion-title-section">
+              <i class="pi" 
+                 [ngClass]="isAccordionExpanded(data.api_txnid) ? 'pi-chevron-down' : 'pi-chevron-right'"
+                 class="accordion-toggle-icon"></i>
+              <span [innerHTML]="getAccordionTitle(data)"></span>
             </div>
+          </div>
 
-            <div class="row">
-              <!-- Rules Table (30%) -->
-              <div class="col-4">
-                <h4>Rule Table</h4>
-                <p-table [value]="data.rules" styleClass="rules-table">
+          <!-- Custom accordion content -->
+          @if (isAccordionExpanded(data.api_txnid)) {
+            <div class="custom-accordion-content">
+              <div class="txn-info">
+                <p><strong>Txn id:</strong> {{ data.api_txnid }}</p>
+                <p><strong>DLEnabled:</strong> {{ data.dl_enable }}</p>
+              </div>
+
+              <div class="row">
+                <!-- Rules Table (30%) -->
+                <div class="col-4">
+                  <h4>Rule Table</h4>
+                  <p-table [value]="data.rules" styleClass="rules-table">
+                    <ng-template pTemplate="header">
+                      <tr>
+                        @for (col of rulesColumns(); track trackByField($index, col)) {
+                          @if (col.visible) {
+                            <th [style.width]="col.width">{{ col.displayName }}</th>
+                          }
+                        }
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-rule>
+                      <tr>
+                        @for (col of rulesColumns(); track trackByField($index, col)) {
+                          @if (col.visible) {
+                            <td [style.width]="col.width"
+                                [ngClass]="col.field === 'pass' ? getRuleCellClass(rule.pass) : ''"
+                                [class.clickable-cell]="col.onClick"
+                                (click)="col.onClick && col.field === 'message' ? openMessageEditor(rule.message) : null">
+                              {{ getFieldValue(rule, col.field) | transform:col.transform:rule }}
+                            </td>
+                          }
+                        }
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+
+                <!-- Aggregated Data Table (70%) -->
+                <div class="col-8">
+                  <h4>Aggregated Data Table</h4>
+                  <p-table [value]="data.aggs" styleClass="aggs-table">
+                    <ng-template pTemplate="header">
+                      <tr>
+                        @for (col of aggColumns(); track trackByField($index, col)) {
+                          @if (col.visible) {
+                            <th [style.width]="col.width">{{ col.displayName }}</th>
+                          }
+                        }
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-agg>
+                      <tr>
+                        @for (col of aggColumns(); track trackByField($index, col)) {
+                          @if (col.visible) {
+                            <td [style.width]="col.width">
+                              {{ getFieldValue(agg, col.field) | transform:col.transform:agg }}
+                            </td>
+                          }
+                        }
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+              </div>
+
+              <!-- Fix #3: Summary Section with Collapsible Row Groups -->
+              <div class="summary-section">
+                <div class="group-selector">
+                  <label for="groupColumns">Group by:</label>
+                  <p-multiselect 
+                    [(ngModel)]="selectedGroupColumns"
+                    [options]="availableGroupColumns()"
+                    optionLabel="label" 
+                    optionValue="value"
+                    placeholder="Select grouping columns"
+                    [showToggleAll]="false"
+                    styleClass="w-100">
+                  </p-multiselect>
+                </div>
+
+                <!-- Enhanced summary table with row grouping and filtering -->
+                <p-table 
+                  [value]="data.summaries"
+                  sortField="representative.name" 
+                  sortMode="single" 
+                  [dataKey]="selectedGroupColumns().length > 0 ? selectedGroupColumns()[0] : null"
+                  [rowGroupMode]="selectedGroupColumns().length > 0 ? 'subheader' : null"
+                  [groupRowsBy]="selectedGroupColumns().length > 0 ? selectedGroupColumns()[0] : null"
+                  styleClass="summary-table"
+                  [scrollable]="true"
+                  scrollHeight="400px">
+                  
+                  <!-- Fix #5: Header with filter row -->
                   <ng-template pTemplate="header">
                     <tr>
-                      @for (col of rulesColumns(); track col.id) {
+                      @for (col of summaryColumns(); track trackByField($index, col)) {
                         @if (col.visible) {
                           <th [style.width]="col.width">{{ col.displayName }}</th>
                         }
                       }
                     </tr>
-                  </ng-template>
-                  <ng-template pTemplate="body" let-rule>
+                    <!-- Filter row for columns with enableFiltering = true -->
                     <tr>
-                      @for (col of rulesColumns(); track col.id) {
+                      @for (col of summaryColumns(); track trackByField($index, col)) {
                         @if (col.visible) {
-                          <td [style.width]="col.width"
-                              [ngClass]="col.field === 'pass' ? getRuleCellClass(rule.pass) : ''"
-                              [class.clickable-cell]="col.onClick"
-                              (click)="col.onClick && col.field === 'message' ? onRuleMessageClick(rule) : null">
-                            {{ getFieldValue(rule, col.field) | transform:col.transform:rule }}
-                          </td>
+                          <th [style.width]="col.width">
+                            @if (col.enableFiltering === true) {
+                              <p-columnFilter 
+                                type="text" 
+                                [field]="col.field"
+                                display="row"
+                                placeholder="Filter {{ col.displayName }}">
+                              </p-columnFilter>
+                            }
+                          </th>
                         }
                       }
                     </tr>
                   </ng-template>
-                </p-table>
-              </div>
 
-              <!-- Agg Table (70%) -->
-              <div class="col-8">
-                <h4>Agg Table</h4>
-                <p-table [value]="data.agg" styleClass="agg-table">
-                  <ng-template pTemplate="header">
-                    <tr>
-                      @for (col of aggColumns(); track col.id) {
-                        @if (col.visible) {
-                          <th [style.width]="col.width">{{ col.displayName }}</th>
+                  <!-- Row group header (collapsible) -->
+                  @if (selectedGroupColumns().length > 0) {
+                    <ng-template #groupheader let-summary let-rowIndex="rowIndex" let-expanded="expanded">
+                      <tr>
+                        <td [attr.colspan]="summaryColumns().length">
+                          <button 
+                            type="button" 
+                            pButton 
+                            pRipple 
+                            [pRowToggler]="summary" 
+                            text 
+                            rounded 
+                            plain 
+                            class="mr-2" 
+                            [icon]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'">
+                          </button>
+                          <span class="font-bold ml-2">
+                            {{ getFieldValue(summary, selectedGroupColumns()[0]) }}
+                          </span>
+                        </td>
+                      </tr>
+                    </ng-template>
+                  }
+
+                  <!-- Row group footer -->
+                  @if (selectedGroupColumns().length > 0) {
+                    <ng-template #groupfooter let-summary>
+                      <tr class="p-rowgroup-footer">
+                        <td [attr.colspan]="summaryColumns().length - 1" style="text-align: right">
+                          <strong>Group Total</strong>
+                        </td>
+                        <td>
+                          <strong>{{ data.summaries.filter(s => getFieldValue(s, selectedGroupColumns()[0]) === getFieldValue(summary, selectedGroupColumns()[0])).length }}</strong>
+                        </td>
+                      </tr>
+                    </ng-template>
+                  }
+
+                  <!-- Expandable row content (for grouped tables) -->
+                  @if (selectedGroupColumns().length > 0) {
+                    <ng-template #expandedrow let-summary>
+                      <tr>
+                        @for (col of summaryColumns(); track trackByField($index, col)) {
+                          @if (col.visible) {
+                            <td [style.width]="col.width">
+                              {{ getFieldValue(summary, col.field) | transform:col.transform:summary }}
+                            </td>
+                          }
                         }
-                      }
-                    </tr>
-                  </ng-template>
-                  <ng-template pTemplate="body" let-agg>
-                    <tr>
-                      @for (col of aggColumns(); track col.id) {
-                        @if (col.visible) {
-                          <td [style.width]="col.width">
-                            {{ getFieldValue(agg, col.field) | transform:col.transform:agg }}
-                          </td>
+                      </tr>
+                    </ng-template>
+                  } @else {
+                    <!-- Standard body template for non-grouped tables -->
+                    <ng-template pTemplate="body" let-summary>
+                      <tr>
+                        @for (col of summaryColumns(); track trackByField($index, col)) {
+                          @if (col.visible) {
+                            <td [style.width]="col.width">
+                              {{ getFieldValue(summary, col.field) | transform:col.transform:summary }}
+                            </td>
+                          }
                         }
-                      }
-                    </tr>
-                  </ng-template>
+                      </tr>
+                    </ng-template>
+                  }
                 </p-table>
               </div>
             </div>
-
-            <!-- Summary Table (100%) -->
-            <div class="summary-section">
-              <h4>U & M Summary Table</h4>
-              
-              <div class="group-selector">
-                <label>Group Cols By:</label>
-                <p-multiSelect 
-                  [(ngModel)]="selectedGroupColumns"
-                  [options]="availableGroupColumns"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Select columns to group by">
-                </p-multiSelect>
-              </div>
-
-              <p-table [value]="data.summary" 
-                       [rowGroupMode]="selectedGroupColumns().length > 0 ? 'rowspan' : null"
-                       [groupRowsBy]="selectedGroupColumns()"
-                       styleClass="summary-table">
-                <ng-template pTemplate="header">
-                  <tr>
-                    @for (col of summaryColumns(); track col.id) {
-                      @if (col.visible) {
-                        <th [style.width]="col.width">{{ col.displayName }}</th>
-                      }
-                    }
-                  </tr>
-                </ng-template>
-                <ng-template pTemplate="body" let-summary let-rowgroup="rowgroup">
-                  <tr>
-                    @for (col of summaryColumns(); track col.id) {
-                      @if (col.visible) {
-                        @if (rowgroup && selectedGroupColumns().includes(col.field)) {
-                          <td [style.width]="col.width">
-                            {{ getFieldValue(summary, col.field) | transform:col.transform:summary }}
-                          </td>
-                        } @else if (!rowgroup) {
-                          <td [style.width]="col.width">
-                            {{ getFieldValue(summary, col.field) | transform:col.transform:summary }}
-                          </td>
-                        }
-                      }
-                    }
-                  </tr>
-                </ng-template>
-              </p-table>
-            </div>
-          </p-accordion-content>
-        </p-accordion-panel>
+          }
+        </div>
       }
-    </p-accordion>
+    </div>
   </div>
 </div>
 

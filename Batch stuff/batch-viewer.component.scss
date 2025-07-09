@@ -1,3 +1,4 @@
+// batch-viewer.component.scss - Enhanced styles with individual accordion control
 .batch-viewer-container {
   padding: 1rem;
   height: 100%;
@@ -11,10 +12,38 @@
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--surface-border);
 
-    h2 {
-      margin: 0;
-      font-size: 1.5rem;
-      color: var(--text-color);
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+
+      h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        color: var(--text-color);
+      }
+
+      // Fix #6: Streaming indicator styling
+      .streaming-indicator {
+        .streaming-control-btn {
+          font-size: 0.875rem;
+          transition: all 0.3s ease;
+          
+          &.p-button-success {
+            background-color: var(--green-500);
+            border-color: var(--green-500);
+          }
+          
+          &.p-button-danger {
+            background-color: var(--red-500);
+            border-color: var(--red-500);
+          }
+          
+          .pi-spinner {
+            animation: spin 1s linear infinite;
+          }
+        }
+      }
     }
 
     .time-range-selector {
@@ -54,55 +83,132 @@
     }
   }
 
-  ::ng-deep .batch-accordions {
-    .p-accordion-panel {
-      margin-bottom: 0.5rem;
-
-      &.batch-accordion-success .p-accordion-header-link {
-        background-color: rgba(40, 167, 69, 0.1) !important;
-        border-left: 4px solid #28a745;
+d #28a745;
+        
+        .custom-accordion-header {
+          background-color: rgba(40, 167, 69, 0.1) !important;
+        }
       }
 
-      &.batch-accordion-error .p-accordion-header-link {
-        background-color: rgba(220, 53, 69, 0.1) !important;
+      &.batch-accordion-error {
         border-left: 4px solid #dc3545;
+        
+        .custom-accordion-header {
+          background-color: rgba(220, 53, 69, 0.1) !important;
+        }
+      }
+
+      .custom-accordion-header {
+        background-color: var(--surface-ground);
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid var(--surface-border);
+        
+        &:hover {
+          background-color: var(--surface-hover);
+        }
+
+        .accordion-title-section {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          
+          .accordion-toggle-icon {
+            transition: transform 0.3s ease;
+            color: var(--primary-color);
+          }
+        }
+      }
+
+      .custom-accordion-content {
+        padding: 1rem;
+        background-color: var(--surface-card);
       }
     }
   }
 
   .txn-info {
-    margin-bottom: 1rem;
-    padding: 0.5rem;
-    background-color: var(--surface-ground);
-    border-radius: 4px;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, var(--surface-50) 0%, var(--surface-100) 100%);
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 
     p {
-      margin: 0.25rem 0;
+      margin: 0.5rem 0;
+      font-size: 0.95rem;
+      
+      strong {
+        color: var(--text-color);
+        font-weight: 600;
+      }
     }
   }
 
-  .rules-table {
+  // Enhanced professional table styles
+  .rules-table, .aggs-table {
+    margin-bottom: 1.5rem;
+    
+    ::ng-deep {
+      .p-datatable-thead > tr > th {
+        background: var(--surface-100) !important;
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 0.875rem 0.75rem;
+        border-bottom: 2px solid var(--primary-color);
+      }
+      
+      .p-datatable-tbody > tr > td {
+        padding: 0.75rem;
+        font-size: 0.875rem;
+        border-bottom: 1px solid var(--surface-200);
+      }
+      
+      .p-datatable-tbody > tr:hover {
+        background: var(--surface-50);
+      }
+    }
+    
     .rule-pass {
-      color: #28a745;
-      font-weight: 500;
+      color: var(--green-600);
+      font-weight: 600;
+      
+      &::before {
+        content: '✓ ';
+        margin-right: 0.25rem;
+      }
     }
 
     .rule-fail {
-      color: #dc3545;
-      font-weight: 500;
+      color: var(--red-600);
+      font-weight: 600;
+      
+      &::before {
+        content: '✗ ';
+        margin-right: 0.25rem;
+      }
     }
 
     .clickable-cell {
       cursor: pointer;
       color: var(--primary-color);
-      text-decoration: underline;
-
+      transition: all 0.2s ease;
+      border-radius: 4px;
+      padding: 0.25rem 0.5rem;
+      margin: -0.25rem -0.5rem;
+      
       &:hover {
-        color: var(--primary-color-text);
+        background-color: var(--primary-50);
+        color: var(--primary-700);
+        text-decoration: underline;
+        transform: translateX(2px);
       }
     }
   }
 
+  // Fix #3 & #5: Enhanced summary table with filtering
   .summary-section {
     margin-top: 2rem;
 
@@ -114,22 +220,206 @@
 
       label {
         font-weight: 500;
+        min-width: 80px;
       }
 
       ::ng-deep .p-multiselect {
         min-width: 250px;
+        flex: 1;
+      }
+    }
+
+    .summary-table {
+      ::ng-deep {
+        .p-datatable-thead > tr > th {
+          background-color: var(--surface-ground);
+          border-bottom: 2px solid var(--primary-color);
+          font-weight: 600;
+          
+          // Filter row styling
+          .p-column-filter {
+            margin-top: 0.5rem;
+            
+            .p-inputtext {
+              width: 100%;
+              font-size: 0.875rem;
+            }
+          }
+        }
+
+        // Row group headers
+        .p-rowgroup-header {
+          background-color: var(--surface-100);
+          
+          td {
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+          }
+          
+          .p-button {
+            width: 2rem;
+            height: 2rem;
+          }
+        }
+
+        // Row group footers
+        .p-rowgroup-footer {
+          background-color: var(--surface-50);
+          font-weight: 600;
+          border-top: 1px solid var(--surface-border);
+        }
+
+        // Expanded rows
+        .p-datatable-row-expansion {
+          background-color: var(--surface-50);
+        }
       }
     }
   }
 
-  // Dark mode adjustments
+  // Professional dark mode support that works with global .app-dark styles
   :host-context(.app-dark) & {
-    .batch-accordion-success .p-accordion-header-link {
-      background-color: rgba(40, 167, 69, 0.2) !important;
+    .custom-accordions {
+      .custom-accordion-panel {
+        background: var(--surface-800);
+        border-color: var(--surface-600);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+        &.batch-accordion-success {
+          border-left-color: var(--green-400);
+          
+          .custom-accordion-header {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 100%) !important;
+            border-bottom-color: rgba(34, 197, 94, 0.3);
+          }
+
+          .custom-accordion-content {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, var(--surface-800) 100%);
+            border-top-color: rgba(34, 197, 94, 0.2);
+          }
+        }
+
+        &.batch-accordion-error {
+          border-left-color: var(--red-400);
+          
+          .custom-accordion-header {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%) !important;
+            border-bottom-color: rgba(239, 68, 68, 0.3);
+          }
+
+          .custom-accordion-content {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--surface-800) 100%);
+            border-top-color: rgba(239, 68, 68, 0.2);
+          }
+        }
+
+        .custom-accordion-header {
+          background: var(--surface-700);
+          border-bottom-color: var(--surface-600);
+          
+          &:hover {
+            background: var(--surface-600);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+          }
+          
+          span {
+            color: var(--text-color);
+          }
+        }
+
+        .custom-accordion-content {
+          background: rgba(55, 65, 81, 0.5); // Subtle dark background for opened state
+          border-top-color: var(--surface-600);
+        }
+
+        &.expanded {
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+          
+          .custom-accordion-header {
+            background: var(--surface-600);
+            border-bottom-color: var(--primary-400);
+          }
+        }
+      }
     }
 
-    .batch-accordion-error .p-accordion-header-link {
-      background-color: rgba(220, 53, 69, 0.2) !important;
+    .streaming-control-btn {
+      &.p-button-success {
+        background-color: var(--green-600) !important;
+        border-color: var(--green-600) !important;
+      }
+      
+      &.p-button-danger {
+        background-color: var(--red-600) !important;
+        border-color: var(--red-600) !important;
+      }
+    }
+
+    .txn-info {
+      background: var(--surface-700);
+      border-left-color: var(--primary-400);
+    }
+
+    .summary-table {
+      ::ng-deep {
+        .p-datatable-thead > tr > th {
+          background-color: var(--surface-700) !important;
+          border-bottom-color: var(--surface-600) !important;
+        }
+        
+        .p-rowgroup-header {
+          background-color: var(--surface-700);
+        }
+
+        .p-rowgroup-footer {
+          background-color: var(--surface-800);
+        }
+
+        .p-datatable-row-expansion {
+          background-color: var(--surface-700);
+        }
+      }
+    }
+  }
+}
+
+// Animation keyframes
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .batch-viewer-container {
+    .batch-header {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: stretch;
+
+      .header-left {
+        justify-content: space-between;
+      }
+
+      .time-range-selector {
+        justify-content: center;
+      }
+    }
+
+    .row {
+      .col-4, .col-8 {
+        width: 100%;
+        margin-bottom: 1rem;
+      }
+    }
+
+    .group-selector {
+      flex-direction: column;
+      align-items: stretch;
+      
+      label {
+        min-width: auto;
+      }
     }
   }
 }
