@@ -157,7 +157,7 @@
 
                 <!-- Enhanced summary table with row grouping and filtering -->
                 <p-table 
-                  [value]="data.summaries"
+                  [value]="data.summary"
                   sortField="representative.name" 
                   sortMode="single" 
                   [dataKey]="selectedGroupColumns().length > 0 ? selectedGroupColumns()[0] : null"
@@ -227,7 +227,7 @@
                           <strong>Group Total</strong>
                         </td>
                         <td>
-                          <strong>{{ data.summaries.filter(s => getFieldValue(s, selectedGroupColumns()[0]) === getFieldValue(summary, selectedGroupColumns()[0])).length }}</strong>
+                          <strong>{{ calculateGroupTotal(data, summary) }}</strong>
                         </td>
                       </tr>
                     </ng-template>

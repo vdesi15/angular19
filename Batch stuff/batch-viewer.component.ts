@@ -176,7 +176,7 @@ export class BatchViewerComponent {
   }
 
   getFieldValue(obj: any, field: string): any {
-    return field.split('.').reduce((current, key) => current?.[key], obj);
+    return get(obj, field);
   }
 
   openMessageEditor(message: string): void {
@@ -204,5 +204,16 @@ export class BatchViewerComponent {
 
   trackByField(index: number, col: any): string {
     return col.id || col.field;
+  }
+
+  calculateGroupTotal(data: BatchSSEData, summary: any): number {
+    if (!data.summary || this.selectedGroupColumns().length === 0) {
+      return 0;
+    }
+    
+    const groupField = this.selectedGroupColumns()[0];
+    const groupValue = get(summary, groupField);
+    
+    return data.summary.filter(s => get(s, groupField) === groupValue).length;
   }
 }
