@@ -90,19 +90,55 @@ export class BatchViewerComponent {
   );
 
   constructor() {
+    console.log('[BatchViewer] Constructor called');
+    console.log('[BatchViewer] Initial search object:', this.search);
+    
+    // Add a counter to see how many times effect runs
+    let effectRunCount = 0;
+    
     // Fix for issue #1: Update batch data when search data changes
     effect(() => {
-      if (this.search?.batchData) {
-        console.log('[BatchViewer] New batch data detected:', this.search.batchData.length);
-        this.batchData.set([...this.search.batchData]); // Create new array reference
+      effectRunCount++;
+      console.log('[BatchViewer] ==> EFFECT TRIGGERED #' + effectRunCount + ' <==');
+      console.log('[BatchViewer] Effect - search reference:', this.search);
+      console.log('[BatchViewer] Effect - search.id:', this.search?.id);
+      console.log('[BatchViewer] Effect - search.batchData exists:', !!this.search?.batchData);
+      console.log('[BatchViewer] Effect - search.batchData length:', this.search?.batchData?.length);
+      console.log('[BatchViewer] Effect - search.batchData reference:', this.search?.batchData);
+      
+      if (this.search?.batchData && this.search.batchData.length > 0) {
+        console.log('[BatchViewer] ✅ Processing batch data:', this.search.batchData.length);
+        console.log('[BatchViewer] First item:', this.search.batchData[0]);
+        
+        // Set the data
+        this.batchData.set([...this.search.batchData]);
         
         // Reset accordion states for new data
         const newStates = new Map<string, boolean>();
         this.search.batchData.forEach(data => {
-          newStates.set(data.api_txnid, false); // Start collapsed
+          newStates.set(data.api_txnid, false);
         });
         this.accordionStates.set(newStates);
+        
+        console.log('[BatchViewer] ✅ Updated batchData signal to:', this.batchData().length);
+      } else {
+        console.log('[BatchViewer] ❌ No valid batch data');
+        this.batchData.set([]);
+        this.accordionStates.set(new Map());
       }
+    });
+
+    // Separate effect to track just the search object reference
+    effect(() => {
+      console.log('[BatchViewer] 🔍 Search object changed - Reference:', this.search);
+      console.log('[BatchViewer] 🔍 Search object ID:', this.search?.id);
+    });
+
+    // Separate effect to track just batchData property
+    effect(() => {
+      const batchDataRef = this.search?.batchData;
+      console.log('[BatchViewer] 📊 BatchData property changed - Reference:', batchDataRef);
+      console.log('[BatchViewer] 📊 BatchData length:', batchDataRef?.length);
     });
 
     effect(() => {
