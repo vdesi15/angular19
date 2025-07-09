@@ -12,6 +12,8 @@ export interface ColumnDefinition {
   sortable?: boolean;
   filterable?: boolean;
   onClick?: OnClick; // New property for click actions
+  groupable?: boolean; // Whether this column can be used for grouping
+  defaultGroup?: boolean; // Whether this column should be grouped by default
 }
 
 // Transaction Details Response interface

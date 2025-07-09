@@ -46,22 +46,18 @@ export class BatchViewerComponent {
   editorContent = signal<any>(null);
   editorTitle = signal('');
   
-  // Group by state for summary table
-  selectedGroupColumns = signal<string[]>(['type']);
+  selectedGroupColumns = signal<string[]>([]);
   
-  // Computed available group columns from summary columns
   availableGroupColumns = computed(() => {
-    const summaryColDefs = this.summaryColumns();
-    // Only allow grouping by specific columns that make sense
-    const groupableFields = ['type', 'sid', 'status'];
-    
-    return summaryColDefs
-      .filter(col => groupableFields.includes(col.field))
-      .map(col => ({
-        label: col.displayName,
-        value: col.field
-      }));
-  });
+  const summaryColDefs = this.summaryColumns();
+  
+  return summaryColDefs
+    .filter(col => col.groupable === true)
+    .map(col => ({
+      label: col.displayName,
+      value: col.field
+    }));
+});
 
   // Column definitions from API
   rulesColumns = computed(() => 
@@ -82,6 +78,17 @@ export class BatchViewerComponent {
       if (this.search?.batchData) {
         this.batchData.set(this.search.batchData);
       }
+    });
+
+    effect(() => {
+        const summaryColDefs = this.summaryColumns();
+        const defaultGroups = summaryColDefs
+        .filter(col => col.defaultGroup === true)
+        .map(col => col.field);
+        
+        if (defaultGroups.length > 0) {
+        this.selectedGroupColumns.set(defaultGroups);
+        }
     });
   }
 
