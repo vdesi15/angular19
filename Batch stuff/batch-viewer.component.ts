@@ -72,6 +72,14 @@ export class BatchViewerComponent {
     this.colDefService.getTableDefinition('UMTableDefinition_Summary') || []
   );
 
+  public shouldShowBatchToolbar(): boolean {
+    return this.search.type === 'batch';
+  }
+
+  public shouldShowBatchViewer(): boolean {
+    return this.search.type === 'batch';
+  }
+
   constructor() {
     // Update batch data when search data changes
     effect(() => {
