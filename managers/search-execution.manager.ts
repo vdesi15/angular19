@@ -494,35 +494,55 @@ export class SearchExecutionManager {
   // SSE EVENT PROCESSING
   // ================================
 
-  private processSseEvent(searchId: string, event: SseEvent): void {
-    if (!this.stateManager) return;
+  private processSseEvent(searchId: string, event: any): void {
+  if (!this.stateManager) return;
 
-    this.stateManager.activeSearches.update((searches: ActiveSearch[]) =>
-      searches.map(search => {
-        if (search.id !== searchId) return search;
+  this.stateManager.activeSearches.update((searches: ActiveSearch[]) =>
+    searches.map(search => {
+      if (search.id !== searchId) return search;
 
-        switch (event.type) {
-          case 'OPEN':
-            console.log(`[ExecutionManager] SSE connection opened for: ${search.title}`);
-            return { ...search, isLoading: true, data: [] };
+      switch (event.type) {
+        case 'OPEN':
+          console.log(`[ExecutionManager] SSE connection opened for: ${search.title}`);
+          return { ...search, isLoading: true, data: [], batchData: [] };
 
-          case 'DATA':
-            return this.handleSseDataEvent(search, event);
+        case 'DATA':
+          return this.handleSseDataEvent(search, event);
 
-          case 'END':
-            console.log(`[ExecutionManager] SSE stream ended for: ${search.title}`);
-            return { ...search, isLoading: false, isStreaming: false };
+        case 'BATCH_DATA':
+          return this.handleBatchDataEvent(search, event);
 
-          case 'ERROR':
-            console.error(`[ExecutionManager] SSE error for: ${search.title}`, event.error);
-            return search;
+        case 'END':
+          console.log(`[ExecutionManager] SSE stream ended for: ${search.title}`);
+          return { ...search, isLoading: false, isStreaming: false };
 
-          default:
-            return search;
-        }
-      })
-    );
-  }
+        case 'ERROR':
+          console.error(`[ExecutionManager] SSE error for: ${search.title}`, event.error);
+          return { ...search, isLoading: false, error: event.error?.message };
+
+        default:
+          return search;
+      }
+    })
+  );
+}
+
+private handleBatchDataEvent(search: ActiveSearch, event: any): ActiveSearch {
+  if (!event.data) return search;
+
+  const batchData = event.data;
+  const currentBatchData = search.batchData || [];
+  const updatedBatchData = [...currentBatchData, batchData];
+
+  console.log(`[ExecutionManager] Received batch data for: ${search.title}`);
+
+  return {
+    ...search,
+    batchData: updatedBatchData,
+    isLoading: false,
+    totalRecords: updatedBatchData.length
+  };
+}
 
   private handleSseDataEvent(search: ActiveSearch, event: SseEvent): ActiveSearch {
     if (!event.data) return search;

@@ -1,0 +1,156 @@
+<div class="batch-viewer-container">
+  <!-- Header with time range selector -->
+  <div class="batch-header">
+    <h2>U & M Timeline Search</h2>
+    <div class="time-range-selector">
+      <span class="time-range-label">Time Range:</span>
+      @for (range of timeRanges; track range) {
+        <a [class.active]="selectedTimeRange() === range" 
+           (click)="onTimeRangeClick(range, $event)"
+           class="time-range-link">
+          {{ range }}
+        </a>
+      }
+    </div>
+  </div>
+
+  <div class="batch-content">
+    <h3>Following are U & M data</h3>
+    
+    <!-- Batch Data Accordions -->
+    <p-accordion [multiple]="true" styleClass="batch-accordions">
+      @for (data of batchData(); track data.api_txnid) {
+        <p-accordion-panel [ngClass]="getAccordionClass(data)">
+          <p-accordion-header>
+            <span [innerHTML]="getAccordionTitle(data)"></span>
+          </p-accordion-header>
+          <p-accordion-content>
+            <div class="txn-info">
+              <p><strong>Txn id:</strong> {{ data.api_txnid }}</p>
+              <p><strong>DLEnabled:</strong> {{ data.dl_enable }}</p>
+            </div>
+
+            <div class="row">
+              <!-- Rules Table (30%) -->
+              <div class="col-4">
+                <h4>Rule Table</h4>
+                <p-table [value]="data.rules" styleClass="rules-table">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>Name</th>
+                      <th>Passed</th>
+                      <th>Message (Click to view details)</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-rule>
+                    <tr>
+                      <td>{{ rule.name }}</td>
+                      <td [ngClass]="getRuleCellClass(rule.pass)">
+                        {{ rule.pass }}
+                      </td>
+                      <td class="clickable-cell" (click)="onRuleMessageClick(rule)">
+                        {{ rule.message }}
+                      </td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </div>
+
+              <!-- Agg Table (70%) -->
+              <div class="col-8">
+                <h4>Agg Table</h4>
+                <p-table [value]="data.agg" styleClass="agg-table">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>Time</th>
+                      <th>Type</th>
+                      <th>Good Qty</th>
+                      <th>US Qty</th>
+                      <th>RJ Qty</th>
+                      <th>TQ</th>
+                      <th>LDL</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-agg>
+                    <tr>
+                      <td>{{ formatLocalTime(agg.time) }}</td>
+                      <td>{{ agg.type }}</td>
+                      <td>{{ agg.agg_total_g }}</td>
+                      <td>{{ agg.agg_total_ud }}</td>
+                      <td>{{ agg.agg_total_rj }}</td>
+                      <td>{{ agg.agg_total_d }}</td>
+                      <td>{{ agg.agg_ld }}</td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </div>
+            </div>
+
+            <!-- Summary Table (100%) -->
+            <div class="summary-section">
+              <h4>U & M Summary Table</h4>
+              
+              <div class="group-selector">
+                <label>Group Cols By:</label>
+                <p-multiSelect 
+                  [(ngModel)]="selectedGroupColumns"
+                  [options]="availableGroupColumns"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select columns to group by">
+                </p-multiSelect>
+              </div>
+
+              <p-table [value]="data.summary" 
+                       [rowGroupMode]="selectedGroupColumns().length > 0 ? 'rowspan' : null"
+                       [groupRowsBy]="selectedGroupColumns()"
+                       styleClass="summary-table">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th>Time</th>
+                    <th>Type</th>
+                    <th>ID</th>
+                    <th>Slot</th>
+                    <th>FID</th>
+                    <th>DLSummary</th>
+                    <th>USQ</th>
+                    <th>GQ</th>
+                    <th>TQ</th>
+                    <th>Status</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-summary let-rowgroup="rowgroup">
+                  <tr>
+                    @if (rowgroup && selectedGroupColumns().includes('type')) {
+                      <td>{{ formatLocalTime(summary.time) }}</td>
+                      <td>{{ summary.type }}</td>
+                    } @else if (!rowgroup) {
+                      <td>{{ formatLocalTime(summary.time) }}</td>
+                      <td>{{ summary.type }}</td>
+                    }
+                    <td>{{ summary.id }}</td>
+                    <td>{{ summary.sid }}</td>
+                    <td>{{ summary.front_id }}</td>
+                    <td>{{ summary.dsummary }}</td>
+                    <td>{{ summary.usummary }}</td>
+                    <td>{{ summary.gd }}</td>
+                    <td>{{ summary.total_d }}</td>
+                    <td>{{ summary.status }}</td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+          </p-accordion-content>
+        </p-accordion-panel>
+      }
+    </p-accordion>
+  </div>
+</div>
+
+<!-- Editor Dialog -->
+<app-editor-dialog
+  [(visible)]="showEditorDialog"
+  [title]="editorTitle()"
+  [content]="editorContent()"
+  [readOnly]="true">
+</app-editor-dialog>

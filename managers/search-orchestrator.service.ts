@@ -104,6 +104,37 @@ export class SearchOrchestratorService {
     this.executionManager.executeSearch(search);
   }
 
+  public performBatchSearch(request: {
+  query: string;
+  title: string;
+  appName: string;
+  days?: string;
+}): void {
+  const batchRequest: SearchRequest = {
+    type: 'batch',
+    query: request.query,
+    title: request.title,
+    appName: request.appName,
+    metadata: {
+      days: request.days || '7'
+    }
+  };
+  
+  this.performSearch(batchRequest);
+}
+
+// Update the collapseSSESearches method to include batch searches:
+private collapseSSESearches(): void {
+  this.stateManager.activeSearches.update((searches: ActiveSearch[]) =>
+    searches.map(search => {
+      if (search.type === 'browse' || search.type === 'error' || search.type === 'batch') {
+        return { ...search, isExpanded: false };
+      }
+      return search;
+    })
+  );
+}
+
   // ================================
   // DELEGATION METHODS
   // ================================

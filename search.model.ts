@@ -142,6 +142,7 @@ export interface ActiveSearch extends SearchRequest {
   lastUpdated?: Date;
 
   transactionDetails?: TransactionDetailsResponse;
+  batchData?: BatchSSEData[];
 }
 
 /**

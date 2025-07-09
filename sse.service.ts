@@ -210,4 +210,143 @@ export class SseService {
   private getNestedValue(obj: any, path: string): any {
     return path.split('.').reduce((current, key) => current?.[key], obj);
   }
+
+  public connectBatch(
+    batchId: string,
+    globalFilters: SearchFilterModel,
+    days: string = '7'
+  ): Observable<any> {
+    const useMocks = this.configService.get('useMocks');
+
+    if (useMocks) {
+      return this.createMockBatchStream(batchId);
+    }
+
+    // Real batch SSE connection
+    const baseApi = this.configService.get('api.baseUrl');
+    const env = globalFilters.environment || 'prod';
+    const location = globalFilters.location || 'us-east-1';
+    
+    // <baseapi>/getsummary/v2/flat/<env>/<location>/<days>/<batchid>
+    const url = `${baseApi}/getsummary/v2/flat/${env}/${location}/${days}/${batchId}`;
+    
+    return this.createBatchRealStream(url);
+  }
+
+  private createBatchRealStream(url: string): Observable<any> {
+    return new Observable(observer => {
+      console.log(`[SseService] Creating batch EventSource connection to: ${url}`);
+      
+      const eventSource = new EventSource(url, { withCredentials: true });
+
+      const open$ = fromEvent(eventSource, 'open').pipe(
+        map(() => ({ type: 'OPEN' }))
+      );
+      
+      // Listen for PushBatchData events
+      const data$ = fromEvent<MessageEvent>(eventSource, 'PushBatchData').pipe(
+        map(event => {
+          try {
+            const data = JSON.parse(event.data) as BatchSSEData;
+            return { 
+              type: 'BATCH_DATA', 
+              data: data
+            };
+          } catch (e) {
+            console.error('[SseService] Failed to parse batch data:', e);
+            return { 
+              type: 'ERROR', 
+              error: { message: 'Failed to parse batch data' } 
+            };
+          }
+        })
+      );
+
+      const end$ = fromEvent(eventSource, 'endData').pipe(
+        map(() => ({ type: 'END' }))
+      );
+      
+      eventSource.onerror = (err) => {
+        console.error('[SseService] Batch EventSource error:', err);
+        observer.next({ type: 'ERROR', error: { message: 'Connection error' } });
+        observer.complete();
+        eventSource.close();
+      };
+      
+      const subscription = merge(open$, data$, end$).subscribe(observer);
+      
+      return () => {
+        console.log('[SseService] Cleaning up batch EventSource connection');
+        subscription.unsubscribe();
+        if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+          eventSource.close();
+        }
+      };
+    });
+  }
+
+  private createMockBatchStream(batchId: string): Observable<any> {
+    // Mock implementation - return sample batch data
+    const mockData: BatchSSEData = {
+      api_txnid: 'txn-' + Math.random().toString(36).substr(2, 9),
+      time: new Date().toISOString(),
+      e_name: 'NA',
+      agg: [
+        {
+          time: new Date().toISOString(),
+          type: 'U',
+          agg_total_d: 212312,
+          agg_total_g: 'AL=324,Added=213',
+          agg_total_ud: 'na',
+          agg_total_rj: 'na',
+          agg_ld: '6|asd|213,3|ert|435,2|rt|123'
+        },
+        {
+          time: new Date().toISOString(),
+          type: 'M',
+          agg_total_d: 212312,
+          agg_total_g: 32423,
+          agg_total_ud: 0,
+          agg_total_rj: 0,
+          agg_ld: '6| |213,3| |435,2| |123'
+        }
+      ],
+      summary: [
+        {
+          type: 'U',
+          time: new Date().toISOString(),
+          id: 'u1',
+          sid: '2',
+          front_id: 'na',
+          total_d: '21312',
+          usummary: 'na',
+          dsummary: '6|asd|213,3|ert|435,2|rt|123',
+          gd: '231',
+          status: '',
+          blist: { '2': 213, '4': 123 }
+        }
+      ],
+      api_name: 'MockAPI',
+      v_line: 'v1',
+      min: 'true',
+      txn_status: true,
+      all_rules_passed: true,
+      good_u: 213,
+      good_m: 213,
+      dl_enable: true,
+      rules: [
+        {
+          name: 'r1',
+          pass: true,
+          message: 'Rule passed successfully'
+        }
+      ]
+    };
+
+    return merge(
+      of({ type: 'OPEN' }),
+      of({ type: 'BATCH_DATA', data: mockData }).pipe(delay(500)),
+      of({ type: 'END' }).pipe(delay(1000))
+    );
+  }
 }

@@ -118,6 +118,18 @@
               (rowDrilldown)="onDrilldown($event)" 
               (filteredCountChange)="updateFilteredCount($event)">
             </app-log-viewer>
+          }<!-- Add Batch Toolbar section after other toolbar checks -->
+          @if (shouldShowBatchToolbar()) {
+            <app-batch-toolbar>
+            </app-batch-toolbar>
+          }
+
+          <!-- Add Batch Viewer section in the result content wrapper, after the log viewer checks -->
+          @else if (shouldShowBatchViewer()) {
+            <!-- Batch viewer for batch searches -->
+            <app-batch-viewer 
+              [search]="search">
+            </app-batch-viewer>
           }
         </div>
       </p-accordion-content>

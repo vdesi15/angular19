@@ -61,6 +61,12 @@ export class SearchStrategyManager {
     strategiesMap.set('error', sseStrategy);
     strategiesMap.set('guid', guidStrategy); // Legacy support
 
+    this.strategies.set('batch', {
+      name: 'batch',
+      strategy: batchStrategy,
+      canExecute: (search) => search.type === 'batch' && batchStrategy.canHandle(search.query)
+    });
+
     // Update the signal
     this.strategies.set(strategiesMap);
 

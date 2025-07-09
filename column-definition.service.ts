@@ -28,4 +28,15 @@ export class ColumnDefinitionService {
     const allDefs = this.definitions();
     return allDefs ? (allDefs[key] ?? []) : [];
   }
+
+  public getTableDefinition(tableName: string): ColumnDefinition[] | null {
+    const colDefs = this.columnDefinitions();
+    
+    if (!colDefs || !colDefs[tableName]) {
+      console.warn(`[ColumnDefService] Table definition not found: ${tableName}`);
+      return null;
+    }
+    
+    return colDefs[tableName];
+  }
 }
