@@ -7,8 +7,8 @@ graph TD
     end
     
     B --> VS
-    VS -->|Weight: 70| C[Data Center 1<br/>Kubernetes Cluster]
-    VS -->|Weight: 30| D[Data Center 2<br/>Kubernetes Cluster]
+    VS -->|Weight: 70| E
+    VS -->|Weight: 30| F
     
     subgraph DC1 ["Data Center 1 - Kubernetes Cluster"]
         subgraph K8S1 ["Kubernetes Components"]
@@ -41,8 +41,6 @@ graph TD
         end
     end
     
-
-    
     subgraph DC2 ["Data Center 2 - Kubernetes Cluster"]
         subgraph K8S2 ["Kubernetes Components"]
             F[LoadBalancer Service]
@@ -73,9 +71,6 @@ graph TD
             V -->|Selects via labels| B1
         end
     end
-    
-    C --> E
-    D --> F
     
     style A fill:#e1f5fe
     style A2 fill:#e1f5fe
