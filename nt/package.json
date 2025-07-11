@@ -1,0 +1,29 @@
+{
+  "name": "kubernetes-packet-tracer",
+  "version": "1.0.0",
+  "description": "Node.js app for testing Kubernetes traffic flow and packet tracing",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "kubernetes",
+    "istio",
+    "packet-tracing",
+    "load-balancing",
+    "canary"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

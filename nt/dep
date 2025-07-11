@@ -1,0 +1,218 @@
+# deployment-v1.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-app-v1
+  labels:
+    app: nodejs-app
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nodejs-app
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: nodejs-app
+        version: v1
+    spec:
+      containers:
+      - name: nodejs-app
+        image: your-registry/nodejs-packet-tracer:v1
+        ports:
+        - containerPort: 3000
+        env:
+        # Kubernetes Downward API - injects pod/node info
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: DEPLOYMENT_NAME
+          value: "nodejs-app-v1"
+        - name: APP_VERSION
+          value: "v1"
+        - name: CLUSTER_NAME
+          value: "production-cluster"
+        - name: DATA_CENTER
+          value: "us-east-1"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# deployment-v2.yaml (for canary testing)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-app-v2
+  labels:
+    app: nodejs-app
+    version: v2
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nodejs-app
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: nodejs-app
+        version: v2
+    spec:
+      containers:
+      - name: nodejs-app
+        image: your-registry/nodejs-packet-tracer:v2
+        ports:
+        - containerPort: 3000
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: DEPLOYMENT_NAME
+          value: "nodejs-app-v2"
+        - name: APP_VERSION
+          value: "v2"
+        - name: CLUSTER_NAME
+          value: "production-cluster"
+        - name: DATA_CENTER
+          value: "us-east-1"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodejs-app-v1
+  labels:
+    app: nodejs-app
+    version: v1
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: nodejs-app
+    version: v1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nodejs-app-v2
+  labels:
+    app: nodejs-app
+    version: v2
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    app: nodejs-app
+    version: v2
+
+---
+# httproute.yaml (Gateway API)
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: nodejs-app-route
+spec:
+  parentRefs:
+  - name: istio-gateway
+    namespace: istio-system
+  hostnames:
+  - "app.example.com"
+  rules:
+  # Header-based routing for testing
+  - matches:
+    - headers:
+      - name: "x-canary"
+        value: "true"
+    backendRefs:
+    - name: nodejs-app-v2
+      port: 80
+      weight: 100
+  # Default traffic distribution
+  - backendRefs:
+    - name: nodejs-app-v1
+      port: 80
+      weight: 90  # 90% to stable version
+    - name: nodejs-app-v2
+      port: 80
+      weight: 10  # 10% to canary version
+
+---
+# gateway.yaml
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: istio-gateway
+  namespace: istio-system
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: http
+    hostname: "app.example.com"
+    port: 80
+    protocol: HTTP

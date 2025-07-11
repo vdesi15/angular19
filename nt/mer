@@ -1,0 +1,102 @@
+graph TD
+    A[Client] -->|Network Traffic| B[F5 Load Balancer]
+    A2[Client] -->|Network Traffic Session 2| B[F5 Load Balancer]
+    
+    subgraph F5 ["F5 Load Balancer"]
+        VS[Virtual Server<br/>IP: x.x.x.x]
+    end
+    
+    B --> VS
+    VS -->|Weight: 70| C[Data Center 1<br/>Kubernetes Cluster]
+    VS -->|Weight: 30| D[Data Center 2<br/>Kubernetes Cluster]
+    
+    subgraph DC1 ["Data Center 1 - Kubernetes Cluster"]
+        subgraph K8S1 ["Kubernetes Components"]
+            E[LoadBalancer Service]
+            G[Gateway]
+            I[HPA]
+            K[HTTPRoute]
+            M[Service A]
+            N[Service B]
+            
+            subgraph DEP1A ["Deployment A"]
+                Q[Pod A1]
+                R[Pod A2]
+            end
+            
+            subgraph DEP1B ["Deployment B"]
+                S[Pod B1]
+                T[Pod B2]
+            end
+            
+            E -->|Routes Traffic| G
+            I -->|Scales| G
+            G -->|Routes Traffic| K
+            K -->|Weight: 60| M
+            K -->|Weight: 40| N
+            M -->|Selects via labels| Q
+            M -->|Selects via labels| R
+            N -->|Selects via labels| S
+            N -->|Selects via labels| T
+        end
+    end
+    
+
+    
+    subgraph DC2 ["Data Center 2 - Kubernetes Cluster"]
+        subgraph K8S2 ["Kubernetes Components"]
+            F[LoadBalancer Service]
+            H[Gateway]
+            J[HPA]
+            L[HTTPRoute]
+            U[Service A]
+            V[Service B]
+            
+            subgraph DEP2A ["Deployment A"]
+                Y[Pod A1]
+                Z[Pod A2]
+            end
+            
+            subgraph DEP2B ["Deployment B"]
+                A1[Pod B1]
+                B1[Pod B2]
+            end
+            
+            F -->|Routes Traffic| H
+            J -->|Scales| H
+            H -->|Routes Traffic| L
+            L -->|Weight: 60| U
+            L -->|Weight: 40| V
+            U -->|Selects via labels| Y
+            U -->|Selects via labels| Z
+            V -->|Selects via labels| A1
+            V -->|Selects via labels| B1
+        end
+    end
+    
+    C --> E
+    D --> F
+    
+    style A fill:#e1f5fe
+    style A2 fill:#e1f5fe
+    style VS fill:#ffecb3
+    style E fill:#f3e5f5
+    style F fill:#f3e5f5
+    style G fill:#fce4ec
+    style H fill:#fce4ec
+    style I fill:#fff8e1
+    style J fill:#fff8e1
+    style K fill:#e8f5e8
+    style L fill:#e8f5e8
+    style M fill:#f0f4ff
+    style N fill:#f0f4ff
+    style U fill:#f0f4ff
+    style V fill:#f0f4ff
+    style Q fill:#f5f5f5
+    style R fill:#f5f5f5
+    style S fill:#f5f5f5
+    style T fill:#f5f5f5
+    style Y fill:#f5f5f5
+    style Z fill:#f5f5f5
+    style A1 fill:#f5f5f5
+    style B1 fill:#f5f5f5
