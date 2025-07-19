@@ -1,5 +1,5 @@
-// batch-viewer.component.ts - Updated with Angular 19 signals and targeted fixes
-import { Component, Input, inject, signal, computed, effect, linkedSignal } from '@angular/core';
+// batch-viewer.component.ts - TARGETED FIX for data flow issue
+import { Component, Input, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AccordionModule } from 'primeng/accordion';
 import { TableModule } from 'primeng/table';
@@ -14,6 +14,7 @@ import { ColumnDefinitionService } from '../../services/column-definition.servic
 import { SearchOrchestratorService } from '../../services/search-orchestrator.service';
 import { EditorDialogComponent } from '../editor-dialog/editor-dialog.component';
 import { TransformPipe } from 'src/app/shared/pipes/transform.pipe';
+import { get } from 'lodash-es';
 
 @Component({
   selector: 'app-batch-viewer',
@@ -44,7 +45,7 @@ export class BatchViewerComponent {
   selectedTimeRange = signal<string>('7d');
   timeRanges = ['7d', '14d', '20d', '60d'];
   
-  // Individual accordion expansion state - Fix for issue #2
+  // Individual accordion expansion state
   accordionStates = signal<Map<string, boolean>>(new Map());
   
   // Editor dialog
@@ -54,11 +55,8 @@ export class BatchViewerComponent {
   
   selectedGroupColumns = signal<string[]>([]);
   
-  // Streaming state for header display - Fix for issue #6
+  // Streaming state for header display
   isStopButtonHovered = signal(false);
-  
-  // LinkedSignal - tracks batch data from search (Angular 19 feature)
-  batchDataLinked = linkedSignal(() => this.search?.batchData || []);
   
   availableGroupColumns = computed(() => {
     const summaryColDefs = this.summaryColumns();
@@ -84,63 +82,46 @@ export class BatchViewerComponent {
     this.colDefService.getTableDefinition('UMTableDefinition_Summary') || []
   );
 
-  // Computed for filterable columns - Fix for issue #5
+  // Computed for filterable columns
   filterableColumns = computed(() => 
     this.summaryColumns().filter(col => col.enableFiltering === true)
   );
 
   constructor() {
     console.log('[BatchViewer] Constructor called');
-    console.log('[BatchViewer] Initial search object:', this.search);
     
-    // Add a counter to see how many times effect runs
-    let effectRunCount = 0;
-    
-    // Fix for issue #1: Update batch data when search data changes
+    // TARGETED FIX: Use getter-based effect to track property changes
     effect(() => {
-      effectRunCount++;
-      console.log('[BatchViewer] ==> EFFECT TRIGGERED #' + effectRunCount + ' <==');
-      console.log('[BatchViewer] Effect - search reference:', this.search);
-      console.log('[BatchViewer] Effect - search.id:', this.search?.id);
-      console.log('[BatchViewer] Effect - search.batchData exists:', !!this.search?.batchData);
-      console.log('[BatchViewer] Effect - search.batchData length:', this.search?.batchData?.length);
-      console.log('[BatchViewer] Effect - search.batchData reference:', this.search?.batchData);
+      const searchObj = this.search;
+      const batchDataArray = searchObj?.batchData;
       
-      if (this.search?.batchData && this.search.batchData.length > 0) {
-        console.log('[BatchViewer] ✅ Processing batch data:', this.search.batchData.length);
-        console.log('[BatchViewer] First item:', this.search.batchData[0]);
+      console.log('[BatchViewer] Effect triggered');
+      console.log('[BatchViewer] Search ID:', searchObj?.id);
+      console.log('[BatchViewer] BatchData length:', batchDataArray?.length);
+      
+      if (batchDataArray && batchDataArray.length > 0) {
+        console.log('[BatchViewer] ✅ Processing batch data:', batchDataArray.length);
+        console.log('[BatchViewer] First item:', batchDataArray[0]);
         
         // Set the data
-        this.batchData.set([...this.search.batchData]);
+        this.batchData.set([...batchDataArray]);
         
         // Reset accordion states for new data
         const newStates = new Map<string, boolean>();
-        this.search.batchData.forEach(data => {
+        batchDataArray.forEach(data => {
           newStates.set(data.api_txnid, false);
         });
         this.accordionStates.set(newStates);
         
         console.log('[BatchViewer] ✅ Updated batchData signal to:', this.batchData().length);
       } else {
-        console.log('[BatchViewer] ❌ No valid batch data');
+        console.log('[BatchViewer] ❌ No valid batch data, clearing');
         this.batchData.set([]);
         this.accordionStates.set(new Map());
       }
     });
 
-    // Separate effect to track just the search object reference
-    effect(() => {
-      console.log('[BatchViewer] 🔍 Search object changed - Reference:', this.search);
-      console.log('[BatchViewer] 🔍 Search object ID:', this.search?.id);
-    });
-
-    // Separate effect to track just batchData property
-    effect(() => {
-      const batchDataRef = this.search?.batchData;
-      console.log('[BatchViewer] 📊 BatchData property changed - Reference:', batchDataRef);
-      console.log('[BatchViewer] 📊 BatchData length:', batchDataRef?.length);
-    });
-
+    // Set default group columns
     effect(() => {
       const summaryColDefs = this.summaryColumns();
       const defaultGroups = summaryColDefs
@@ -153,7 +134,7 @@ export class BatchViewerComponent {
     });
   }
 
-  // Fix for issue #2: Individual accordion control
+  // Individual accordion control
   toggleAccordion(txnId: string, event: Event): void {
     event.stopPropagation();
     const currentStates = new Map(this.accordionStates());
@@ -192,7 +173,6 @@ export class BatchViewerComponent {
     return `[${localTime}] ${data.api_name} VLine:${data.v_line} Min:${data.min} UG:${data.good_u} MG:${data.good_m} All Rules Passed:${data.all_rules_passed}`;
   }
 
-  // Fix for issue #4: Enhanced accordion class with better color handling
   getAccordionClass(data: BatchSSEData): string {
     return data.all_rules_passed ? 'batch-accordion-success' : 'batch-accordion-error';
   }
@@ -221,15 +201,12 @@ export class BatchViewerComponent {
     this.showEditorDialog.set(true);
   }
 
-  // Fix for issue #6: Streaming control methods (similar to SSE implementation)
   stopStreaming(event: Event): void {
     event.stopPropagation();
     this.orchestrator.stopSseStream(this.search.id);
   }
 
-  // Methods for summary table filtering (Fix for issue #5)
   onColumnFilter(event: Event, field: string): void {
-    // This will be handled by p-table's built-in filtering
     console.log(`[BatchViewer] Filter applied on field: ${field}`);
   }
 
