@@ -257,23 +257,135 @@ export class BatchViewerComponent {
     this.orchestrator.stopSseStream(this.search.id);
   }
 
-  // Filter methods for professional table filtering
+  // State for table filtering
+  private ruleFilters = signal<Map<string, string>>(new Map());
+  private aggFilters = signal<Map<string, string>>(new Map());
+  private summaryFilters = signal<Map<string, string>>(new Map());
+
+  // Filtered data computed signals
+  filteredRules = computed(() => {
+    const filters = this.ruleFilters();
+    if (filters.size === 0) return [];
+    
+    const currentData = this.batchData().find(data => data.rules)?.rules || [];
+    
+    return currentData.filter(rule => {
+      return Array.from(filters.entries()).every(([field, filterValue]) => {
+        if (!filterValue.trim()) return true;
+        const fieldValue = this.getFieldValue(rule, field)?.toString().toLowerCase() || '';
+        return fieldValue.includes(filterValue.toLowerCase());
+      });
+    });
+  });
+
+  filteredAgg = computed(() => {
+    const filters = this.aggFilters();
+    if (filters.size === 0) return [];
+    
+    const currentData = this.batchData().find(data => data.agg)?.agg || [];
+    
+    return currentData.filter(agg => {
+      return Array.from(filters.entries()).every(([field, filterValue]) => {
+        if (!filterValue.trim()) return true;
+        const fieldValue = this.getFieldValue(agg, field)?.toString().toLowerCase() || '';
+        return fieldValue.includes(filterValue.toLowerCase());
+      });
+    });
+  });
+
+  filteredSummary = computed(() => {
+    const filters = this.summaryFilters();
+    if (filters.size === 0) return [];
+    
+    const currentData = this.batchData().find(data => data.summary)?.summary || [];
+    
+    return currentData.filter(summary => {
+      return Array.from(filters.entries()).every(([field, filterValue]) => {
+        if (!filterValue.trim()) return true;
+        const fieldValue = this.getFieldValue(summary, field)?.toString().toLowerCase() || '';
+        return fieldValue.includes(filterValue.toLowerCase());
+      });
+    });
+  });
+
+  // Filter methods with actual implementation
   onRuleFilter(event: Event, field: string): void {
     const value = (event.target as HTMLInputElement).value;
     console.log(`[BatchViewer] Rule filter applied on ${field}:`, value);
-    // Implementation can be added based on your filtering requirements
+    
+    const currentFilters = new Map(this.ruleFilters());
+    if (value.trim()) {
+      currentFilters.set(field, value);
+    } else {
+      currentFilters.delete(field);
+    }
+    this.ruleFilters.set(currentFilters);
   }
 
   onAggFilter(event: Event, field: string): void {
     const value = (event.target as HTMLInputElement).value;
     console.log(`[BatchViewer] Aggregation filter applied on ${field}:`, value);
-    // Implementation can be added based on your filtering requirements
+    
+    const currentFilters = new Map(this.aggFilters());
+    if (value.trim()) {
+      currentFilters.set(field, value);
+    } else {
+      currentFilters.delete(field);
+    }
+    this.aggFilters.set(currentFilters);
   }
 
   onSummaryFilter(event: Event, field: string): void {
     const value = (event.target as HTMLInputElement).value;
     console.log(`[BatchViewer] Summary filter applied on ${field}:`, value);
-    // Implementation can be added based on your filtering requirements
+    
+    const currentFilters = new Map(this.summaryFilters());
+    if (value.trim()) {
+      currentFilters.set(field, value);
+    } else {
+      currentFilters.delete(field);
+    }
+    this.summaryFilters.set(currentFilters);
+  }
+
+  // Get the correct data source for tables (filtered or original)
+  getRulesData(data: BatchSSEData) {
+    const filters = this.ruleFilters();
+    if (filters.size === 0) return data.rules || [];
+    
+    return (data.rules || []).filter(rule => {
+      return Array.from(filters.entries()).every(([field, filterValue]) => {
+        if (!filterValue.trim()) return true;
+        const fieldValue = this.getFieldValue(rule, field)?.toString().toLowerCase() || '';
+        return fieldValue.includes(filterValue.toLowerCase());
+      });
+    });
+  }
+
+  getAggData(data: BatchSSEData) {
+    const filters = this.aggFilters();
+    if (filters.size === 0) return data.agg || [];
+    
+    return (data.agg || []).filter(agg => {
+      return Array.from(filters.entries()).every(([field, filterValue]) => {
+        if (!filterValue.trim()) return true;
+        const fieldValue = this.getFieldValue(agg, field)?.toString().toLowerCase() || '';
+        return fieldValue.includes(filterValue.toLowerCase());
+      });
+    });
+  }
+
+  getSummaryData(data: BatchSSEData) {
+    const filters = this.summaryFilters();
+    if (filters.size === 0) return data.summary || [];
+    
+    return (data.summary || []).filter(summary => {
+      return Array.from(filters.entries()).every(([field, filterValue]) => {
+        if (!filterValue.trim()) return true;
+        const fieldValue = this.getFieldValue(summary, field)?.toString().toLowerCase() || '';
+        return fieldValue.includes(filterValue.toLowerCase());
+      });
+    });
   }
 
   // Track by function for better performance
