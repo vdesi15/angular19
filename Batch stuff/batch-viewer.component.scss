@@ -1,12 +1,15 @@
-/* batch-viewer.component.scss - Professional styling with light/dark mode support */
+/* batch-viewer.component.scss - Professional styling with improved indentation and table filters */
 
 .batch-viewer-container {
-  padding: 1rem;
+  /* IMPROVED: Proper indentation for nested content */
+  padding: 0.75rem;
+  margin-left: 1.5rem; /* Indent from parent search-result accordion */
+  border-left: 3px solid var(--surface-border);
   
   .batch-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 1.5rem;
     padding: 1rem;
     background: var(--surface-ground);
@@ -37,39 +40,60 @@
       }
     }
     
+    /* IMPROVED: Inline time range selector with proper button styling */
     .time-range-selector {
       display: flex;
       align-items: center;
       gap: 0.75rem;
+      flex-wrap: wrap;
       
       .time-range-label {
         font-weight: 500;
         color: var(--text-color);
-        margin-right: 0.5rem;
+        white-space: nowrap;
       }
       
-      /* IMPROVED: Button strip with no gaps */
-      .time-range-button-strip {
+      /* FIXED: Button group with proper border radius only on first/last */
+      .time-range-button-group {
         display: flex;
-        border: 1px solid var(--primary-color);
-        border-radius: 6px;
-        overflow: hidden;
         
         .time-range-button {
           margin: 0 !important;
-          border: none !important;
-          border-radius: 0 !important;
-          border-right: 1px solid var(--primary-color);
+          border: 1px solid var(--primary-color);
           min-width: 50px;
+          position: relative;
           
-          &:last-child {
-            border-right: none;
+          /* Remove all border radius by default */
+          border-radius: 0 !important;
+          
+          /* Only first button gets left border radius */
+          &.first-button {
+            border-top-left-radius: 6px !important;
+            border-bottom-left-radius: 6px !important;
+          }
+          
+          /* Only last button gets right border radius */
+          &.last-button {
+            border-top-right-radius: 6px !important;
+            border-bottom-right-radius: 6px !important;
+          }
+          
+          /* Middle buttons have no border radius */
+          &.middle-button {
+            border-radius: 0 !important;
+            border-left: none;
+          }
+          
+          /* Remove left border for non-first buttons to avoid double borders */
+          &:not(.first-button) {
+            border-left: none;
           }
           
           &.p-button-primary {
             background-color: var(--primary-color);
             color: var(--primary-color-text);
             font-weight: 600;
+            z-index: 1;
           }
           
           &.p-button-outlined {
@@ -79,6 +103,135 @@
             &:hover:not(:disabled) {
               background-color: var(--primary-color);
               color: var(--primary-color-text);
+              z-index: 2;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  .batch-content {
+    h3 {
+      color: var(--text-color);
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    
+    .custom-accordions {
+      .custom-accordion-panel {
+        margin-bottom: 0.75rem;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--surface-border);
+        transition: all 0.3s ease;
+        
+        &.expanded {/* batch-viewer.component.scss - Professional styling with improved indentation and table filters */
+
+.batch-viewer-container {
+  /* IMPROVED: Proper indentation for nested content */
+  padding: 0.75rem;
+  margin-left: 1.5rem; /* Indent from parent search-result accordion */
+  border-left: 3px solid var(--surface-border);
+  
+  .batch-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--surface-ground);
+    border-radius: 8px;
+    border: 1px solid var(--surface-border);
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      
+      h2 {
+        margin: 0;
+        color: var(--text-color);
+        font-weight: 600;
+      }
+      
+      .streaming-indicator {
+        .streaming-control-btn {
+          border-radius: 6px;
+          transition: all 0.2s ease;
+          
+          &:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+          }
+        }
+      }
+    }
+    
+    /* IMPROVED: Inline time range selector with proper button styling */
+    .time-range-selector {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      
+      .time-range-label {
+        font-weight: 500;
+        color: var(--text-color);
+        white-space: nowrap;
+      }
+      
+      /* FIXED: Button group with proper border radius only on first/last */
+      .time-range-button-group {
+        display: flex;
+        
+        .time-range-button {
+          margin: 0 !important;
+          border: 1px solid var(--primary-color);
+          min-width: 50px;
+          position: relative;
+          
+          /* Remove all border radius by default */
+          border-radius: 0 !important;
+          
+          /* Only first button gets left border radius */
+          &.first-button {
+            border-top-left-radius: 6px !important;
+            border-bottom-left-radius: 6px !important;
+          }
+          
+          /* Only last button gets right border radius */
+          &.last-button {
+            border-top-right-radius: 6px !important;
+            border-bottom-right-radius: 6px !important;
+          }
+          
+          /* Middle buttons have no border radius */
+          &.middle-button {
+            border-radius: 0 !important;
+            border-left: none;
+          }
+          
+          /* Remove left border for non-first buttons to avoid double borders */
+          &:not(.first-button) {
+            border-left: none;
+          }
+          
+          &.p-button-primary {
+            background-color: var(--primary-color);
+            color: var(--primary-color-text);
+            font-weight: 600;
+            z-index: 1;
+          }
+          
+          &.p-button-outlined {
+            background-color: transparent;
+            color: var(--primary-color);
+            
+            &:hover:not(:disabled) {
+              background-color: var(--primary-color);
+              color: var(--primary-color-text);
+              z-index: 2;
             }
           }
         }
@@ -102,6 +255,426 @@
         transition: all 0.3s ease;
         
         &.expanded {
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          border-color: var(--primary-color);
+        }
+        
+        &.batch-accordion-success {
+          border-left: 4px solid var(--green-500);
+          
+          .custom-accordion-header {
+            background-color: var(--green-50);
+            
+            :host-context(.app-dark) & {
+              background-color: rgba(34, 197, 94, 0.1);
+            }
+          }
+        }
+        
+        &.batch-accordion-error {
+          border-left: 4px solid var(--red-500);
+          
+          .custom-accordion-header {
+            background-color: var(--red-50);
+            
+            :host-context(.app-dark) & {
+              background-color: rgba(239, 68, 68, 0.1);
+            }
+          }
+        }
+        
+        .custom-accordion-header {
+          padding: 16px 20px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          background: var(--surface-card);
+          
+          &:hover {
+            background: var(--surface-hover);
+            transform: translateY(-1px);
+          }
+          
+          .accordion-title-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            
+            .pi {
+              color: var(--text-color-secondary);
+              transition: transform 0.2s ease;
+              font-size: 0.875rem;
+            }
+            
+            .accordion-title {
+              flex: 1;
+              display: flex;
+              flex-wrap: wrap;
+              align-items: center;
+              gap: 8px;
+              font-size: 0.95rem;
+              
+              .timestamp {
+                color: var(--text-color-secondary);
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 0.85rem;
+              }
+              
+              .api-name {
+                color: var(--primary-color);
+                font-weight: 700;
+                font-size: 1rem;
+                padding: 2px 8px;
+                background: var(--primary-color-text);
+                border-radius: 4px;
+                border: 1px solid var(--primary-color);
+              }
+              
+              .details {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                color: var(--text-color);
+                font-size: 0.85rem;
+                
+                .value {
+                  font-weight: 600;
+                  margin-left: 4px;
+                  
+                  &.success {
+                    color: var(--green-600);
+                  }
+                  
+                  &.error {
+                    color: var(--red-600);
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        /* IMPROVED: Accordion content with proper indentation and background colors */
+        .custom-accordion-content {
+          background: var(--surface-ground);
+          margin-left: 2rem; /* INCREASED: More indentation for nested content */
+          border-top: 1px solid var(--surface-border);
+          
+          /* IMPROVED: Better background colors for light/dark mode */
+          :host-context(.app-dark) & {
+            background: var(--surface-section);
+          }
+          
+          /* IMPROVED: Content sections with better structure */
+          .content-section {
+            padding: 20px;
+            border-bottom: 1px solid var(--surface-border);
+            background: var(--surface-card); /* ADDED: Background for content sections */
+            
+            :host-context(.app-dark) & {
+              background: var(--surface-ground);
+            }
+            
+            &:last-child {
+              border-bottom: none;
+            }
+            
+            h4 {
+              color: var(--text-color);
+              font-weight: 600;
+              margin: 0 0 16px 0;
+              font-size: 1.1rem;
+            }
+          }
+          
+          .transaction-info {
+            background: var(--blue-50);
+            
+            :host-context(.app-dark) & {
+              background: rgba(59, 130, 246, 0.1);
+            }
+            
+            p {
+              margin: 0;
+              
+              .transaction-link {
+                color: var(--primary-color);
+                text-decoration: none;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-weight: 500;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px 8px;
+                background: var(--primary-color-text);
+                border-radius: 4px;
+                border: 1px solid var(--primary-color);
+                transition: all 0.2s ease;
+                
+                &:hover {
+                  background: var(--primary-color);
+                  color: var(--primary-color-text);
+                  transform: translateY(-1px);
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                
+                .pi-external-link {
+                  font-size: 0.75rem;
+                }
+              }
+            }
+          }
+          
+          /* IMPROVED: Professional table styling with proper header filters */
+          .professional-table {
+            .p-datatable-thead > tr > th {
+              background: var(--surface-section);
+              border-color: var(--surface-border);
+              padding: 0.5rem;
+              
+              .header-content {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                
+                span {
+                  font-weight: 600;
+                  color: var(--text-color);
+                  font-size: 0.875rem;
+                }
+                
+                /* IMPROVED: Professional header filter inputs */
+                .header-filter-input {
+                  width: 100%;
+                  height: 2rem;
+                  padding: 0.25rem 0.5rem;
+                  font-size: 0.75rem;
+                  border: 1px solid var(--surface-border);
+                  border-radius: 4px;
+                  background: var(--surface-ground);
+                  color: var(--text-color);
+                  
+                  &::placeholder {
+                    color: var(--text-color-secondary);
+                    font-style: italic;
+                  }
+                  
+                  &:focus {
+                    border-color: var(--primary-color);
+                    box-shadow: 0 0 0 1px var(--primary-color);
+                    outline: none;
+                  }
+                }
+              }
+            }
+            
+            .p-datatable-tbody > tr > td {
+              border-color: var(--surface-border);
+              padding: 0.75rem 0.5rem;
+              
+              /* Better text readability */
+              color: var(--text-color);
+              font-size: 0.875rem;
+            }
+            
+            /* Alternating row colors for better readability */
+            .p-datatable-tbody > tr:nth-child(even) {
+              background: var(--surface-ground);
+              
+              :host-context(.app-dark) & {
+                background: var(--surface-section);
+              }
+            }
+            
+            .p-datatable-tbody > tr:hover {
+              background: var(--surface-hover);
+            }
+          }
+          
+          .rules-section,
+          .aggregation-section {
+            .rule-message {
+              &.clickable {
+                cursor: pointer;
+                color: var(--primary-color);
+                text-decoration: underline;
+                
+                &:hover {
+                  color: var(--primary-color-text);
+                  background: var(--primary-color);
+                  padding: 2px 4px;
+                  border-radius: 3px;
+                }
+              }
+            }
+          }
+          
+          .summary-section {
+            .summary-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 16px;
+              flex-wrap: wrap;
+              gap: 12px;
+              
+              .group-selector {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                
+                label {
+                  font-weight: 500;
+                  color: var(--text-color);
+                  white-space: nowrap;
+                }
+                
+                p-multiselect {
+                  min-width: 200px;
+                }
+              }
+            }
+            
+            .table-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              flex-wrap: wrap;
+              gap: 12px;
+              
+              span:first-child {
+                font-weight: 500;
+                color: var(--text-color);
+              }
+              
+              .p-input-icon-left {
+                .global-search-input {
+                  min-width: 250px;
+                  height: 2.5rem;
+                }
+              }
+            }
+            
+            .group-count {
+              color: var(--text-color-secondary);
+              font-weight: normal;
+              font-size: 0.85rem;
+              margin-left: 6px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/* Dark mode specific overrides */
+:host-context(.app-dark) {
+  .batch-viewer-container {
+    border-left-color: var(--surface-border);
+    
+    .batch-header {
+      background: var(--surface-section);
+    }
+    
+    .custom-accordions {
+      .custom-accordion-panel {
+        &.expanded {
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .custom-accordion-header {
+          background: var(--surface-card);
+          
+          &:hover {
+            background: var(--surface-hover);
+          }
+        }
+        
+        .custom-accordion-content {
+          .content-section {
+            background: var(--surface-ground);
+          }
+          
+          .transaction-info {
+            background: rgba(59, 130, 246, 0.15);
+          }
+          
+          .professional-table {
+            .p-datatable-thead > tr > th {
+              background: var(--surface-card);
+              
+              .header-filter-input {
+                background: var(--surface-section);
+                border-color: var(--surface-border);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .batch-viewer-container {
+    padding: 0.5rem;
+    margin-left: 0.75rem;
+    
+    .batch-header {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: stretch;
+      
+      .time-range-selector {
+        justify-content: flex-start;
+        
+        .time-range-button-group {
+          .time-range-button {
+            min-width: 45px;
+            font-size: 0.85rem;
+          }
+        }
+      }
+    }
+    
+    .custom-accordions {
+      .custom-accordion-panel {
+        .custom-accordion-header {
+          padding: 12px 16px;
+          
+          .accordion-title-section {
+            .accordion-title {
+              font-size: 0.85rem;
+              
+              .details {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+              }
+            }
+          }
+        }
+        
+        .custom-accordion-content {
+          margin-left: 1rem;
+          
+          .content-section {
+            padding: 16px;
+          }
+          
+          .professional-table {
+            .header-filter-input {
+              height: 1.75rem;
+              font-size: 0.7rem;
+            }
+          }
+        }
+      }
+    }
+  }
+}
           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
           border-color: var(--primary-color);
         }

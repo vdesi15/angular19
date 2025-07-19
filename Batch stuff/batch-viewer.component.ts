@@ -89,7 +89,7 @@ export class BatchViewerComponent {
     this.summaryColumns().filter(col => col.enableFiltering === true)
   );
 
-   constructor() {
+  constructor() {
     console.log('[BatchViewer] Constructor called');
     
     // TARGETED FIX: Subscribe to orchestrator's activeSearches signal to track the specific search
@@ -257,8 +257,23 @@ export class BatchViewerComponent {
     this.orchestrator.stopSseStream(this.search.id);
   }
 
-  onColumnFilter(event: Event, field: string): void {
-    console.log(`[BatchViewer] Filter applied on field: ${field}`);
+  // Filter methods for professional table filtering
+  onRuleFilter(event: Event, field: string): void {
+    const value = (event.target as HTMLInputElement).value;
+    console.log(`[BatchViewer] Rule filter applied on ${field}:`, value);
+    // Implementation can be added based on your filtering requirements
+  }
+
+  onAggFilter(event: Event, field: string): void {
+    const value = (event.target as HTMLInputElement).value;
+    console.log(`[BatchViewer] Aggregation filter applied on ${field}:`, value);
+    // Implementation can be added based on your filtering requirements
+  }
+
+  onSummaryFilter(event: Event, field: string): void {
+    const value = (event.target as HTMLInputElement).value;
+    console.log(`[BatchViewer] Summary filter applied on ${field}:`, value);
+    // Implementation can be added based on your filtering requirements
   }
 
   // Track by function for better performance
