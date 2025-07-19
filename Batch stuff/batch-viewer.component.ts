@@ -1,4 +1,4 @@
-// batch-viewer.component.ts - TARGETED FIX for data flow issue
+// batch-viewer.component.ts - TARGETED FIX for data flow issue + UI improvements
 import { Component, Input, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AccordionModule } from 'primeng/accordion';
@@ -14,6 +14,7 @@ import { ColumnDefinitionService } from '../../services/column-definition.servic
 import { SearchOrchestratorService } from '../../services/search-orchestrator.service';
 import { EditorDialogComponent } from '../editor-dialog/editor-dialog.component';
 import { TransformPipe } from 'src/app/shared/pipes/transform.pipe';
+import { UrlBuilderService } from 'src/app/shared/services/url-builder.service';
 import { get } from 'lodash-es';
 
 @Component({
@@ -39,6 +40,7 @@ export class BatchViewerComponent {
 
   private orchestrator = inject(SearchOrchestratorService);
   private colDefService = inject(ColumnDefinitionService);
+  private urlBuilder = inject(UrlBuilderService);
   
   // State - Using Angular 19 signals
   batchData = signal<BatchSSEData[]>([]);
@@ -90,34 +92,42 @@ export class BatchViewerComponent {
   constructor() {
     console.log('[BatchViewer] Constructor called');
     
-    // TARGETED FIX: Use getter-based effect to track property changes
+    // TARGETED FIX: Subscribe to orchestrator's activeSearches signal to track the specific search
     effect(() => {
-      const searchObj = this.search;
-      const batchDataArray = searchObj?.batchData;
+      // Get the current search from orchestrator's signal by ID
+      const allSearches = this.orchestrator.activeSearches();
+      const currentSearch = allSearches.find(s => s.id === this.search?.id);
+      const batchDataArray = currentSearch?.batchData;
       
-      console.log('[BatchViewer] Effect triggered');
-      console.log('[BatchViewer] Search ID:', searchObj?.id);
+      console.log('[BatchViewer] Effect triggered - Search ID:', currentSearch?.id);
       console.log('[BatchViewer] BatchData length:', batchDataArray?.length);
+      console.log('[BatchViewer] BatchData reference:', batchDataArray);
       
       if (batchDataArray && batchDataArray.length > 0) {
         console.log('[BatchViewer] ✅ Processing batch data:', batchDataArray.length);
-        console.log('[BatchViewer] First item:', batchDataArray[0]);
+        console.log('[BatchViewer] Latest item:', batchDataArray[batchDataArray.length - 1]);
         
         // Set the data
         this.batchData.set([...batchDataArray]);
         
-        // Reset accordion states for new data
-        const newStates = new Map<string, boolean>();
+        // FIXED: Update accordion states for new items only, preserve existing expansion states
+        const currentStates = new Map(this.accordionStates());
         batchDataArray.forEach(data => {
-          newStates.set(data.api_txnid, false);
+          if (!currentStates.has(data.api_txnid)) {
+            currentStates.set(data.api_txnid, false); // Only add new items as collapsed
+          }
+          // Don't modify existing expansion states
         });
-        this.accordionStates.set(newStates);
+        this.accordionStates.set(currentStates);
         
         console.log('[BatchViewer] ✅ Updated batchData signal to:', this.batchData().length);
-      } else {
-        console.log('[BatchViewer] ❌ No valid batch data, clearing');
-        this.batchData.set([]);
-        this.accordionStates.set(new Map());
+      } else if (batchDataArray?.length === 0 || !batchDataArray) {
+        console.log('[BatchViewer] ❌ No valid batch data or empty array');
+        // Don't clear if we have existing data, as this might be initial state
+        if (this.batchData().length === 0) {
+          this.batchData.set([]);
+          this.accordionStates.set(new Map());
+        }
       }
     });
 
@@ -168,21 +178,39 @@ export class BatchViewerComponent {
     });
   }
 
+  // IMPROVED: Professional accordion title with bold API name
   getAccordionTitle(data: BatchSSEData): string {
     const localTime = new Date(data.time).toLocaleString();
-    return `[${localTime}] ${data.api_name} VLine:${data.v_line} Min:${data.min} UG:${data.good_u} MG:${data.good_m} All Rules Passed:${data.all_rules_passed}`;
+    const allRulesPassed = this.calculateAllRulesPassed(data);
+    return `[${localTime}] ${data.api_name} VLine:${data.v_line} Min:${data.min} UG:${data.good_u} MG:${data.good_m} All Rules Passed:${allRulesPassed}`;
   }
 
+  // NEW: Calculate all rules passed based on actual rules data
+  calculateAllRulesPassed(data: BatchSSEData): boolean {
+    if (!data.rules || data.rules.length === 0) {
+      return data.all_rules_passed; // fallback to original value
+    }
+    
+    // Check if all rules have pass: true
+    return data.rules.every(rule => rule.pass === true);
+  }
+
+  // IMPROVED: Professional accordion styling
   getAccordionClass(data: BatchSSEData): string {
-    return data.all_rules_passed ? 'batch-accordion-success' : 'batch-accordion-error';
+    const allRulesPassed = this.calculateAllRulesPassed(data);
+    return allRulesPassed ? 'batch-accordion-success' : 'batch-accordion-error';
   }
 
   getAccordionHeaderStyle(data: BatchSSEData): any {
+    const allRulesPassed = this.calculateAllRulesPassed(data);
     const baseStyle = {
-      borderLeft: `4px solid ${data.all_rules_passed ? '#28a745' : '#dc3545'}`,
-      backgroundColor: data.all_rules_passed 
+      borderLeft: `4px solid ${allRulesPassed ? '#28a745' : '#dc3545'}`,
+      backgroundColor: allRulesPassed 
         ? 'rgba(40, 167, 69, 0.1)' 
-        : 'rgba(220, 53, 69, 0.1)'
+        : 'rgba(220, 53, 69, 0.1)',
+      padding: '12px 16px',
+      borderRadius: '6px',
+      marginBottom: '2px'
     };
     return baseStyle;
   }
@@ -193,6 +221,11 @@ export class BatchViewerComponent {
 
   getFieldValue(obj: any, field: string): any {
     return get(obj, field);
+  }
+
+  // NEW: Build search link using the reusable URL builder service
+  buildTransactionSearchLink(txnId: string): string {
+    return this.urlBuilder.buildSearchLink(txnId);
   }
 
   openMessageEditor(message: string): void {

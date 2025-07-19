@@ -319,6 +319,7 @@ export class TransactionTimelineComponent {
   @Input() transactionId?: string;
 
   private filtersService = inject(FiltersService);
+  private urlBuilder = inject(UrlBuilderService);
 
   // Pre-process events once with all computed data to avoid repeated function calls
   public readonly processedEvents = computed(() => {
@@ -328,7 +329,7 @@ export class TransactionTimelineComponent {
       ...event,
       isCurrent: this.isCurrentTransaction(event),
       formattedTime: this.formatTime(event.time),
-      searchLink: this.buildSearchLink(event.action)
+      searchLink: this.urlBuilder.buildSearchLink(event.action)
     }));
   });
 
@@ -358,24 +359,5 @@ export class TransactionTimelineComponent {
     } catch {
       return time;
     }
-  }
-
-  // Build search link for action (from your existing implementation)
-  private buildSearchLink(action: string): string {
-    const filters = this.filtersService.filters();
-    if (!filters) return '#';
-
-    const baseUrl = window.location.origin;
-    const currentApp = filters.application?.[0] || '';
-    const currentEnv = filters.environment || '';
-    const currentLoc = filters.location || '';
-
-    // URL encode all parameters
-    const encodedApp = encodeURIComponent(currentApp);
-    const encodedEnv = encodeURIComponent(currentEnv);
-    const encodedLoc = encodeURIComponent(currentLoc);
-    const encodedAction = encodeURIComponent(action);
-
-    return `${baseUrl}/logs/search?applications=${encodedApp}&env=${encodedEnv}&location=${encodedLoc}&searchText=${encodedAction}`;
   }
 }
