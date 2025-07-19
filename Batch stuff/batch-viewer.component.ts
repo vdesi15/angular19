@@ -89,7 +89,7 @@ export class BatchViewerComponent {
     this.summaryColumns().filter(col => col.enableFiltering === true)
   );
 
-  constructor() {
+   constructor() {
     console.log('[BatchViewer] Constructor called');
     
     // TARGETED FIX: Subscribe to orchestrator's activeSearches signal to track the specific search
@@ -110,21 +110,39 @@ export class BatchViewerComponent {
         // Set the data
         this.batchData.set([...batchDataArray]);
         
-        // FIXED: Update accordion states for new items only, preserve existing expansion states
-        const currentStates = new Map(this.accordionStates());
-        batchDataArray.forEach(data => {
-          if (!currentStates.has(data.api_txnid)) {
-            currentStates.set(data.api_txnid, false); // Only add new items as collapsed
+        // FIXED: Only initialize accordion states for completely new data, don't update existing ones
+        const currentStates = this.accordionStates();
+        const hasAnyStates = currentStates.size > 0;
+        
+        if (!hasAnyStates) {
+          // First time loading - initialize all states
+          const newStates = new Map<string, boolean>();
+          batchDataArray.forEach(data => {
+            newStates.set(data.api_txnid, false);
+          });
+          this.accordionStates.set(newStates);
+          console.log('[BatchViewer] ✅ Initialized accordion states for first load');
+        } else {
+          // Subsequent loads - only add missing states, don't modify existing ones
+          const needsUpdate = batchDataArray.some(data => !currentStates.has(data.api_txnid));
+          
+          if (needsUpdate) {
+            const updatedStates = new Map(currentStates);
+            batchDataArray.forEach(data => {
+              if (!updatedStates.has(data.api_txnid)) {
+                updatedStates.set(data.api_txnid, false);
+              }
+            });
+            this.accordionStates.set(updatedStates);
+            console.log('[BatchViewer] ✅ Added new accordion states only');
           }
-          // Don't modify existing expansion states
-        });
-        this.accordionStates.set(currentStates);
+        }
         
         console.log('[BatchViewer] ✅ Updated batchData signal to:', this.batchData().length);
       } else if (batchDataArray?.length === 0 || !batchDataArray) {
         console.log('[BatchViewer] ❌ No valid batch data or empty array');
-        // Don't clear if we have existing data, as this might be initial state
-        if (this.batchData().length === 0) {
+        // Only clear if we have existing data and this is truly empty (not initial state)
+        if (this.batchData().length > 0 && batchDataArray?.length === 0) {
           this.batchData.set([]);
           this.accordionStates.set(new Map());
         }
