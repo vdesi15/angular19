@@ -35,10 +35,16 @@ import { BatchViewerComponent } from '../batch-viewer/batch-viewer.component';
 import { JiraViewerComponent } from '../jira-viewer/jira-viewer.component';
 import { TransactionTimelineComponent } from '../transaction-timeline/transaction-timeline.component';
 import { TableSkeletonComponent } from 'src/app/shared/components/table-skeleton/table-skeleton.component';
+import { accordionAnimations } from '../animations/accordion.animations';
 
 @Component({
   selector: 'app-search-result',
   standalone: true,
+  animations: [
+    accordionAnimations.slideToggle,
+    accordionAnimations.iconRotate,
+    accordionAnimations.fadeInContent
+  ],
   imports: [
     CommonModule, AccordionModule, ButtonModule, TooltipModule, BadgeModule, 
     ProgressBarModule, ChipModule, TagModule,
