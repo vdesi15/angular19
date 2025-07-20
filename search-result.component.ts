@@ -79,6 +79,18 @@ export class SearchResultComponent {
   public streamingVisibleColumns: WritableSignal<ColumnDefinition[]> = signal([]);
   public streamFilters: WritableSignal<StreamFilter[]> = signal([]);
 
+// Animation state
+  public headerHoverState = signal<'normal' | 'hovered'>('normal');
+
+  // SIMPLIFIED: Single method to toggle accordion
+  public toggleAccordion(): void {
+    if (this.search.isExpanded) {
+      this.orchestrator.collapseSearch(this.search.id);
+    } else {
+      this.orchestrator.expandSearch(this.search.id);
+    }
+  }
+
   // Computed signals for transaction details
   public hasTransactionDetails = computed(() => {
     return this.search.type === 'transaction' && 
