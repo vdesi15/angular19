@@ -253,7 +253,7 @@
                     [value]="getSummaryData(data)" 
                     [scrollable]="true" 
                     scrollHeight="300px"
-                    [globalFilterFields]="filterableColumns().map(col => col.field)"
+                    [globalFilterFields]="globalFilterFields()"
                     styleClass="p-datatable-sm compact-table"
                     #summaryTable>
                     

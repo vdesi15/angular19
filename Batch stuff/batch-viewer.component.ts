@@ -89,6 +89,11 @@ export class BatchViewerComponent {
     this.summaryColumns().filter(col => col.enableFiltering === true)
   );
 
+  // Computed properties for template binding (fix Angular parsing error)
+  globalFilterFields = computed(() => 
+    this.filterableColumns().map(col => col.field)
+  );
+
   constructor() {
     console.log('[BatchViewer] Constructor called');
     
