@@ -31,6 +31,9 @@ export class FavoritesPopoverComponent {
   private confirmationService = inject(ConfirmationService);
   private router = inject(Router);
 
+  // Modal visibility
+  public visible = signal(false);
+
   // Reactive data from service
   public favoriteItems = this.searchHistoryService.favoriteDisplayItems;
   public recentItems = this.searchHistoryService.recentDisplayItems;
@@ -38,121 +41,63 @@ export class FavoritesPopoverComponent {
   // Computed helpers
   public hasFavorites = computed(() => this.favoriteItems().length > 0);
   public hasRecentSearches = computed(() => this.recentItems().length > 0);
+  public favoriteCount = computed(() => this.favoriteItems().length);
 
-  /**
-   * Check if a search is favorited
-   */
+  // Modal controls
+  public showModal(): void {
+    this.visible.set(true);
+  }
+
+  public closeModal(): void {
+    this.visible.set(false);
+  }
+
+  // Existing methods remain the same...
   public isFavorite(searchId: string): boolean {
     return this.searchHistoryService.isFavorite(searchId);
   }
 
-  /**
-   * Toggle favorite status of a search
-   */
   public toggleFavorite(searchId: string, event: Event): void {
-    event.stopPropagation(); // Prevent executing the search
+    event.stopPropagation();
     this.searchHistoryService.toggleFavorite(searchId);
   }
 
-  /**
-   * Execute a search from history
-   */
   public executeSearch(item: SearchDisplayItem): void {
-    const search = item.searchData;
-    
-    // Navigate to appropriate route based on search type
-    this.navigateToSearchType(search.type);
-    
-    // Execute the search after navigation
-    setTimeout(() => {
-      this.searchOrchestrator.executeSearchFromHistory(search);
-    }, 100);
+    this.closeModal(); // Close modal first
+    this.searchOrchestrator.restoreSearchFromHistory(item.id);
   }
 
-  /**
-   * Navigate to the appropriate route based on search type
-   */
-  private navigateToSearchType(type: string): void {
-    switch (type) {
-      case 'browse':
-        this.router.navigate(['/browse']);
-        break;
-      case 'error':
-        this.router.navigate(['/errors']);
-        break;
-      case 'transaction':
-        this.router.navigate(['/search']);
-        break;
-      default:
-        this.router.navigate(['/search']);
-    }
-  }
-
-  /**
-   * Clear all favorites with confirmation
-   */
   public clearFavorites(event: Event): void {
     event.stopPropagation();
-    
     this.confirmationService.confirm({
       message: 'Are you sure you want to clear all favorites?',
       header: 'Clear Favorites',
       icon: 'pi pi-exclamation-triangle',
-      acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
         this.searchHistoryService.clearFavorites();
       }
     });
   }
 
-  /**
-   * Clear all recent searches with confirmation
-   */
   public clearRecent(event: Event): void {
     event.stopPropagation();
-    
     this.confirmationService.confirm({
-      message: 'Are you sure you want to clear all recent searches?',
+      message: 'Are you sure you want to clear your recent search history?',
       header: 'Clear Recent Searches',
       icon: 'pi pi-exclamation-triangle',
-      acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
         this.searchHistoryService.clearRecentSearches();
       }
     });
   }
 
-  /**
-   * Format timestamp for display
-   */
   public formatTimestamp(timestamp: Date): string {
     const now = new Date();
     const diff = now.getTime() - timestamp.getTime();
     
-    // Less than 1 minute
-    if (diff < 60000) {
-      return 'Just now';
-    }
-    
-    // Less than 1 hour
-    if (diff < 3600000) {
-      const minutes = Math.floor(diff / 60000);
-      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    }
-    
-    // Less than 1 day
-    if (diff < 86400000) {
-      const hours = Math.floor(diff / 3600000);
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    }
-    
-    // Less than 1 week
-    if (diff < 604800000) {
-      const days = Math.floor(diff / 86400000);
-      return `${days} day${days > 1 ? 's' : ''} ago`;
-    }
-    
-    // More than 1 week - show actual date
-    return timestamp.toLocaleDateString();
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return `${Math.floor(diff / 86400000)}d ago`;
   }
 }
