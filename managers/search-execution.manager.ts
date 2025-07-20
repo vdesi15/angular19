@@ -482,12 +482,75 @@ export class SearchExecutionManager {
    */
   public stopSseStream(searchId: string): void {
     const subscription = this.activeSseSubscriptions.get(searchId);
+     const executionContext = this.executionContexts.get(searchId);
     if (subscription) {
       subscription.unsubscribe();
       this.activeSseSubscriptions.delete(searchId);
       this.updateSearchState(searchId, { isLoading: false, isStreaming: false });
       console.log(`[ExecutionManager] Stopped SSE stream for: ${searchId}`);
     }
+    
+    // If we have execution context, call strategy's stopStreaming method directly
+    if (executionContext && executionContext.selectedStrategy) {
+      const strategy = executionContext.selectedStrategy.strategy;
+      const search = this.stateManager?.getSearchById(searchId);
+      
+      if (strategy && typeof strategy.stopStreaming === 'function' && search) {
+        console.log(`[ExecutionManager] Calling strategy.stopStreaming() for: ${strategy.getStrategyName()}`);
+        strategy.stopStreaming(search, executionContext);
+      } else {
+        console.log(`[ExecutionManager] Strategy ${strategy?.getStrategyName()} does not implement stopStreaming()`);
+      }
+    } else {
+      console.log(`[ExecutionManager] No execution context found for ${searchId}, using basic stop`);
+    }
+
+    // Update search state
+    this.updateSearchState(searchId, { 
+      isLoading: false, 
+      isStreaming: false 
+    });
+    
+    // Clean up execution context
+    this.executionContexts.delete(searchId);
+    
+    // Update execution tracking
+    this.isExecuting.update(executing => {
+      const newSet = new Set(executing);
+      newSet.delete(searchId);
+      return newSet;
+    });
+  }
+
+  /**
+ * Strategy-specific stop streaming logic
+ */
+private stopStreamingByStrategy(searchId: string, executionContext: any): void {
+  const strategy = executionContext.selectedStrategy.strategy;
+  const strategyName = strategy.getStrategyName();
+  
+  console.log(`[ExecutionManager] Using strategy-specific stop for: ${strategyName}`);
+  
+  try {
+    // Check if strategy has a custom stop method
+    if (typeof strategy.stopStreaming === 'function') {
+      const search = this.stateManager?.getSearchById(searchId);
+      if (search) {
+        strategy.stopStreaming(search, executionContext);
+        console.log(`[ExecutionManager] Called strategy.stopStreaming for: ${strategyName}`);
+      }
+    } else if (strategyName.includes('Batch') && this.shouldCallBatchStopAPI(executionContext)) {
+      // For batch strategies, call the batch-specific stop API
+      this.callBatchStopAPI(searchId, executionContext);
+    } else if (strategyName.includes('SSE') || strategyName.includes('Streaming')) {
+      // For SSE/Streaming strategies, additional cleanup if needed
+      this.callSSEStopAPI(searchId, executionContext);
+    }
+    // Add more strategy-specific logic as needed
+    
+  } catch (error) {
+    console.error(`[ExecutionManager] Error in strategy-specific stop for ${strategyName}:`, error);
+  }
   }
 
   // ================================

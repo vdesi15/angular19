@@ -120,8 +120,8 @@ export class SearchResultComponent {
       return col.views.split(',').map(v => v.trim()).includes(viewIdToUse);
     });
   }
-  return this.streamingVisibleColumns();
-});
+    return this.streamingVisibleColumns();
+  });
 
   public filteredCount = 0;
   public totalLoadedCount = 0;
@@ -226,9 +226,7 @@ export class SearchResultComponent {
         return 'browse';
     }
   }
-
- 
-
+  
   // Event Handlers
   resetStreamingColumns(): void {
     const allColumns = this.allColumnsForViewType();
@@ -259,6 +257,8 @@ export class SearchResultComponent {
     event.stopPropagation();
     event.preventDefault();
     this.orchestrator.stopSearch(this.search.id);
+    this.search.isStreaming = false;
+    this.cdr.markForCheck();
   }
 
   closePanel(event: Event): void {
@@ -270,34 +270,7 @@ export class SearchResultComponent {
   retrySearch(): void {
     this.orchestrator.retrySearch(this.search.id);
   }
-
-  onAccordionOpen(event: any): void {
-    console.log('[SearchResult] Accordion opened for:', this.search.title);
-    
-    // Prevent the event from bubbling and causing issues
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-    
-    // Update internal state first
-    this.internalIsExpanded.set(true);
-    
-    // Then notify orchestrator
-    this.orchestrator.expandSearch(this.search.id);
-  }
-
-  onAccordionClose(event: any): void {
-    console.log('[SearchResult] Accordion closed for:', this.search.title);
-    
-    // Prevent the event from bubbling and causing issues
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-    
-    // Update internal state first
-    this.internalIsExpanded.set(false);
-    
-    // Then notify orchestrator
-    this.orchestrator.collapseSearch(this.search.id);
-  }
+  
 
   public forceExpand(): void {
     this.internalIsExpanded.set(true);

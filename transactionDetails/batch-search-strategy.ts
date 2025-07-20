@@ -74,4 +74,29 @@ export class BatchSearchStrategy implements SearchStrategy {
       return null;
     }
   }
+
+  stopStreaming(search: ActiveSearch, executionContext: any): void {
+    console.log(`[BatchStrategy] Stopping streaming for batchId: ${search.batchId}`);
+    
+    if (!search.batchId) {
+      console.warn('[BatchStrategy] No batchId found for stop streaming');
+      return;
+    }
+
+    // Get parameters from execution context or defaults
+    const globalFilters = executionContext.globalFilters;
+    const env = globalFilters?.environment || 'prod';
+    const location = globalFilters?.location || 'us-east-1';
+    const days = executionContext.days || '7';
+
+    // Call the SSE service with the batch-specific stop endpoint
+    this.sseService.stopStreaming(env, location, days, search.batchId).subscribe({
+      next: (response) => {
+        console.log(`[BatchStrategy] Successfully stopped streaming for batchId: ${search.batchId}`, response);
+      },
+      error: (error) => {
+        console.error(`[BatchStrategy] Failed to stop streaming for batchId: ${search.batchId}`, error);
+      }
+    });
+  }
 }

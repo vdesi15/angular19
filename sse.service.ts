@@ -349,4 +349,17 @@ export class SseService {
       of({ type: 'END' }).pipe(delay(1000))
     );
   }
+
+  public stopBatchStreaming(env: string, location: string, days: string, batchId: string): Observable<any> {
+  const baseApi = this.configService.get('api.baseUrl');
+  const url = `${baseApi}/stipstreaming/v2/flat/${env}/${location}/${days}/${batchId}`;
+  
+  console.log(`[SseService] Stopping streaming for batch: ${batchId}`, { env, location, days });
+  
+  return this.http.post(url, {}, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+}
 }
