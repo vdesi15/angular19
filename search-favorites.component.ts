@@ -26,7 +26,7 @@ import { SearchDisplayItem } from 'src/app/core/models/saved-search.model';
   providers: [ConfirmationService]
 })
 export class FavoritesPopoverComponent {
-  @Input() visible = false;
+   @Input() visible = false;
   @Output() visibleChange = new EventEmitter<boolean>();
 
   private searchHistoryService = inject(SearchHistoryService);

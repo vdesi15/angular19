@@ -53,23 +53,25 @@
                     <p class="empty-hint">Click the heart icon on any search to save it</p>
                   </div>
                 } @else {
-                  @for (item of favoriteItems(); track item.id) {
-                    <div class="search-item" (click)="executeSearch(item)">
-                      <div class="item-content">
-                        <div class="item-header">
-                          <i [class]="getSearchIcon(item.searchData.type) + ' search-type-icon'"></i>
-                          <span class="item-title">{{ item.title }}</span>
-                          <button pButton type="button" 
-                                  icon="pi pi-heart-fill" 
-                                  class="p-button-text p-button-sm favorite-action-btn"
-                                  (click)="toggleFavorite(item.id, $event)"
-                                  pTooltip="Remove from favorites">
-                          </button>
+                  <p-scrollPanel [style]="{ width: '100%', height: '100%' }" styleClass="custom-scroll">
+                    @for (item of favoriteItems(); track item.id) {
+                      <div class="search-item" (click)="executeSearch(item)">
+                        <div class="item-content">
+                          <div class="item-header">
+                            <i [class]="getSearchIcon(item.searchData.type) + ' search-type-icon'"></i>
+                            <span class="item-title">{{ item.title }}</span>
+                            <button pButton type="button" 
+                                    icon="pi pi-heart-fill" 
+                                    class="p-button-text p-button-sm favorite-action-btn"
+                                    (click)="toggleFavorite(item.id, $event)"
+                                    pTooltip="Remove from favorites">
+                            </button>
+                          </div>
+                          <div class="item-subtitle">{{ item.subtitle }}</div>
                         </div>
-                        <div class="item-subtitle">{{ item.subtitle }}</div>
                       </div>
-                    </div>
-                  }
+                    }
+                  </p-scrollPanel>
                 }
               </div>
             </div>

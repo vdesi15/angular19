@@ -5,8 +5,8 @@
       }
 
       .favorites-modal-container {
-        width: 750px; // Increased width
-        max-width: 90vw;
+        width: 1125px; // Increased by 50% (750px * 1.5)
+        max-width: 95vw;
         max-height: 85vh;
         border-radius: 16px;
         overflow: hidden;
@@ -62,30 +62,31 @@
         }
       }
 
-      // Content Layout
+      // Content Layout - 50/50 Split
       .modal-content {
         flex: 1;
         display: flex;
         flex-direction: column;
         overflow: hidden;
         padding: 0;
+        min-height: 0; // Important for flexbox scrolling
       }
 
       .favorites-section {
         padding: 1.5rem;
-        flex: 0 0 200px; // Fixed smaller height for favorites
+        flex: 1; // 50% of space
         display: flex;
         flex-direction: column;
-        min-height: 0;
+        min-height: 0; // Important for scrolling
         border-bottom: 1px solid var(--surface-border);
       }
 
       .recent-section {
         padding: 1.5rem;
-        flex: 1; // Takes remaining space - much larger
+        flex: 1; // 50% of space  
         display: flex;
         flex-direction: column;
-        min-height: 0;
+        min-height: 0; // Important for scrolling
       }
 
       // Section Headers - Clean & Minimal
@@ -96,6 +97,7 @@
         margin-bottom: 1rem;
         padding-bottom: 0.75rem;
         border-bottom: 1px solid var(--surface-border);
+        flex-shrink: 0; // Don't shrink the header
 
         .section-title {
           display: flex;
@@ -123,8 +125,9 @@
       }
 
       .items-container {
-        flex: 1;
-        overflow: hidden;
+        flex: 1; // Take remaining space
+        overflow: hidden; // Container doesn't scroll
+        min-height: 0; // Allow shrinking
       }
 
       // Elegant Empty States
@@ -152,26 +155,25 @@
         }
       }
 
-      // Polished Search Items
+      // Polished Search Items - Clean & Elegant
       .search-item {
         padding: 0.875rem;
         border-radius: 8px;
         margin-bottom: 0.5rem;
         cursor: pointer;
-        border: 1px solid var(--surface-border);
         background: var(--surface-ground);
         transition: all 0.2s ease;
+        border: 1px solid transparent; // Invisible border for layout consistency
 
         &:hover {
           background: var(--surface-hover);
-          border-color: var(--primary-200);
           transform: translateY(-1px);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         :host-context(.app-dark) & {
           background: var(--surface-700);
-          border-color: var(--surface-600);
+          border: none; // No border in dark mode for clean look
 
           &:hover {
             background: var(--surface-600);
@@ -247,6 +249,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-shrink: 0; // Don't shrink the footer
 
         :host-context(.app-dark) & {
           background: var(--surface-800);
@@ -275,21 +278,34 @@
         }
       }
 
-      // Custom Scroll Panel
+      // Custom Scroll Panel - FIXED TO SHOW SCROLLBARS
       ::ng-deep .custom-scroll {
+        height: 100% !important; // Ensure full height
+
         .p-scrollpanel-wrapper {
           border-right: none !important;
+          height: 100% !important;
         }
 
-        .p-scrollpanel-bar {
+        .p-scrollpanel-content {
+          height: 100% !important;
+          padding-right: 8px !important; // Space for scrollbar
+        }
+
+        .p-scrollpanel-bar-y {
           background: var(--primary-color) !important;
-          opacity: 0.3 !important;
-          width: 4px !important;
-          border-radius: 2px !important;
+          opacity: 0.4 !important;
+          width: 6px !important;
+          border-radius: 3px !important;
+          transition: opacity 0.2s ease !important;
 
           &:hover {
-            opacity: 0.6 !important;
+            opacity: 0.7 !important;
           }
+        }
+
+        .p-scrollpanel-bar-x {
+          display: none !important; // Hide horizontal scrollbar
         }
       }
 
