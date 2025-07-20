@@ -1,9 +1,12 @@
-// Batch stuff/batch-viewer.component.scss - Fixed SCSS structure to avoid deprecation warnings
+// batch-viewer.component.scss - Clean, elegant styling for light and dark modes
 :host {
   display: block;
   width: 100%;
 }
 
+// ================================
+// CONTAINER AND LAYOUT
+// ================================
 .batch-viewer-container {
   background: var(--surface-card);
   border: 1px solid var(--surface-border);
@@ -13,7 +16,7 @@
 }
 
 // ================================
-// BATCH HEADER - PROFESSIONAL STYLING
+// BATCH HEADER
 // ================================
 .batch-header {
   display: flex;
@@ -24,366 +27,584 @@
   background: var(--surface-ground);
   border: 1px solid var(--surface-border);
   border-radius: 8px;
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    h2 {
+      margin: 0;
+      color: var(--text-color);
+      font-weight: 600;
+      font-size: 1.5rem;
+    }
+
+    .streaming-indicator .streaming-control-btn {
+      font-size: 0.875rem;
+    }
+  }
+
+  .time-range-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .time-range-label {
+      color: var(--text-color);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .time-range-button-group {
+      display: flex;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--surface-border);
+
+      .time-range-button {
+        border-radius: 0 !important;
+        border: none !important;
+
+        &.first-button {
+          border-radius: 6px 0 0 6px !important;
+        }
+
+        &.last-button {
+          border-radius: 0 6px 6px 0 !important;
+        }
+
+        &:not(:disabled) {
+          background: var(--surface-card) !important;
+          color: var(--text-color) !important;
+          border-right: 1px solid var(--surface-border) !important;
+
+          &:hover {
+            background: var(--surface-hover) !important;
+          }
+        }
+
+        &:disabled {
+          background: var(--primary-color) !important;
+          color: white !important;
+        }
+      }
+    }
+  }
 }
 
-.batch-header .header-left {
+// ================================
+// BATCH CONTENT
+// ================================
+.batch-content {
+  h3 {
+    color: var(--text-color);
+    font-weight: 600;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+  }
+}
+
+// ================================
+// NO DATA MESSAGE
+// ================================
+.no-data-message {
   display: flex;
   align-items: center;
-  gap: 1rem;
-}
-
-.batch-header .header-left h2 {
-  margin: 0;
-  color: var(--text-color);
-  font-weight: 600;
-  font-size: 1.5rem;
-}
-
-.batch-header .header-left .streaming-indicator .streaming-control-btn {
-  font-size: 0.875rem;
-}
-
-.batch-header .time-range-selector {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.batch-header .time-range-selector .time-range-label {
-  color: var(--text-color);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.batch-header .time-range-selector .time-range-button-group {
-  display: flex;
-  border-radius: 6px;
-  overflow: hidden;
-  border: 1px solid var(--surface-border);
-}
-
-.batch-header .time-range-selector .time-range-button-group .time-range-button {
-  border-radius: 0 !important;
-  border: none !important;
-}
-
-.batch-header .time-range-selector .time-range-button-group .time-range-button.first-button {
-  border-radius: 6px 0 0 6px !important;
-}
-
-.batch-header .time-range-selector .time-range-button-group .time-range-button.last-button {
-  border-radius: 0 6px 6px 0 !important;
-}
-
-.batch-header .time-range-selector .time-range-button-group .time-range-button:not(:disabled) {
-  background: var(--surface-card) !important;
-  color: var(--text-color) !important;
-  border-right: 1px solid var(--surface-border) !important;
-}
-
-.batch-header .time-range-selector .time-range-button-group .time-range-button:not(:disabled):hover {
-  background: var(--surface-hover) !important;
-}
-
-.batch-header .time-range-selector .time-range-button-group .time-range-button:disabled {
-  background: var(--primary-color) !important;
-  color: white !important;
-}
-
-// ================================
-// BATCH CONTENT SECTION
-// ================================
-.batch-content h3 {
-  color: var(--text-color);
-  font-weight: 600;
-  margin-bottom: 1rem;
-  font-size: 1.25rem;
-}
-
-// ================================
-// CUSTOM ACCORDIONS - FIXED FOR DARK MODE
-// ================================
-.custom-accordions .custom-accordion-panel {
-  margin-bottom: 0.75rem;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--surface-border);
-  background: var(--surface-card);
-  transition: all 0.3s ease;
-}
-
-.custom-accordions .custom-accordion-panel.expanded {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-color: var(--primary-color);
-}
-
-// ================================
-// SUCCESS/ERROR STATES - THEME AWARE
-// ================================
-.custom-accordions .custom-accordion-panel.batch-accordion-success {
-  border-left: 4px solid var(--green-500);
-}
-
-.custom-accordions .custom-accordion-panel.batch-accordion-success .custom-accordion-header {
-  background: var(--green-50);
-}
-
-.custom-accordions .custom-accordion-panel.batch-accordion-error {
-  border-left: 4px solid var(--red-500);
-}
-
-.custom-accordions .custom-accordion-panel.batch-accordion-error .custom-accordion-header {
-  background: var(--red-50);
-}
-
-// ================================
-// ACCORDION HEADER - FIXED COLORS
-// ================================
-.custom-accordions .custom-accordion-panel .custom-accordion-header {
-  padding: 16px 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: var(--surface-card);
-  border-bottom: 1px solid var(--surface-border);
-}
-
-.custom-accordions .custom-accordion-panel .custom-accordion-header:hover {
-  background: var(--surface-hover);
-  transform: translateY(-1px);
-}
-
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-// ================================
-// ACCORDION ICON - FIXED LOADING
-// ================================
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-toggle-icon {
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
   color: var(--text-color-secondary);
-  transition: transform 0.2s ease;
-  font-size: 1rem;
-  flex-shrink: 0;
-}
-
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-toggle-icon.expanded {
-  transform: rotate(90deg);
-}
-
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title {
-  flex: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.95rem;
-  color: var(--text-color);
-}
-
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .timestamp {
-  color: var(--text-color-secondary);
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-// ================================
-// API NAME - FIXED WHITE BOX ISSUE
-// ================================
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .api-name {
-  color: var(--primary-color);
-  font-weight: 700;
-  font-size: 1rem;
-  padding: 4px 8px;
-  background: var(--primary-50);
-  border-radius: 4px;
-  border: 1px solid var(--primary-200);
-}
-
-// ================================
-// DETAILS FORMATTING - IMPROVED SPACING
-// ================================
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .details {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  color: var(--text-color);
-  font-weight: 500;
-}
-
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .details .detail-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.9rem;
-}
-
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .details .detail-item .detail-label {
-  color: var(--text-color-secondary);
-  font-weight: 600;
-}
-
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .details .detail-item .detail-value {
-  color: var(--text-color);
-  font-weight: 500;
-}
-
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .rules-status {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .rules-status.success {
-  background: var(--green-100);
-  color: var(--green-800);
-}
-
-.custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .rules-status.error {
-  background: var(--red-100);
-  color: var(--red-800);
-}
-
-// ================================
-// ACCORDION CONTENT
-// ================================
-.custom-accordions .custom-accordion-panel .custom-accordion-content {
-  padding: 1rem;
-  background: var(--surface-card);
-  border-top: 1px solid var(--surface-border);
-}
-
-.custom-accordions .custom-accordion-panel .custom-accordion-content .transaction-info,
-.custom-accordions .custom-accordion-panel .custom-accordion-content .rules-section,
-.custom-accordions .custom-accordion-panel .custom-accordion-content .aggregation-section,
-.custom-accordions .custom-accordion-panel .custom-accordion-content .summary-section {
-  margin-bottom: 1.5rem;
-  padding: 1rem;
+  font-style: italic;
   background: var(--surface-ground);
-  border: 1px solid var(--surface-border);
   border-radius: 6px;
-}
+  border: 1px dashed var(--surface-border);
 
-.custom-accordions .custom-accordion-panel .custom-accordion-content h4 {
-  color: var(--text-color);
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-  font-size: 1.1rem;
+  i {
+    font-size: 1.2rem;
+  }
 }
 
 // ================================
-// DARK MODE SPECIFIC OVERRIDES
+// CUSTOM ACCORDIONS - CLEAN AND ELEGANT
 // ================================
-:host-context(.app-dark) .batch-viewer-container {
-  background: var(--surface-800);
-  border-color: var(--surface-600);
+.custom-accordions {
+  .custom-accordion-panel {
+    margin-bottom: 0.75rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--surface-border);
+    background: var(--surface-card);
+    transition: all 0.3s ease;
+
+    &.expanded {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border-color: var(--primary-200);
+    }
+
+    // Success/Error indicators with subtle colors
+    &.batch-accordion-success {
+      border-left: 3px solid var(--green-500);
+      
+      .custom-accordion-header {
+        background: var(--green-50);
+      }
+    }
+
+    &.batch-accordion-error {
+      border-left: 3px solid var(--red-500);
+      
+      .custom-accordion-header {
+        background: var(--red-50);
+      }
+    }
+
+    // ================================
+    // ACCORDION HEADER - FIXED DARK MODE
+    // ================================
+    .custom-accordion-header {
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--surface-card);
+      border-bottom: 1px solid var(--surface-border);
+
+      &:hover {
+        background: var(--surface-hover);
+      }
+
+      .accordion-title-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+
+        .accordion-toggle-icon {
+          color: var(--text-color-secondary);
+          transition: transform 0.2s ease;
+          font-size: 1rem;
+          flex-shrink: 0;
+
+          &.expanded {
+            transform: rotate(90deg);
+          }
+        }
+
+        .accordion-title {
+          flex: 1;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 12px;
+          font-size: 0.95rem;
+          color: var(--text-color);
+
+          .timestamp {
+            color: var(--text-color-secondary);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            font-weight: 500;
+          }
+
+          // FIXED: API Name styling for dark mode
+          .api-name {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 4px 8px;
+            background: var(--primary-50);
+            border-radius: 4px;
+            border: 1px solid var(--primary-200);
+          }
+
+          .details {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            color: var(--text-color);
+            font-weight: 500;
+
+            .detail-item {
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              font-size: 0.9rem;
+
+              .detail-label {
+                color: var(--text-color-secondary);
+                font-weight: 600;
+              }
+
+              .detail-value {
+                color: var(--text-color);
+                font-weight: 500;
+              }
+            }
+          }
+
+          .rules-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+
+            &.success {
+              background: var(--green-100);
+              color: var(--green-800);
+            }
+
+            &.error {
+              background: var(--red-100);
+              color: var(--red-800);
+            }
+          }
+        }
+      }
+    }
+
+    // ================================
+    // ACCORDION CONTENT - CLEAN SECTIONS
+    // ================================
+    .custom-accordion-content {
+      padding: 0;
+      background: var(--surface-card);
+
+      .content-section {
+        margin: 0;
+        padding: 1.5rem;
+        background: var(--surface-card);
+        border-bottom: 1px solid var(--surface-border);
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        h4 {
+          color: var(--text-color);
+          font-weight: 600;
+          margin-bottom: 1rem;
+          font-size: 1.1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        // Transaction info styling
+        &.transaction-info {
+          background: var(--surface-ground);
+
+          .transaction-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+
+            .detail-row {
+              display: flex;
+              gap: 1rem;
+              align-items: center;
+
+              strong {
+                min-width: 120px;
+                color: var(--text-color-secondary);
+              }
+
+              .txn-link {
+                color: var(--primary-color);
+                text-decoration: none;
+                font-family: monospace;
+
+                &:hover {
+                  text-decoration: underline;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
-:host-context(.app-dark) .batch-header {
-  background: var(--surface-700);
-  border-color: var(--surface-600);
+// ================================
+// SUMMARY SECTION ENHANCEMENTS
+// ================================
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  h4 {
+    margin: 0 !important;
+  }
+
+  .group-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+
+    label {
+      color: var(--text-color-secondary);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    ::ng-deep p-multiselect {
+      min-width: 200px;
+      
+      .p-multiselect {
+        background: var(--surface-card);
+        border: 1px solid var(--surface-border);
+        
+        &:not(.p-disabled):hover {
+          border-color: var(--primary-color);
+        }
+        
+        &:not(.p-disabled).p-focus {
+          border-color: var(--primary-color);
+          box-shadow: 0 0 0 2px var(--primary-100);
+        }
+      }
+    }
+  }
 }
 
-:host-context(.app-dark) .batch-header h2,
-:host-context(.app-dark) .batch-header .time-range-label {
-  color: var(--text-color);
+.summary-group {
+  margin-bottom: 1.5rem;
+
+  .group-header {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 1rem;
+    background: var(--primary-50);
+    border-radius: 4px;
+    border-left: 3px solid var(--primary-color);
+
+    h5 {
+      margin: 0;
+      color: var(--primary-color);
+      font-weight: 600;
+      font-size: 1rem;
+    }
+  }
 }
 
-:host-context(.app-dark) .batch-header .time-range-button-group {
-  border-color: var(--surface-600);
+// ================================
+// TABLE STYLING - COMPACT AND CLEAN
+// ================================
+::ng-deep .compact-table {
+  .p-datatable-header {
+    background: var(--surface-ground);
+    border: 1px solid var(--surface-border);
+    border-bottom: none;
+    padding: 0.75rem;
+
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+
+      .global-search-input {
+        max-width: 250px;
+      }
+    }
+  }
+
+  .p-datatable-thead > tr > th {
+    background: var(--surface-100) !important;
+    border: 1px solid var(--surface-border) !important;
+    padding: 0.5rem !important;
+    font-weight: 600 !important;
+    
+    .header-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      .header-title {
+        font-weight: 600;
+        color: var(--text-color);
+      }
+
+      .header-filter {
+        .header-filter-input {
+          width: 100%;
+          padding: 0.25rem 0.5rem;
+          font-size: 0.875rem;
+          border: 1px solid var(--surface-border);
+          border-radius: 4px;
+          background: var(--surface-card);
+
+          &:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px var(--primary-100);
+          }
+        }
+      }
+    }
+  }
+
+  .p-datatable-tbody > tr > td {
+    padding: 0.5rem !important;
+    border: 1px solid var(--surface-border) !important;
+    color: var(--text-color) !important;
+    font-size: 0.875rem;
+  }
+
+  .p-datatable-tbody > tr:hover {
+    background: var(--surface-hover) !important;
+  }
 }
 
-:host-context(.app-dark) .batch-header .time-range-button-group .time-range-button {
-  border-right-color: var(--surface-600) !important;
+// Message styling
+.rule-message.clickable {
+  cursor: pointer;
+  color: var(--primary-color);
+  
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
-:host-context(.app-dark) .batch-header .time-range-button-group .time-range-button:not(:disabled) {
-  background: var(--surface-700) !important;
-  color: var(--text-color) !important;
+// ================================
+// DROPDOWN IMPROVEMENTS - COMPACT SIZE
+// ================================
+::ng-deep .compact-dropdown {
+  max-height: 200px !important; // Reduced by 40%
+  
+  .p-multiselect-items {
+    max-height: 180px !important;
+  }
+  
+  .p-multiselect-item {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem !important;
+  }
 }
 
-:host-context(.app-dark) .batch-header .time-range-button-group .time-range-button:not(:disabled):hover {
-  background: var(--surface-600) !important;
-}
+// ================================
+// DARK MODE ENHANCEMENTS
+// ================================
+:host-context(.app-dark) {
+  .batch-viewer-container {
+    background: var(--surface-800);
+    border-color: var(--surface-600);
+  }
 
-:host-context(.app-dark) .batch-content h3 {
-  color: var(--text-color);
-}
+  .batch-header {
+    background: var(--surface-700);
+    border-color: var(--surface-600);
+  }
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel {
-  background: var(--surface-700);
-  border-color: var(--surface-600);
-}
+  .custom-accordions .custom-accordion-panel {
+    background: var(--surface-800);
+    border-color: var(--surface-600);
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel.expanded {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  border-color: var(--primary-color);
-}
+    &.expanded {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      border-color: var(--primary-400);
+    }
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel.batch-accordion-success .custom-accordion-header {
-  background: rgba(34, 197, 94, 0.1);
-}
+    &.batch-accordion-success .custom-accordion-header {
+      background: rgba(34, 197, 94, 0.15);
+    }
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel.batch-accordion-error .custom-accordion-header {
-  background: rgba(239, 68, 68, 0.1);
-}
+    &.batch-accordion-error .custom-accordion-header {
+      background: rgba(239, 68, 68, 0.15);
+    }
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-header {
-  background: var(--surface-700);
-  border-color: var(--surface-600);
-}
+    .custom-accordion-header {
+      background: var(--surface-700);
+      border-color: var(--surface-600);
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-header:hover {
-  background: var(--surface-600);
-}
+      &:hover {
+        background: var(--surface-600);
+      }
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title {
-  color: var(--text-color);
-}
+      .accordion-title-section .accordion-title {
+        // FIXED: API name in dark mode
+        .api-name {
+          background: rgba(59, 130, 246, 0.2);
+          border-color: rgba(59, 130, 246, 0.4);
+          color: var(--primary-300);
+        }
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .timestamp {
-  color: var(--text-color-secondary);
-}
+        .rules-status {
+          &.success {
+            background: rgba(34, 197, 94, 0.25);
+            color: var(--green-300);
+          }
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .api-name {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: var(--primary-400);
-}
+          &.error {
+            background: rgba(239, 68, 68, 0.25);
+            color: var(--red-300);
+          }
+        }
+      }
+    }
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .rules-status.success {
-  background: rgba(34, 197, 94, 0.2);
-  color: var(--green-400);
-}
+    .custom-accordion-content {
+      background: var(--surface-800);
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .rules-status.error {
-  background: rgba(239, 68, 68, 0.2);
-  color: var(--red-400);
-}
+      .content-section {
+        background: var(--surface-800);
+        border-color: var(--surface-600);
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-content {
-  background: var(--surface-700);
-  border-color: var(--surface-600);
-}
+        &.transaction-info {
+          background: var(--surface-700);
+        }
+      }
+    }
+  }
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-content .transaction-info,
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-content .rules-section,
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-content .aggregation-section,
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-content .summary-section {
-  background: var(--surface-800);
-  border-color: var(--surface-600);
-}
+  .summary-group .group-header {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: var(--primary-400);
 
-:host-context(.app-dark) .custom-accordions .custom-accordion-panel .custom-accordion-content h4 {
-  color: var(--text-color);
+    h5 {
+      color: var(--primary-300);
+    }
+  }
+
+  // Table styling for dark mode
+  ::ng-deep .compact-table {
+    .p-datatable-header {
+      background: var(--surface-700);
+      border-color: var(--surface-600);
+    }
+
+    .p-datatable-thead > tr > th {
+      background: var(--surface-600) !important;
+      border-color: var(--surface-500) !important;
+      color: var(--text-color) !important;
+
+      .header-filter .header-filter-input {
+        background: var(--surface-700);
+        border-color: var(--surface-500);
+        color: var(--text-color);
+
+        &:focus {
+          border-color: var(--primary-400);
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+      }
+    }
+
+    .p-datatable-tbody > tr > td {
+      border-color: var(--surface-600) !important;
+      background: var(--surface-800) !important;
+    }
+
+    .p-datatable-tbody > tr:hover {
+      background: var(--surface-700) !important;
+    }
+  }
 }
 
 // ================================
@@ -392,494 +613,45 @@
 @media (max-width: 768px) {
   .batch-viewer-container {
     padding: 0.5rem;
+    margin: 0.5rem 0;
   }
 
   .batch-header {
     flex-direction: column;
     gap: 1rem;
     align-items: stretch;
-  }
+    padding: 0.75rem;
 
-  .batch-header .time-range-selector {
-    justify-content: center;
-  }
+    .time-range-selector {
+      justify-content: center;
 
-  .batch-header .time-range-selector .time-range-button-group .time-range-button {
-    min-width: 45px;
-    font-size: 0.85rem;
+      .time-range-button-group .time-range-button {
+        min-width: 45px;
+        font-size: 0.85rem;
+      }
+    }
   }
 
   .custom-accordions .custom-accordion-panel .custom-accordion-header {
     padding: 12px 16px;
-  }
 
-  .custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title {
-    font-size: 0.85rem;
-  }
+    .accordion-title-section .accordion-title {
+      font-size: 0.85rem;
 
-  .custom-accordions .custom-accordion-panel .custom-accordion-header .accordion-title-section .accordion-title .details {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-}// Batch stuff/batch-viewer.component.scss - Fixed for dark mode
-:host {
-  display: block;
-  width: 100%;
-
-  .batch-viewer-container {
-    background: var(--surface-card);
-    border: 1px solid var(--surface-border);
-    border-radius: 8px;
-    padding: 1rem;
-    margin: 1rem 0;
-
-    // ================================
-    // BATCH HEADER - PROFESSIONAL STYLING
-    // ================================
-    .batch-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.5rem;
-      padding: 1rem;
-      background: var(--surface-ground);
-      border: 1px solid var(--surface-border);
-      border-radius: 8px;
-
-      .header-left {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-
-        h2 {
-          margin: 0;
-          color: var(--text-color);
-          font-weight: 600;
-          font-size: 1.5rem;
-        }
-
-        .streaming-indicator {
-          .streaming-control-btn {
-            font-size: 0.875rem;
-          }
-        }
-      }
-
-      .time-range-selector {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-
-        .time-range-label {
-          color: var(--text-color);
-          font-weight: 500;
-          white-space: nowrap;
-        }
-
-        .time-range-button-group {
-          display: flex;
-          border-radius: 6px;
-          overflow: hidden;
-          border: 1px solid var(--surface-border);
-
-          .time-range-button {
-            border-radius: 0 !important;
-            border: none !important;
-            
-            &.first-button {
-              border-radius: 6px 0 0 6px !important;
-            }
-            
-            &.last-button {
-              border-radius: 0 6px 6px 0 !important;
-            }
-
-            &:not(:disabled) {
-              background: var(--surface-card) !important;
-              color: var(--text-color) !important;
-              border-right: 1px solid var(--surface-border) !important;
-
-              &:hover {
-                background: var(--surface-hover) !important;
-              }
-            }
-
-            &:disabled {
-              background: var(--primary-color) !important;
-              color: white !important;
-            }
-          }
-        }
-      }
-    }
-
-    // ================================
-    // BATCH CONTENT SECTION
-    // ================================
-    .batch-content {
-      h3 {
-        color: var(--text-color);
-        font-weight: 600;
-        margin-bottom: 1rem;
-        font-size: 1.25rem;
-      }
-
-      // ================================
-      // CUSTOM ACCORDIONS - FIXED FOR DARK MODE
-      // ================================
-      .custom-accordions {
-        .custom-accordion-panel {
-          margin-bottom: 0.75rem;
-          border-radius: 8px;
-          overflow: hidden;
-          border: 1px solid var(--surface-border);
-          background: var(--surface-card);
-          transition: all 0.3s ease;
-
-          &.expanded {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            border-color: var(--primary-color);
-          }
-
-          // ================================
-          // SUCCESS/ERROR STATES - THEME AWARE
-          // ================================
-          &.batch-accordion-success {
-            border-left: 4px solid var(--green-500);
-
-            .custom-accordion-header {
-              background: var(--green-50);
-              
-              :host-context(.app-dark) & {
-                background: rgba(34, 197, 94, 0.1);
-              }
-            }
-          }
-
-          &.batch-accordion-error {
-            border-left: 4px solid var(--red-500);
-
-            .custom-accordion-header {
-              background: var(--red-50);
-              
-              :host-context(.app-dark) & {
-                background: rgba(239, 68, 68, 0.1);
-              }
-            }
-          }
-
-          // ================================
-          // ACCORDION HEADER - FIXED COLORS
-          // ================================
-          .custom-accordion-header {
-            padding: 16px 20px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background: var(--surface-card);
-            border-bottom: 1px solid var(--surface-border);
-
-            &:hover {
-              background: var(--surface-hover);
-              transform: translateY(-1px);
-            }
-
-            .accordion-title-section {
-              display: flex;
-              align-items: center;
-              gap: 12px;
-              width: 100%;
-
-              // ================================
-              // ACCORDION ICON - FIXED LOADING
-              // ================================
-              .accordion-toggle-icon {
-                color: var(--text-color-secondary);
-                transition: transform 0.2s ease;
-                font-size: 1rem;
-                flex-shrink: 0;
-                
-                &.expanded {
-                  transform: rotate(90deg);
-                }
-              }
-
-              .accordion-title {
-                flex: 1;
-                display: flex;
-                flex-wrap: wrap;
-                align-items: center;
-                gap: 12px;
-                font-size: 0.95rem;
-                color: var(--text-color);
-
-                .timestamp {
-                  color: var(--text-color-secondary);
-                  font-family: 'Consolas', 'Monaco', monospace;
-                  font-size: 0.85rem;
-                  font-weight: 500;
-                }
-
-                // ================================
-                // API NAME - FIXED WHITE BOX ISSUE
-                // ================================
-                .api-name {
-                  color: var(--primary-color);
-                  font-weight: 700;
-                  font-size: 1rem;
-                  padding: 4px 8px;
-                  background: var(--primary-50);
-                  border-radius: 4px;
-                  border: 1px solid var(--primary-200);
-                  
-                  :host-context(.app-dark) & {
-                    background: rgba(59, 130, 246, 0.1);
-                    border-color: rgba(59, 130, 246, 0.3);
-                    color: var(--primary-400);
-                  }
-                }
-
-                // ================================
-                // DETAILS FORMATTING - IMPROVED SPACING
-                // ================================
-                .details {
-                  display: flex;
-                  align-items: center;
-                  gap: 16px; // Better spacing between details
-                  flex-wrap: wrap;
-                  color: var(--text-color);
-                  font-weight: 500;
-
-                  .detail-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                    font-size: 0.9rem;
-
-                    .detail-label {
-                      color: var(--text-color-secondary);
-                      font-weight: 600;
-                    }
-
-                    .detail-value {
-                      color: var(--text-color);
-                      font-weight: 500;
-                    }
-                  }
-                }
-
-                .rules-status {
-                  display: flex;
-                  align-items: center;
-                  gap: 4px;
-                  padding: 2px 6px;
-                  border-radius: 4px;
-                  font-size: 0.8rem;
-                  font-weight: 600;
-
-                  &.success {
-                    background: var(--green-100);
-                    color: var(--green-800);
-                    
-                    :host-context(.app-dark) & {
-                      background: rgba(34, 197, 94, 0.2);
-                      color: var(--green-400);
-                    }
-                  }
-
-                  &.error {
-                    background: var(--red-100);
-                    color: var(--red-800);
-                    
-                    :host-context(.app-dark) & {
-                      background: rgba(239, 68, 68, 0.2);
-                      color: var(--red-400);
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          // ================================
-          // ACCORDION CONTENT
-          // ================================
-          .custom-accordion-content {
-            padding: 1rem;
-            background: var(--surface-card);
-            border-top: 1px solid var(--surface-border);
-
-            .transaction-info,
-            .rules-section,
-            .aggregation-section,
-            .summary-section {
-              margin-bottom: 1.5rem;
-              padding: 1rem;
-              background: var(--surface-ground);
-              border: 1px solid var(--surface-border);
-              border-radius: 6px;
-
-              h4 {
-                color: var(--text-color);
-                font-weight: 600;
-                margin-bottom: 0.75rem;
-                font-size: 1.1rem;
-              }
-
-              // Tables inside sections
-              .p-datatable {
-                .p-datatable-thead tr th {
-                  background: var(--surface-100) !important;
-                  color: var(--text-color) !important;
-                  border-color: var(--surface-border) !important;
-                }
-
-                .p-datatable-tbody tr td {
-                  color: var(--text-color) !important;
-                  border-color: var(--surface-border) !important;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // ================================
-  // DARK MODE SPECIFIC OVERRIDES
-  // ================================
-  :host-context(.app-dark) {
-    .batch-viewer-container {
-      background: var(--surface-800);
-      border-color: var(--surface-600);
-
-      .batch-header {
-        background: var(--surface-700);
-        border-color: var(--surface-600);
-
-        h2,
-        .time-range-label {
-          color: var(--text-color);
-        }
-
-        .time-range-button-group {
-          border-color: var(--surface-600);
-
-          .time-range-button {
-            border-right-color: var(--surface-600) !important;
-
-            &:not(:disabled) {
-              background: var(--surface-700) !important;
-              color: var(--text-color) !important;
-
-              &:hover {
-                background: var(--surface-600) !important;
-              }
-            }
-          }
-        }
-      }
-
-      .batch-content {
-        h3 {
-          color: var(--text-color);
-        }
-
-        .custom-accordions {
-          .custom-accordion-panel {
-            background: var(--surface-700);
-            border-color: var(--surface-600);
-
-            &.expanded {
-              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-              border-color: var(--primary-color);
-            }
-
-            .custom-accordion-header {
-              background: var(--surface-700);
-              border-color: var(--surface-600);
-
-              &:hover {
-                background: var(--surface-600);
-              }
-
-              .accordion-title-section {
-                .accordion-title {
-                  color: var(--text-color);
-
-                  .timestamp {
-                    color: var(--text-color-secondary);
-                  }
-                }
-              }
-            }
-
-            .custom-accordion-content {
-              background: var(--surface-700);
-              border-color: var(--surface-600);
-
-              .transaction-info,
-              .rules-section,
-              .aggregation-section,
-              .summary-section {
-                background: var(--surface-800);
-                border-color: var(--surface-600);
-
-                h4 {
-                  color: var(--text-color);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // ================================
-  // RESPONSIVE DESIGN
-  // ================================
-  @media (max-width: 768px) {
-    .batch-viewer-container {
-      padding: 0.5rem;
-
-      .batch-header {
+      .details {
         flex-direction: column;
-        gap: 1rem;
-        align-items: stretch;
-
-        .time-range-selector {
-          justify-content: center;
-
-          .time-range-button-group {
-            .time-range-button {
-              min-width: 45px;
-              font-size: 0.85rem;
-            }
-          }
-        }
+        align-items: flex-start;
+        gap: 8px;
       }
+    }
+  }
 
-      .custom-accordions {
-        .custom-accordion-panel {
-          .custom-accordion-header {
-            padding: 12px 16px;
+  .summary-header {
+    flex-direction: column;
+    align-items: stretch;
 
-            .accordion-title-section {
-              .accordion-title {
-                font-size: 0.85rem;
-
-                .details {
-                  flex-direction: column;
-                  align-items: flex-start;
-                  gap: 8px;
-                }
-              }
-            }
-          }
-        }
-      }
+    .group-selector {
+      justify-content: space-between;
     }
   }
 }
