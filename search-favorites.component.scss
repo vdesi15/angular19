@@ -5,17 +5,18 @@
       }
 
       .favorites-modal-container {
-        width: 600px;
+        width: 750px; // Increased width
         max-width: 90vw;
-        max-height: 80vh;
+        max-height: 85vh;
         border-radius: 16px;
         overflow: hidden;
-        background: var(--p-content-background);
+        background: var(--surface-card);
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         display: flex;
         flex-direction: column;
       }
 
+      // Elegant Header
       .modal-header {
         background: linear-gradient(135deg, #005a94 0%, #007bca 50%, #0099e6 100%);
         padding: 1.5rem;
@@ -24,6 +25,10 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+
+        :host-context(.app-dark) & {
+          background: linear-gradient(135deg, #004466 0%, #005a94 50%, #007bca 100%);
+        }
 
         .header-content {
           display: flex;
@@ -57,6 +62,7 @@
         }
       }
 
+      // Content Layout
       .modal-content {
         flex: 1;
         display: flex;
@@ -65,29 +71,54 @@
         padding: 0;
       }
 
-      .favorites-section,
+      .favorites-section {
+        padding: 1.5rem;
+        flex: 0 0 200px; // Fixed smaller height for favorites
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        border-bottom: 1px solid var(--surface-border);
+      }
+
       .recent-section {
         padding: 1.5rem;
-        flex: 1;
+        flex: 1; // Takes remaining space - much larger
         display: flex;
         flex-direction: column;
         min-height: 0;
       }
 
+      // Section Headers - Clean & Minimal
       .section-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 1rem;
         padding-bottom: 0.75rem;
-        border-bottom: 1px solid var(--p-content-border-color);
+        border-bottom: 1px solid var(--surface-border);
 
         .section-title {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          gap: 0.75rem;
           font-weight: 600;
-          font-size: 1.1rem;
+          font-size: 1rem;
+          color: var(--text-color);
+
+          .section-icon {
+            color: var(--text-color-secondary);
+            font-size: 1rem;
+          }
+        }
+
+        // Subtle Clear Button
+        .clear-button {
+          color: var(--text-color-secondary) !important;
+          
+          &:hover {
+            color: var(--text-color) !important;
+            background: var(--surface-hover) !important;
+          }
         }
       }
 
@@ -96,85 +127,187 @@
         overflow: hidden;
       }
 
+      // Elegant Empty States
       .empty-state {
         text-align: center;
         padding: 2rem 1rem;
         
-        i {
-          display: block;
+        .empty-icon {
+          font-size: 3rem;
+          color: var(--text-color-secondary);
+          opacity: 0.3;
           margin-bottom: 1rem;
+        }
+
+        .empty-text {
+          color: var(--text-color);
+          margin: 0 0 0.5rem 0;
+          font-weight: 500;
+        }
+
+        .empty-hint {
+          color: var(--text-color-secondary);
+          margin: 0;
+          font-size: 0.9rem;
         }
       }
 
+      // Polished Search Items
       .search-item {
-        padding: 0.75rem;
+        padding: 0.875rem;
         border-radius: 8px;
         margin-bottom: 0.5rem;
         cursor: pointer;
-        border: 1px solid var(--p-content-border-color);
+        border: 1px solid var(--surface-border);
+        background: var(--surface-ground);
         transition: all 0.2s ease;
 
         &:hover {
-          background: var(--p-highlight-bg);
-          border-color: var(--p-primary-color);
+          background: var(--surface-hover);
+          border-color: var(--primary-200);
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
-        .item-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 0.25rem;
+        :host-context(.app-dark) & {
+          background: var(--surface-700);
+          border-color: var(--surface-600);
 
-          .item-title {
-            font-weight: 600;
-            flex: 1;
-          }
-
-          .favorite-btn {
-            margin-left: auto;
+          &:hover {
+            background: var(--surface-600);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
           }
         }
 
-        .item-subtitle {
-          font-size: 0.85rem;
-          color: var(--p-text-color-secondary);
-          margin-bottom: 0.25rem;
-        }
+        .item-content {
+          .item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
 
-        .item-timestamp {
-          font-size: 0.75rem;
-          color: var(--p-text-color-secondary);
+            .search-type-icon {
+              color: var(--primary-color);
+              font-size: 0.9rem;
+              margin-right: 0.75rem;
+              flex-shrink: 0;
+            }
+
+            .item-title {
+              font-weight: 600;
+              flex: 1;
+              color: var(--text-color);
+              font-size: 0.95rem;
+            }
+
+            // Subtle Favorite Button
+            .favorite-action-btn {
+              margin-left: auto;
+              color: var(--text-color-secondary) !important;
+              opacity: 0.6;
+              transition: all 0.2s ease;
+
+              &:hover {
+                opacity: 1;
+                color: var(--text-color) !important;
+                background: var(--surface-hover) !important;
+              }
+
+              &.is-favorite {
+                color: #14b8a6 !important; // Teal for favorited items
+                opacity: 0.8;
+
+                &:hover {
+                  opacity: 1;
+                }
+              }
+            }
+          }
+
+          .item-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-color-secondary);
+            margin-bottom: 0.25rem;
+            line-height: 1.3;
+          }
+
+          .item-timestamp {
+            font-size: 0.75rem;
+            color: var(--text-color-secondary);
+            opacity: 0.7;
+          }
         }
       }
 
+      // Elegant Footer
       .modal-footer {
         padding: 1rem 1.5rem;
-        border-top: 1px solid var(--p-content-border-color);
-        background: var(--p-surface-ground);
+        border-top: 1px solid var(--surface-border);
+        background: var(--surface-50);
         display: flex;
-        justify-content: flex-end;
-      }
+        justify-content: space-between;
+        align-items: center;
 
-      .has-favorites {
-        position: relative;
-        
-        &::after {
-          content: '';
-          position: absolute;
-          top: 6px;
-          right: 6px;
-          width: 8px;
-          height: 8px;
-          background: var(--p-primary-color);
-          border-radius: 50%;
-          border: 2px solid var(--p-content-background);
+        :host-context(.app-dark) & {
+          background: var(--surface-800);
+        }
+
+        .footer-info {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: var(--text-color-secondary);
+          font-size: 0.85rem;
+
+          .info-icon {
+            font-size: 0.9rem;
+            opacity: 0.7;
+          }
+        }
+
+        .close-footer-btn {
+          color: var(--text-color) !important;
+          border-color: var(--surface-border) !important;
+
+          &:hover {
+            background: var(--surface-hover) !important;
+          }
         }
       }
 
-      // Dark mode adjustments
-      :host-context(.app-dark) {
-        .modal-header {
-          background: linear-gradient(135deg, #004466 0%, #005a94 50%, #007bca 100%);
+      // Custom Scroll Panel
+      ::ng-deep .custom-scroll {
+        .p-scrollpanel-wrapper {
+          border-right: none !important;
+        }
+
+        .p-scrollpanel-bar {
+          background: var(--primary-color) !important;
+          opacity: 0.3 !important;
+          width: 4px !important;
+          border-radius: 2px !important;
+
+          &:hover {
+            opacity: 0.6 !important;
+          }
+        }
+      }
+
+      // Mobile Responsive
+      @media (max-width: 768px) {
+        .favorites-modal-container {
+          width: 95vw;
+          max-height: 90vh;
+        }
+
+        .favorites-section {
+          flex: 0 0 150px;
+        }
+
+        .modal-footer {
+          flex-direction: column;
+          gap: 0.75rem;
+          align-items: center;
         }
       }
     }

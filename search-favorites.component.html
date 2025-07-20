@@ -1,30 +1,16 @@
-<button 
-      pButton 
-      type="button" 
-      icon="pi pi-heart" 
-      class="p-button-text p-button-rounded"
-      (click)="showModal()"
-      pTooltip="Search Favorites & History"
-      tooltipPosition="bottom"
-      [class.has-favorites]="hasFavorites()">
-      @if (favoriteCount() > 0) {
-        <p-badge [value]="favoriteCount().toString()" severity="info" styleClass="ml-2"></p-badge>
-      }
-    </button>
-
-    <!-- Modal Dialog -->
-    <p-dialog 
+<p-dialog 
       maskStyleClass="backdrop-blur-sm" 
       [(visible)]="visible" 
+      (visibleChange)="visibleChange.emit($event)"
       styleClass="!border-0 !bg-transparent favorites-modal"
       [modal]="true"
-      [closable]="true"
+      [closable]="false"
       [draggable]="false"
       [resizable]="false">
       
       <ng-template #headless>
         <div class="favorites-modal-container">
-          <!-- Header with gradient -->
+          <!-- Elegant Header -->
           <div class="modal-header">
             <div class="header-content">
               <i class="pi pi-heart header-icon"></i>
@@ -33,33 +19,28 @@
                 <p class="header-subtitle">Quick access to your saved searches</p>
               </div>
             </div>
-            <button 
-              pButton 
-              type="button" 
-              icon="pi pi-times" 
-              class="p-button-text p-button-rounded close-button"
-              (click)="closeModal()">
+            <button pButton type="button" icon="pi pi-times" 
+                    class="p-button-text p-button-rounded close-button"
+                    (click)="closeModal()">
             </button>
           </div>
 
           <!-- Content Area -->
           <div class="modal-content">
-            <!-- Favorites Section -->
+            <!-- Favorites Section - Smaller -->
             <div class="favorites-section">
               <div class="section-header">
                 <div class="section-title">
-                  <i class="pi pi-heart-fill text-primary"></i>
+                  <i class="pi pi-heart section-icon"></i>
                   <span>Favorites</span>
-                  <p-badge [value]="favoriteItems().length.toString()" severity="info"></p-badge>
+                  <p-badge [value]="favoriteItems().length.toString()" severity="secondary"></p-badge>
                 </div>
                 @if (favoriteItems().length > 0) {
-                  <button 
-                    pButton 
-                    type="button" 
-                    icon="pi pi-trash"
-                    class="p-button-text p-button-sm p-button-danger"
-                    (click)="clearFavorites($event)"
-                    pTooltip="Clear all favorites">
+                  <button pButton type="button" 
+                          icon="pi pi-trash"
+                          class="p-button-text p-button-sm clear-button"
+                          (click)="clearFavorites($event)"
+                          pTooltip="Clear all favorites">
                   </button>
                 }
               </div>
@@ -67,28 +48,25 @@
               <div class="items-container">
                 @if (favoriteItems().length === 0) {
                   <div class="empty-state">
-                    <i class="pi pi-heart text-4xl text-color-secondary opacity-50"></i>
-                    <p class="text-color-secondary mt-3">No favorites yet</p>
-                    <p class="text-sm text-color-secondary">Click the heart icon on any search to save it</p>
+                    <i class="pi pi-heart empty-icon"></i>
+                    <p class="empty-text">No favorites yet</p>
+                    <p class="empty-hint">Click the heart icon on any search to save it</p>
                   </div>
                 } @else {
                   @for (item of favoriteItems(); track item.id) {
                     <div class="search-item" (click)="executeSearch(item)">
                       <div class="item-content">
                         <div class="item-header">
-                          <i [class]="item.icon + ' mr-2 text-primary'"></i>
+                          <i [class]="getSearchIcon(item.searchData.type) + ' search-type-icon'"></i>
                           <span class="item-title">{{ item.title }}</span>
-                          <button 
-                            pButton 
-                            type="button" 
-                            icon="pi pi-heart-fill" 
-                            class="p-button-text p-button-sm p-button-danger favorite-btn"
-                            (click)="toggleFavorite(item.id, $event)"
-                            pTooltip="Remove from favorites">
+                          <button pButton type="button" 
+                                  icon="pi pi-heart-fill" 
+                                  class="p-button-text p-button-sm favorite-action-btn"
+                                  (click)="toggleFavorite(item.id, $event)"
+                                  pTooltip="Remove from favorites">
                           </button>
                         </div>
                         <div class="item-subtitle">{{ item.subtitle }}</div>
-                        <div class="item-timestamp">{{ formatTimestamp(item.timestamp) }}</div>
                       </div>
                     </div>
                   }
@@ -96,24 +74,20 @@
               </div>
             </div>
 
-            <p-divider></p-divider>
-
-            <!-- Recent Searches Section -->
+            <!-- Recent Searches Section - Larger -->
             <div class="recent-section">
               <div class="section-header">
                 <div class="section-title">
-                  <i class="pi pi-clock text-primary"></i>
+                  <i class="pi pi-clock section-icon"></i>
                   <span>Recent Searches</span>
                   <p-badge [value]="recentItems().length.toString()" severity="secondary"></p-badge>
                 </div>
                 @if (recentItems().length > 0) {
-                  <button 
-                    pButton 
-                    type="button" 
-                    icon="pi pi-trash"
-                    class="p-button-text p-button-sm p-button-danger"
-                    (click)="clearRecent($event)"
-                    pTooltip="Clear all recent searches">
+                  <button pButton type="button" 
+                          icon="pi pi-trash"
+                          class="p-button-text p-button-sm clear-button"
+                          (click)="clearRecent($event)"
+                          pTooltip="Clear recent searches">
                   </button>
                 }
               </div>
@@ -121,25 +95,24 @@
               <div class="items-container">
                 @if (recentItems().length === 0) {
                   <div class="empty-state">
-                    <i class="pi pi-clock text-4xl text-color-secondary opacity-50"></i>
-                    <p class="text-color-secondary mt-3">No recent searches</p>
-                    <p class="text-sm text-color-secondary">Your search history will appear here</p>
+                    <i class="pi pi-clock empty-icon"></i>
+                    <p class="empty-text">No recent searches</p>
+                    <p class="empty-hint">Your search history will appear here</p>
                   </div>
                 } @else {
-                  <p-scrollPanel [style]="{ width: '100%', height: '200px' }">
+                  <p-scrollPanel [style]="{ width: '100%', height: '100%' }" styleClass="custom-scroll">
                     @for (item of recentItems(); track item.id) {
                       <div class="search-item" (click)="executeSearch(item)">
                         <div class="item-content">
                           <div class="item-header">
-                            <i [class]="item.icon + ' mr-2'"></i>
+                            <i [class]="getSearchIcon(item.searchData.type) + ' search-type-icon'"></i>
                             <span class="item-title">{{ item.title }}</span>
-                            <button 
-                              pButton 
-                              type="button" 
-                              [icon]="isFavorite(item.id) ? 'pi pi-heart-fill' : 'pi pi-heart'" 
-                              [class]="'p-button-text p-button-sm favorite-btn ' + (isFavorite(item.id) ? 'p-button-danger' : '')"
-                              (click)="toggleFavorite(item.id, $event)"
-                              [pTooltip]="isFavorite(item.id) ? 'Remove from favorites' : 'Add to favorites'">
+                            <button pButton type="button" 
+                                    [icon]="isFavorite(item.id) ? 'pi pi-heart-fill' : 'pi pi-heart'" 
+                                    class="p-button-text p-button-sm favorite-action-btn"
+                                    [class.is-favorite]="isFavorite(item.id)"
+                                    (click)="toggleFavorite(item.id, $event)"
+                                    [pTooltip]="isFavorite(item.id) ? 'Remove from favorites' : 'Add to favorites'">
                             </button>
                           </div>
                           <div class="item-subtitle">{{ item.subtitle }}</div>
@@ -153,19 +126,20 @@
             </div>
           </div>
 
-          <!-- Footer -->
+          <!-- Elegant Footer -->
           <div class="modal-footer">
-            <button 
-              pButton 
-              type="button" 
-              label="Close" 
-              class="p-button-outlined"
-              (click)="closeModal()">
+            <div class="footer-info">
+              <i class="pi pi-info-circle info-icon"></i>
+              <span>All favorites are stored in your browser cookies</span>
+            </div>
+            <button pButton type="button" 
+                    label="Close" 
+                    class="p-button-outlined close-footer-btn"
+                    (click)="closeModal()">
             </button>
           </div>
         </div>
       </ng-template>
     </p-dialog>
 
-    <!-- Confirmation Dialogs -->
     <p-confirmDialog></p-confirmDialog>
