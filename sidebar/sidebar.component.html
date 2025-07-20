@@ -1,42 +1,60 @@
 <div class="sidebar-container"
-        [ngClass]="{ 'sidebar-expanded': drawerVisible(), 'sidebar-collapsed': !drawerVisible() }">
+    [ngClass]="{ 'sidebar-expanded': drawerVisible(), 'sidebar-collapsed': !drawerVisible() }">
 
-        <!-- Header -->
-        <div class="sidebar-seperator">
-            <button class="burger-menu" (click)="toggleSidebar()">
-                <i class="pi" [ngClass]="drawerVisible() ? 'pi-arrow-circle-left' : 'pi-bars'"></i>
-                @if(drawerVisible()) {
-                <span>Collapse</span>
-                }
-            </button>
-        </div>
-
-        <!-- Navigation content -->
-        <div class="sidebar-content">
-            <nav class="nav-list">
-                <ul class="list-group">
-                    <!-- Nav items from config -->
-                    @for (item of navItems(); track item.routerLink) {
-                    <li>
-                        <a class="nav-item side-nav-menu-item list-group-item list-group-item-action"
-                            [attr.title]="item.tooltip" [routerLink]="item.routerLink" routerLinkActive="active"
-                            [queryParamsHandling]="'preserve'">
-                            <div class="nav_icons d-flex w-100 justify-content-start align-items-center">
-                                <i [class]="item.icon" aria-hidden="true"></i>
-                                @if(drawerVisible()) {
-                                <span>{{item.label}}</span>
-                                }
-                            </div>
-                        </a>
-                    </li>
-                    }
-
-                    <!-- Use the modal favorites component -->
-                    <li>
-                        <app-favorites-modal></app-favorites-modal>
-                    </li>
-                </ul>
-            </nav>
-            <div class="sidebar-spacer"></div>
-        </div>
+    <!-- Header -->
+    <div class="sidebar-seperator">
+        <button class="burger-menu" (click)="toggleSidebar()">
+            <i class="pi" [ngClass]="drawerVisible() ? 'pi-arrow-circle-left' : 'pi-bars'"></i>
+            @if(drawerVisible()) {
+            <span>Collapse</span>
+            }
+        </button>
     </div>
+
+    <!-- Navigation content -->
+    <div class="sidebar-content">
+        <nav class="nav-list">
+            <ul class="list-group">
+                <!-- Nav items from config -->
+                @for (item of navItems(); track item.routerLink) {
+                <li>
+                    <a class="nav-item side-nav-menu-item list-group-item list-group-item-action"
+                        [attr.title]="item.tooltip" [routerLink]="item.routerLink" routerLinkActive="active"
+                        [queryParamsHandling]="'preserve'">
+                        <div class="nav_icons d-flex w-100 justify-content-start align-items-center">
+                            <i [class]="item.icon" aria-hidden="true"></i>
+                            @if(drawerVisible()) {
+                            <span>{{item.label}}</span>
+                            }
+                        </div>
+                    </a>
+                </li>
+                }
+
+                <!-- Favorites & History - Matching pattern -->
+                <li>
+                    <button
+                        class="nav-item side-nav-menu-item list-group-item list-group-item-action nav-button favorites-nav-button"
+                        title="Search history and saved favorites" (click)="showModal()">
+                        <div class="nav_icons d-flex w-100 justify-content-start align-items-center">
+                            <i class="pi pi-heart favorites-heart-icon" [class.has-favorites]="favoriteCount() > 0"
+                                aria-hidden="true"></i>
+                            @if(drawerVisible()) {
+                            <span>Fav & History</span>
+                            @if (favoriteCount() > 0) {
+                            <p-badge [value]="favoriteCount().toString()" severity="info"
+                                styleClass="ml-auto favorites-badge">
+                            </p-badge>
+                            }
+                            }
+                        </div>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+        <div class="sidebar-spacer"></div>
+    </div>
+
+    <!-- Modal Component -->
+    <app-favorites-modal [visible]="modalVisible()" (visibleChange)="modalVisible.set($event)"></app-favorites-modal>
+</div>

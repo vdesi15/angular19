@@ -16,18 +16,15 @@ import { MenuItem } from 'primeng/api';
     selector: 'app-sidebar',
     standalone: true,
     imports: [
-        CommonModule,
-        RouterLink,
-        RouterLinkActive,
-        TooltipModule,
-        SkeletonModule,
-        ButtonModule
+        CommonModule, RouterLink, RouterLinkActive, TooltipModule, 
+        SkeletonModule, ButtonModule, BadgeModule, FavoritesModalComponent
     ],
     templateUrl: './sidebar.component.html',
     styleUrls: ['./sidebar.component.scss']
 })
 export class SidebarComponent {
     public drawerVisible = signal(false);
+    public modalVisible = signal(false);
 
     // Services
     private navigationService = inject(NavigationService);
@@ -39,5 +36,9 @@ export class SidebarComponent {
 
     public toggleSidebar(): void {
         this.drawerVisible.update(expanded => !expanded);
+    }
+
+    public showModal(): void {
+        this.modalVisible.set(true);
     }
 }

@@ -1,3 +1,8 @@
+// sidebar/sidebar.component.scss - Complete file with favorites styling
+// ================================
+// SIDEBAR CONTAINER - FULL HEIGHT
+// ================================
+
 :host {
     display: block;
     height: 100vh;
@@ -124,6 +129,30 @@
 }
 
 // ================================
+// FAVORITES NAVIGATION BUTTON - FIXED FOR LIGHT/DARK MODE
+// ================================
+.favorites-nav-button {
+    .favorites-heart-icon {
+        color: #cbd5e1 !important; // Light gray in both modes
+        font-size: 14px;
+        transition: color 0.2s ease;
+
+        // Teal color when has favorites
+        &.has-favorites {
+            color: #14b8a6 !important; // Teal color that works in both light and dark
+        }
+    }
+
+    &:hover .favorites-heart-icon {
+        color: #06b6d4 !important; // Cyan on hover
+    }
+
+    .favorites-badge {
+        margin-left: auto;
+    }
+}
+
+// ================================
 // NAVIGATION ICONS
 // ================================
 .nav_icons {
@@ -131,10 +160,6 @@
         font-size: 14px;
         margin-right: 10px;
         width: 10px;
-    }
-
-    .text-pink-500 {
-        color: #ec4899 !important;
     }
 
     .ml-auto {
