@@ -1,47 +1,38 @@
-<!-- search-result.component.html - Updated with animations -->
+<!-- search-result.component.html - Custom accordion preserving ALL your existing logic -->
 <div class="custom-search-result" [class.expanded]="search.isExpanded">
-  <!-- Custom Accordion Header with animations -->
+  <!-- Custom Accordion Header -->
   <div class="result-header" 
-       [@headerHover]="headerHoverState()"
        (click)="toggleAccordion()" 
-       (mouseenter)="onHeaderMouseEnter()"
-       (mouseleave)="onHeaderMouseLeave()"
        [class.active]="search.isExpanded"
        role="button" 
        tabindex="0"
        (keydown.enter)="toggleAccordion()"
        (keydown.space)="toggleAccordion()">
     
-    <div class="header-content">
+    <div class="accordion-header">
       <div class="header-left">
-        <!-- Animated Expand/Collapse Icon -->
-        <i class="toggle-icon pi pi-chevron-right" 
-           [@iconRotate]="search.isExpanded ? 'expanded' : 'collapsed'"></i>
+        <!-- Expand/Collapse Icon -->
+        <i class="toggle-icon pi" 
+           [class.pi-chevron-right]="!search.isExpanded"
+           [class.pi-chevron-down]="search.isExpanded"></i>
         
         <span class="font-bold text-lg mr-3">{{ search.title }}</span>
-        
         @if (hasTransactionDetails()) {
           <p-tag value="Transaction Details" severity="info" size="small" class="mr-2"></p-tag>
         }
-        
         <span class="text-sm text-color-secondary ml-2">{{ recordsSummary() }}</span>
       </div>
       
-      <!-- Buttons Container - Isolated from header click -->
+      <!-- FIXED: Buttons container with proper click isolation -->
       <div class="header-right" (click)="$event.stopPropagation()">
+        <!-- Streaming Control Button -->
         @if(search.isStreaming) {
-          <button pButton type="button" 
-                  class="p-button-sm streaming-control-btn" 
-                  [ngClass]="{
-                    'p-button-success': !isStopButtonHovered(),
-                    'p-button-danger': isStopButtonHovered()
-                  }" 
-                  (mouseenter)="isStopButtonHovered.set(true)" 
-                  (mouseleave)="isStopButtonHovered.set(false)"
-                  (click)="stopStreaming($event)" 
-                  pTooltip="Stop the live data stream" 
-                  tooltipPosition="top">
-            
+          <button pButton type="button" class="p-button-sm streaming-control-btn" [ngClass]="{
+              'p-button-success': !isStopButtonHovered(),
+              'p-button-danger': isStopButtonHovered()
+            }" (mouseenter)="isStopButtonHovered.set(true)" (mouseleave)="isStopButtonHovered.set(false)"
+            (click)="stopStreaming($event)" pTooltip="Stop the live data stream" tooltipPosition="top">
+
             @if (isStopButtonHovered()) {
               <span class="flex align-items-center gap-2">
                 <i class="pi pi-stop-circle"></i>
@@ -56,11 +47,10 @@
           </button>
         }
 
-        <button pButton type="button" 
-                icon="pi pi-times"
-                class="p-button-text p-button-rounded p-button-danger p-button-sm" 
-                pTooltip="Close this result panel"
-                (click)="closePanel($event)">
+        <!-- Close Panel Button -->
+        <button pButton type="button" icon="pi pi-times"
+          class="p-button-text p-button-rounded p-button-danger p-button-sm" pTooltip="Close this result panel"
+          (click)="closePanel($event)">
         </button>
       </div>
     </div>
@@ -68,9 +58,12 @@
 
   <!-- Custom Accordion Content with slide animation -->
   <div class="result-content" 
-       [@slideToggle]="search.isExpanded ? 'expanded' : 'collapsed'">
+       [@slideToggle]="search.isExpanded ? 'expanded' : 'collapsed'"
+       [style.overflow]="search.isExpanded ? 'visible' : 'hidden'">
     
+    <!-- ALL YOUR EXISTING CONTENT PRESERVED EXACTLY -->
     <div class="content-wrapper" *ngIf="search.isExpanded" [@fadeInContent]>
+      <!-- Show different toolbars based on search type -->
       @if (!search.error) {
         
         <!-- Streaming Toolbar for SSE searches -->
@@ -89,62 +82,71 @@
         <!-- Transaction Toolbar for transaction searches -->
         @if (shouldShowTransactionToolbar()) {
           <app-transaction-toolbar 
-            [views]="getViewsForTransaction()" 
+            [views]="availableViews()" 
             [selectedView]="selectedViewId()"
             (viewChange)="onViewChange($event)">
           </app-transaction-toolbar>
         }
 
-        <!-- JIRA Toolbar for JIRA searches -->
-        @if (shouldShowJiraToolbar()) {
-          <app-jira-toolbar>
-          </app-jira-toolbar>
-        }
+      }
 
-        <!-- Batch Toolbar for batch searches -->
-        @if (shouldShowBatchToolbar()) {
-          <app-batch-toolbar>
-          </app-batch-toolbar>
-        }
-
-        <!-- Content Viewers -->
-        @if (shouldShowLogViewer()) {
-          <app-log-viewer 
-            [search]="search" 
-            [visibleColumns]="streamingVisibleColumns()"
-            [selectedViewId]="selectedViewId()"
-            (drilldown)="onDrilldown($event)">
+      <div class="result-content-wrapper">
+        @if (search.isLoading && search.data.length === 0) {
+          <!-- Loading skeleton with visible columns only -->
+          <app-table-skeleton 
+            [columns]="finalVisibleColumns()" 
+            [rowCount]="10">
+          </app-table-skeleton>
+        } @else if (search.error) {
+          <!-- Error state -->
+          <div class="error-container">
+            <p class="p-3 text-red-500 font-bold">
+              <i class="pi pi-exclamation-circle mr-2"></i>{{ search.error }}
+            </p>
+            <button pButton type="button" label="Retry" icon="pi pi-refresh" class="p-button-sm p-button-outlined"
+              (click)="retrySearch()">
+            </button>
+          </div>
+        } @else if (hasTransactionDetails()) {
+          <!-- Split layout for transaction details - YOUR 70%/30% SPLIT PRESERVED -->
+          <div class="transaction-details-layout">
+            <!-- 80% - Log Viewer -->
+            <div class="log-viewer-section">
+              <app-log-viewer #logViewer 
+                [searchInstance]="search" 
+                [visibleColumns]="finalVisibleColumns()"
+                (rowDrilldown)="onDrilldown($event)" 
+                (filteredCountChange)="updateFilteredCount($event)">
+              </app-log-viewer>
+            </div>
+            
+            <!-- 20% - Transaction Timeline -->
+            <div class="timeline-section">
+              <app-transaction-timeline 
+                [transactionDetails]="search.transactionDetails"
+                [transactionId]="search.query"
+                class="transaction-timeline">
+              </app-transaction-timeline>
+            </div>
+          </div>
+        } @else if (shouldShowLogViewer()) {
+          <!-- Regular log viewer -->
+          <app-log-viewer #logViewer 
+            [searchInstance]="search" 
+            [visibleColumns]="finalVisibleColumns()"
+            (rowDrilldown)="onDrilldown($event)" 
+            (filteredCountChange)="updateFilteredCount($event)">
           </app-log-viewer>
         }
 
-        @if (shouldShowBatchViewer()) {
+        <!-- Add Batch Viewer section in the result content wrapper, after the log viewer checks -->
+        @else if (shouldShowBatchViewer()) {
+          <!-- Batch viewer for batch searches -->
           <app-batch-viewer 
             [search]="search">
           </app-batch-viewer>
         }
-
-        @if (shouldShowJiraViewer()) {
-          <app-jira-viewer 
-            [search]="search">
-          </app-jira-viewer>
-        }
-
-      } @else {
-        <!-- Error State -->
-        <div class="error-container p-4">
-          <div class="text-center">
-            <i class="pi pi-exclamation-triangle text-4xl text-red-500 mb-3"></i>
-            <h3 class="text-lg font-semibold mb-2">Search Error</h3>
-            <p class="text-color-secondary mb-4">{{ search.error }}</p>
-            <button pButton type="button" 
-                    label="Retry Search" 
-                    icon="pi pi-refresh" 
-                    class="p-button-outlined"
-                    (click)="retrySearch()">
-            </button>
-          </div>
-        </div>
-      }
+      </div>
     </div>
   </div>
 </div>

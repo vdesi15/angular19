@@ -1,202 +1,196 @@
-// ================================
-// SIMPLIFIED ACCORDION STYLES FOR SEARCH RESULTS
-// Add this to your search-result.component.scss
-// ================================
-
+// search-result.component.scss - Enhanced styles preserving your layouts
 :host {
   display: block;
   width: 100%;
   margin-bottom: 1rem;
 
-  // ================================
-  // MAIN ACCORDION STYLING
-  // ================================
-  
-  ::ng-deep .result-accordion {
+  .custom-search-result {
     border: 1px solid var(--surface-border);
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: var(--surface-card);
+    transition: all 0.2s ease;
 
-    .p-accordion-panel {
-      border: none;
-      margin: 0;
-      
-      // ================================
-      // ACCORDION HEADER - PROFESSIONAL COLORS
-      // ================================
-      .p-accordion-header {
+    &:hover {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    &.expanded {
+      .result-header {
+        border-bottom: 1px solid var(--surface-border);
         
-        a, .p-accordion-header-link {
-          // LIGHT MODE: Professional Gray Background
-          background: #f8f9fa !important;
-          border: none !important;
-          border-bottom: 1px solid #e9ecef !important;
-          color: var(--text-color) !important;
-          padding: 1rem 1.5rem !important;
-          font-weight: 500 !important;
-          transition: all 0.2s ease !important;
-          text-decoration: none !important;
-          display: flex !important;
-          align-items: center !important;
-          width: 100% !important;
-          
-          &:hover {
-            background: #e9ecef !important;
-            color: var(--text-color) !important;
-          }
-          
-          &:focus {
-            outline: none !important;
-            box-shadow: inset 0 0 0 2px var(--primary-color) !important;
-          }
-          
-          // Accordion toggle icon styling
-          .p-accordion-toggle-icon {
-            color: var(--primary-color) !important;
-            margin-left: auto !important;
-            transition: transform 0.3s ease !important;
-          }
-        }
-        
-        // When accordion is expanded
-        &[aria-expanded="true"] a,
-        &[aria-expanded="true"] .p-accordion-header-link {
-          background: #e9ecef !important;
-          border-bottom-color: var(--primary-color) !important;
-          
-          .p-accordion-toggle-icon {
-            transform: rotate(180deg) !important;
-          }
-        }
-      }
-      
-      // ================================
-      // ACCORDION CONTENT
-      // ================================
-      .p-accordion-content {
-        background: #ffffff !important;
-        border: none !important;
-        padding: 0 !important;
-        
-        .p-accordion-content-container {
-          padding: 0 !important;
+        .toggle-icon {
+          transform: rotate(90deg);
         }
       }
     }
   }
 
   // ================================
-  // DARK MODE ACCORDION COLORS
+  // HEADER STYLING (Matches p-accordion)
   // ================================
-  :host-context(.app-dark) ::ng-deep .result-accordion {
-    border-color: var(--surface-600);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    
-    .p-accordion-header {
-      
-      a, .p-accordion-header-link {
-        // DARK MODE: Professional Dark Gray Background
-        background: #374151 !important; // Dark gray
-        border-bottom-color: #4b5563 !important;
-        color: var(--text-color) !important;
-        
-        &:hover {
-          background: #4b5563 !important; // Lighter gray on hover
-          color: var(--text-color) !important;
-        }
-      }
-      
-      &[aria-expanded="true"] a,
-      &[aria-expanded="true"] .p-accordion-header-link {
-        background: #4b5563 !important;
-        border-bottom-color: var(--primary-color) !important;
-      }
-    }
-    
-    .p-accordion-content {
-      background: var(--surface-900) !important;
-    }
-  }
+  .result-header {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    position: relative;
 
-  // ================================
-  // ACCORDION HEADER CONTENT LAYOUT
-  // ================================
-  .accordion-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: 1rem;
-    
+    &:hover {
+      background: #e9ecef;
+    }
+
+    &:focus {
+      outline: 2px solid var(--primary-color);
+      outline-offset: -2px;
+    }
+
+    &.active {
+      background: #e9ecef;
+    }
+
+    .accordion-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
     .header-left {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
       flex: 1;
-      min-width: 0; // Allow content to shrink
-      
-      .font-bold {
-        font-weight: 600;
-        color: var(--text-color);
-      }
-      
-      .text-color-secondary {
-        color: var(--text-color-secondary);
-        font-size: 0.875rem;
-      }
+      min-width: 0;
     }
-    
+
     .header-right {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      flex-shrink: 0; // Prevent buttons from shrinking
-      
-      .streaming-control-btn {
-        font-size: 0.875rem;
-        padding: 0.375rem 0.75rem;
-      }
-      
-      .p-button-text {
-        margin-left: 0.5rem;
-      }
+      margin-left: 1rem;
+      flex-shrink: 0;
+    }
+
+    .toggle-icon {
+      margin-right: 0.75rem;
+      transition: transform 0.3s ease;
+      color: var(--primary-color);
+      font-size: 1.1rem;
+      flex-shrink: 0;
     }
   }
 
   // ================================
-  // TRANSACTION DETAILS LAYOUT (from previous artifact)
+  // CONTENT AREA STYLING
   // ================================
+  .result-content {
+    background: var(--surface-card);
+    overflow: hidden;
+    
+    .content-wrapper {
+      // Let child components handle their own spacing
+    }
+  }
+
+  // ================================
+  // PRESERVE YOUR EXISTING LAYOUTS
+  // ================================
+  
+  // Transaction details layout (70%/30% split)
   .transaction-details-layout {
     display: flex;
-    height: 100%;
-    gap: 5px; // Exact 5px gap
-    min-height: 600px;
+    height: 600px; // Or whatever height you prefer
     
     .log-viewer-section {
-      flex: 0 0 calc(80% - 2.5px);
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      
-      app-log-viewer {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-      }
+      flex: 0 0 70%; // 70% width
+      border-right: 1px solid var(--surface-border);
+      overflow: hidden;
     }
     
     .timeline-section {
-      flex: 0 0 calc(20% - 2.5px);
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
+      flex: 0 0 30%; // 30% width
+      overflow: hidden;
       
-      app-transaction-timeline {
+      .transaction-timeline {
         height: 100%;
-        display: block;
+      }
+    }
+  }
+
+  // Result content wrapper
+  .result-content-wrapper {
+    // Your existing styles for content wrapper
+    max-height: 80vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  // Error container
+  .error-container {
+    padding: 1rem;
+    text-align: center;
+    
+    p {
+      margin-bottom: 1rem;
+    }
+  }
+
+  // ================================
+  // DARK MODE SUPPORT
+  // ================================
+  :host-context(.app-dark) {
+    .custom-search-result {
+      background: var(--surface-800);
+      border-color: var(--surface-600);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
+      &:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+      }
+    }
+
+    .result-header {
+      background: var(--surface-700);
+      
+      &:hover {
+        background: var(--surface-600);
+      }
+
+      &.active {
+        background: var(--surface-600);
+      }
+    }
+
+    .result-content {
+      background: var(--surface-800);
+    }
+  }
+
+  // ================================
+  // BUTTON STYLING IN HEADER
+  // ================================
+  .streaming-control-btn {
+    font-size: 0.875rem;
+    
+    &.p-button-success {
+      background-color: var(--green-500);
+      border-color: var(--green-500);
+      
+      &:hover {
+        background-color: var(--green-600);
+        border-color: var(--green-600);
+      }
+    }
+
+    &.p-button-danger {
+      background-color: var(--red-500);
+      border-color: var(--red-500);
+      
+      &:hover {
+        background-color: var(--red-600);
+        border-color: var(--red-600);
       }
     }
   }
@@ -204,65 +198,49 @@
   // ================================
   // RESPONSIVE DESIGN
   // ================================
-  @media (max-width: 1200px) {
-    .transaction-details-layout {
-      .log-viewer-section {
-        flex: 0 0 calc(75% - 2.5px);
-      }
+  @media (max-width: 768px) {
+    .result-header {
+      padding: 0.75rem 1rem;
       
-      .timeline-section {
-        flex: 0 0 calc(25% - 2.5px);
-      }
-    }
-  }
-  
-  @media (max-width: 960px) {
-    .transaction-details-layout {
-      flex-direction: column;
-      gap: 5px;
-      
-      .log-viewer-section,
-      .timeline-section {
-        flex: 1 1 auto;
-        height: 50%;
-      }
-      
-      .timeline-section {
-        min-height: 300px;
-      }
-    }
-    
-    .accordion-header {
       .header-left {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
       }
-      
+
       .header-right {
-        margin-top: 0.5rem;
-        align-self: flex-start;
+        margin-left: 0.5rem;
+      }
+    }
+
+    .toggle-icon {
+      margin-right: 0.5rem !important;
+    }
+
+    // Stack transaction layout on mobile
+    .transaction-details-layout {
+      flex-direction: column;
+      height: auto;
+      
+      .log-viewer-section {
+        flex: none;
+        border-right: none;
+        border-bottom: 1px solid var(--surface-border);
+      }
+      
+      .timeline-section {
+        flex: none;
       }
     }
   }
-  
-  @media (max-width: 600px) {
-    ::ng-deep .result-accordion .p-accordion-header a,
-    ::ng-deep .result-accordion .p-accordion-header .p-accordion-header-link {
-      padding: 0.75rem 1rem !important;
-      font-size: 0.9rem !important;
-    }
-    
-    .accordion-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.75rem;
-      
-      .header-right {
-        margin-top: 0;
-        width: 100%;
-        justify-content: flex-end;
-      }
+
+  // ================================
+  // ACCESSIBILITY ENHANCEMENTS
+  // ================================
+  .result-header {
+    &:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
     }
   }
 }

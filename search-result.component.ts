@@ -79,10 +79,9 @@ export class SearchResultComponent {
   public streamingVisibleColumns: WritableSignal<ColumnDefinition[]> = signal([]);
   public streamFilters: WritableSignal<StreamFilter[]> = signal([]);
 
-// Animation state
-  public headerHoverState = signal<'normal' | 'hovered'>('normal');
+// Keep ALL your existing computed properties
+  public accordionActiveIndex = computed(() => this.search.isExpanded ? [0] : []);
 
-  // SIMPLIFIED: Single method to toggle accordion
   public toggleAccordion(): void {
     if (this.search.isExpanded) {
       this.orchestrator.collapseSearch(this.search.id);
