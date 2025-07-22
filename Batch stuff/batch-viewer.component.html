@@ -1,357 +1,325 @@
-<!-- batch-viewer.component.html - Enhanced with proper filtering and styling -->
+<!-- batch-viewer.component.html - Updated with professional styling and table improvements -->
 <div class="batch-viewer-container">
-  <!-- BATCH HEADER -->
+  <!-- Header with time range selector and streaming controls -->
   <div class="batch-header">
     <div class="header-left">
-      <h2>Batch Processing Results</h2>
-      @if (search.isStreaming) {
+      <h2>U & M Timeline Search</h2>
+      
+      <!-- Streaming indicator and control -->
+      @if(search.isStreaming) {
         <div class="streaming-indicator">
-          <p-button 
-            (click)="stopStreaming($event)"
-            (mouseenter)="isStopButtonHovered.set(true)"
+          <button 
+            pButton 
+            type="button" 
+            class="p-button-sm streaming-control-btn" 
+            [ngClass]="{
+              'p-button-success': !isStopButtonHovered(),
+              'p-button-danger': isStopButtonHovered()
+            }" 
+            (mouseenter)="isStopButtonHovered.set(true)" 
             (mouseleave)="isStopButtonHovered.set(false)"
-            severity="danger"
-            size="small"
-            class="streaming-control-btn"
-            pTooltip="Stop streaming"
+            (click)="stopStreaming($event)" 
+            pTooltip="Stop the live data stream" 
             tooltipPosition="top">
-            <i class="pi pi-stop-circle"></i>
+
             @if (isStopButtonHovered()) {
-              <span class="ml-1">Stop</span>
+              <span class="flex align-items-center gap-2">
+                <i class="pi pi-stop-circle"></i>
+                <span>Stop</span>
+              </span>
+            } @else {
+              <span class="flex align-items-center gap-2">
+                <i class="pi pi-spin pi-spinner"></i>
+                <span>Streaming...</span>
+              </span>
             }
-          </p-button>
+          </button>
         </div>
       }
     </div>
     
+    <!-- IMPROVED: Time range inline with proper button styling -->
     <div class="time-range-selector">
       <span class="time-range-label">Time Range:</span>
       <div class="time-range-button-group">
-        @for (range of timeRanges; track range; let first = $first; let last = $last) {
-          <p-button 
+        @for (range of timeRanges; track $index; let first = $first; let last = $last) {
+          <button
+            pButton
+            type="button"
             [label]="range"
             [disabled]="selectedTimeRange() === range"
-            (click)="selectTimeRange(range)"
-            [class]="first ? 'time-range-button first-button' : last ? 'time-range-button last-button' : 'time-range-button'"
-            size="small">
-          </p-button>
+            [ngClass]="{
+              'p-button-primary': selectedTimeRange() === range,
+              'p-button-outlined': selectedTimeRange() !== range,
+              'first-button': first,
+              'last-button': last,
+              'middle-button': !first && !last
+            }"
+            class="time-range-button"
+            (click)="onTimeRangeClick(range, $event)"
+            pTooltip="Change time range for batch data"
+            tooltipPosition="top">
+          </button>
         }
       </div>
     </div>
   </div>
 
-  <!-- BATCH CONTENT -->
+  <!-- IMPROVED: Indented content wrapper -->
   <div class="batch-content">
-    @if (batchData().length === 0) {
-      <div class="no-data-message">
-        <i class="pi pi-info-circle"></i>
-        <span>No batch data available</span>
-      </div>
-    } @else {
-      <h3>Batch Results ({{ batchData().length }} transactions)</h3>
-
-      <!-- CUSTOM ACCORDIONS -->
-      <div class="custom-accordions">
-        @for (data of batchData(); track trackByTxnId($index, data)) {
+    <h3>Following are U & M data</h3>
+    
+    <!-- IMPROVED: Professional accordion implementation with proper indentation -->
+    <div class="custom-accordions">
+      @for (data of batchData(); track trackByTxnId($index, data)) {
+        <div class="custom-accordion-panel" 
+             [ngClass]="[getAccordionClass(data), isAccordionExpanded(data.api_txnid) ? 'expanded' : '']">
+          
+          <!-- Custom accordion header with professional styling -->
           <div 
-            class="custom-accordion-panel" 
-            [class]="getAccordionClass(data)"
-            [class.expanded]="isAccordionExpanded(data.api_txnid)">
+            class="custom-accordion-header" 
+            [style]="getAccordionHeaderStyle(data)"
+            (click)="toggleAccordion(data.api_txnid, $event)">
             
-            <!-- ACCORDION HEADER -->
-            <div 
-              class="custom-accordion-header"
-              (click)="toggleAccordion(data.api_txnid, $event)">
+            <div class="accordion-title-section">
+              <i class="pi" 
+                 [ngClass]="isAccordionExpanded(data.api_txnid) ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
               
-              <div class="accordion-title-section">
-                <i 
-                  class="pi pi-chevron-right accordion-toggle-icon"
-                  [class.expanded]="isAccordionExpanded(data.api_txnid)">
-                </i>
-                
-                <div class="accordion-title">
-                  <span class="timestamp">{{ data.timestamp || 'No timestamp' }}</span>
-                  <span class="api-name">{{ data.api_name || 'Unknown API' }}</span>
-                  
-                  <div class="details">
-                    <div class="detail-item">
-                      <span class="detail-label">TXN ID:</span>
-                      <span class="detail-value">{{ data.api_txnid }}</span>
-                    </div>
-                    
-                    @if (data.rules) {
-                      <div class="detail-item">
-                        <span class="detail-label">Rules:</span>
-                        <span class="detail-value">{{ data.rules.length }}</span>
-                      </div>
-                      
-                      <span 
-                        class="rules-status"
-                        [class.success]="calculateAllRulesPassed(data)"
-                        [class.error]="!calculateAllRulesPassed(data)">
-                        <i class="pi" [class.pi-check]="calculateAllRulesPassed(data)" [class.pi-times]="!calculateAllRulesPassed(data)"></i>
-                        {{ calculateAllRulesPassed(data) ? 'All Passed' : 'Some Failed' }}
-                      </span>
-                    }
-                  </div>
-                </div>
-              </div>
+              <!-- Professional title with bold API name -->
+              <span class="accordion-title">
+                <span class="timestamp">[{{ data.time | date:'short' }}]</span>
+                <strong class="api-name">{{ data.api_name }}</strong>
+                <span class="details">
+                  VLine:<span class="value">{{ data.v_line }}</span>
+                  Min:<span class="value">{{ data.min }}</span>
+                  UG:<span class="value">{{ data.good_u }}</span>
+                  MG:<span class="value">{{ data.good_m }}</span>
+                  All Rules Passed:<span class="value" [ngClass]="calculateAllRulesPassed(data) ? 'success' : 'error'">
+                    {{ calculateAllRulesPassed(data) }}
+                  </span>
+                </span>
+              </span>
             </div>
+          </div>
+          
+          <!-- IMPROVED: Accordion content with proper indentation and background -->
+          @if (isAccordionExpanded(data.api_txnid)) {
+            <div class="custom-accordion-content">
+              
+              <!-- Transaction ID with clickable link -->
+              <div class="content-section transaction-info">
+                <p>
+                  <strong>Txn id:</strong> 
+                  <a [href]="buildTransactionSearchLink(data.api_txnid)" 
+                     target="_blank" 
+                     class="transaction-link"
+                     pTooltip="Click to search for this transaction">
+                    {{ data.api_txnid }}
+                    <i class="pi pi-external-link"></i>
+                  </a>
+                </p>
+              </div>
 
-            <!-- ACCORDION CONTENT -->
-            @if (isAccordionExpanded(data.api_txnid)) {
-              <div class="custom-accordion-content">
-                
-                <!-- Transaction Info -->
-                <div class="content-section transaction-info">
-                  <h4>Transaction Information</h4>
-                  <div class="transaction-details">
-                    <div class="detail-row">
-                      <strong>Transaction ID:</strong> 
-                      <a [href]="buildTransactionSearchLink(data.api_txnid)" target="_blank" class="txn-link">
-                        {{ data.api_txnid }}
-                      </a>
-                    </div>
-                    <div class="detail-row">
-                      <strong>API Name:</strong> {{ data.api_name }}
-                    </div>
-                    <div class="detail-row">
-                      <strong>Timestamp:</strong> {{ data.timestamp }}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Rules Section -->
-                @if (data.rules && data.rules.length > 0) {
-                  <div class="content-section rules-section">
-                    <h4>Rules Validation ({{ getRulesData(data).length }} records)</h4>
+              <!-- FIXED: Rules section with proper column definitions and compact table -->
+              @if (data.rules && data.rules.length > 0) {
+                <div class="content-section rules-section">
+                  <h4>Rules</h4>
+                  <p-table 
+                    [value]="getRulesData(data)" 
+                    [scrollable]="true" 
+                    scrollHeight="200px"
+                    styleClass="p-datatable-sm compact-table">
                     
-                    @if (getRulesData(data).length === 0) {
-                      <div class="no-data-message">
-                        <i class="pi pi-info-circle"></i>
-                        <span>No data matches the current filters</span>
-                      </div>
-                    } @else {
-                      <p-table 
-                        [value]="getRulesData(data)" 
-                        [scrollable]="true" 
-                        scrollHeight="250px"
-                        styleClass="p-datatable-sm compact-table">
-                        
-                        <ng-template pTemplate="header">
-                          <tr>
-                            @for (col of rulesColumns(); track trackByField($index, col)) {
-                              <th [style.width]="col.width || 'auto'">
-                                <div class="header-content">
-                                  <div class="header-title">{{ col.displayName }}</div>
-                                  @if (col.enableFiltering) {
-                                    <div class="header-filter">
-                                      <input 
-                                        pInputText 
-                                        type="text" 
-                                        [placeholder]="'Filter ' + col.displayName.toLowerCase() + '...'"
-                                        class="header-filter-input"
-                                        (input)="onRuleFilter($event, col.field)" />
-                                    </div>
-                                  }
-                                </div>
-                              </th>
-                            }
-                          </tr>
-                        </ng-template>
-                        
-                        <ng-template pTemplate="body" let-rule>
-                          <tr>
-                            @for (col of rulesColumns(); track trackByField($index, col)) {
-                              <td>
-                                @if (col.field === 'passed') {
-                                  <p-tag 
-                                    [value]="getFieldValue(rule, col.field) ? 'PASS' : 'FAIL'"
-                                    [severity]="getFieldValue(rule, col.field) ? 'success' : 'danger'">
-                                  </p-tag>
-                                } @else if (col.field === 'message') {
-                                  <span 
-                                    class="rule-message clickable" 
-                                    (click)="openMessageEditor(getFieldValue(rule, col.field))"
-                                    pTooltip="Click to view full message">
-                                    {{ getFieldValue(rule, col.field) | slice:0:100 }}{{ getFieldValue(rule, col.field)?.length > 100 ? '...' : '' }}
-                                  </span>
-                                } @else {
-                                  <span [innerHTML]="getFieldValue(rule, col.field) | transform:col.transform"></span>
-                                }
-                              </td>
-                            }
-                          </tr>
-                        </ng-template>
-                      </p-table>
-                    }
-                  </div>
-                }
-
-                <!-- Aggregation Section -->
-                @if (data.agg && data.agg.length > 0) {
-                  <div class="content-section aggregation-section">
-                    <h4>Aggregation Data ({{ getAggData(data).length }} records)</h4>
-                    
-                    @if (getAggData(data).length === 0) {
-                      <div class="no-data-message">
-                        <i class="pi pi-info-circle"></i>
-                        <span>No data matches the current filters</span>
-                      </div>
-                    } @else {
-                      <p-table 
-                        [value]="getAggData(data)" 
-                        [scrollable]="true" 
-                        scrollHeight="200px"
-                        styleClass="p-datatable-sm compact-table">
-                        
-                        <ng-template pTemplate="header">
-                          <tr>
-                            @for (col of aggColumns(); track trackByField($index, col)) {
-                              <th [style.width]="col.width || 'auto'">
-                                <div class="header-content">
-                                  <div class="header-title">{{ col.displayName }}</div>
-                                  @if (col.enableFiltering) {
-                                    <div class="header-filter">
-                                      <input 
-                                        pInputText 
-                                        type="text" 
-                                        [placeholder]="'Filter ' + col.displayName.toLowerCase() + '...'"
-                                        class="header-filter-input"
-                                        (input)="onAggFilter($event, col.field)" />
-                                    </div>
-                                  }
-                                </div>
-                              </th>
-                            }
-                          </tr>
-                        </ng-template>
-                        
-                        <ng-template pTemplate="body" let-agg>
-                          <tr>
-                            @for (col of aggColumns(); track trackByField($index, col)) {
-                              <td>
-                                <span [innerHTML]="getFieldValue(agg, col.field) | transform:col.transform"></span>
-                              </td>
-                            }
-                          </tr>
-                        </ng-template>
-                      </p-table>
-                    }
-                  </div>
-                }
-
-                <!-- Summary Section with Enhanced Grouping -->
-                @if (data.summary && data.summary.length > 0) {
-                  <div class="content-section summary-section">
-                    <div class="summary-header">
-                      <h4>Summary Data ({{ getSummaryData(data).length }} records)</h4>
-                      
-                      <!-- Group selector with improved styling -->
-                      @if (availableGroupColumns().length > 0) {
-                        <div class="group-selector">
-                          <label for="groupColumns">Group by:</label>
-                          <p-multiSelect
-                            id="groupColumns"
-                            [options]="availableGroupColumns()"
-                            [(ngModel)]="selectedGroupColumns"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Select grouping columns"
-                            [maxSelectedLabels]="2"
-                            [showClear]="true"
-                            [appendTo]="'body'"
-                            panelStyleClass="compact-dropdown">
-                          </p-multiSelect>
-                        </div>
-                      }
-                    </div>
-
-                    @if (getSummaryData(data).length === 0) {
-                      <div class="no-data-message">
-                        <i class="pi pi-info-circle"></i>
-                        <span>No data matches the current filters</span>
-                      </div>
-                    } @else {
-                      <!-- Grouped Summary Display -->
-                      @for (group of groupedSummaryData(); track trackByGroupKey($index, group)) {
-                        <div class="summary-group">
-                          @if (selectedGroupColumns().length > 0) {
-                            <div class="group-header">
-                              <h5>{{ group.key }} ({{ group.data.length }} records)</h5>
-                            </div>
-                          }
-                          
-                          <p-table 
-                            [value]="group.data" 
-                            [scrollable]="true" 
-                            scrollHeight="300px"
-                            [globalFilterFields]="globalFilterFields()"
-                            styleClass="p-datatable-sm compact-table"
-                            #summaryTable>
-                            
-                            <ng-template pTemplate="caption">
-                              <div class="table-header">
-                                <span>Total Records: {{ group.data.length }}</span>
-                                <span class="p-input-icon-left">
-                                  <i class="pi pi-search"></i>
+                    <ng-template pTemplate="header">
+                      <tr>
+                        @for (col of rulesColumns(); track trackByField($index, col)) {
+                          <th [style.width]="col.width || 'auto'" [style.min-width]="col.field === 'name' ? '150px' : col.field === 'pass' ? '80px' : 'auto'">
+                            <div class="header-content">
+                              <div class="header-title">{{ col.displayName }}</div>
+                              @if (col.enableFiltering) {
+                                <div class="header-filter">
                                   <input 
                                     pInputText 
                                     type="text" 
-                                    placeholder="Global search..." 
-                                    class="global-search-input"
-                                    (input)="summaryTable.filterGlobal($any($event.target).value, 'contains')" />
-                                </span>
-                              </div>
-                            </ng-template>
-                            
-                            <ng-template pTemplate="header">
-                              <tr>
-                                @for (col of summaryColumns(); track trackByField($index, col)) {
-                                  <th [style.width]="col.width || 'auto'">
-                                    <div class="header-content">
-                                      <div class="header-title">{{ col.displayName }}</div>
-                                      @if (col.enableFiltering) {
-                                        <div class="header-filter">
-                                          <input 
-                                            pInputText 
-                                            type="text" 
-                                            [placeholder]="'Filter ' + col.displayName.toLowerCase() + '...'"
-                                            class="header-filter-input"
-                                            (input)="onSummaryFilter($event, col.field)" />
-                                        </div>
-                                      }
-                                    </div>
-                                  </th>
-                                }
-                              </tr>
-                            </ng-template>
-                            
-                            <ng-template pTemplate="body" let-summary>
-                              <tr>
-                                @for (col of summaryColumns(); track trackByField($index, col)) {
-                                  <td>
-                                    <span [innerHTML]="getFieldValue(summary, col.field) | transform:col.transform"></span>
-                                  </td>
-                                }
-                              </tr>
-                            </ng-template>
-                          </p-table>
-                        </div>
-                      }
+                                    [placeholder]="'Filter ' + col.displayName.toLowerCase() + '...'"
+                                    class="header-filter-input"
+                                    (input)="onRuleFilter($event, col.field)" />
+                                </div>
+                              }
+                            </div>
+                          </th>
+                        }
+                      </tr>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="body" let-rule>
+                      <tr>
+                        @for (col of rulesColumns(); track trackByField($index, col)) {
+                          <td>
+                            @if (col.field === 'pass') {
+                              <p-tag 
+                                [value]="getFieldValue(rule, col.field) ? 'PASS' : 'FAIL'" 
+                                [severity]="getFieldValue(rule, col.field) ? 'success' : 'danger'">
+                              </p-tag>
+                            } @else if (col.field === 'message') {
+                              <span 
+                                class="rule-message clickable" 
+                                (click)="openMessageEditor(getFieldValue(rule, col.field))"
+                                pTooltip="Click to view full message">
+                                {{ getFieldValue(rule, col.field) | slice:0:100 }}{{ getFieldValue(rule, col.field)?.length > 100 ? '...' : '' }}
+                              </span>
+                            } @else {
+                              <span [innerHTML]="getFieldValue(rule, col.field) | transform:col.transform"></span>
+                            }
+                          </td>
+                        }
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+              }
+
+              <!-- FIXED: Aggregation section with compact table -->
+              @if (data.agg && data.agg.length > 0) {
+                <div class="content-section aggregation-section">
+                  <h4>Aggregation Data</h4>
+                  <p-table 
+                    [value]="getAggData(data)" 
+                    [scrollable]="true" 
+                    scrollHeight="200px"
+                    styleClass="p-datatable-sm compact-table">
+                    
+                    <ng-template pTemplate="header">
+                      <tr>
+                        @for (col of aggColumns(); track trackByField($index, col)) {
+                          <th [style.width]="col.width || 'auto'">
+                            <div class="header-content">
+                              <div class="header-title">{{ col.displayName }}</div>
+                              @if (col.enableFiltering) {
+                                <div class="header-filter">
+                                  <input 
+                                    pInputText 
+                                    type="text" 
+                                    [placeholder]="'Filter ' + col.displayName.toLowerCase() + '...'"
+                                    class="header-filter-input"
+                                    (input)="onAggFilter($event, col.field)" />
+                                </div>
+                              }
+                            </div>
+                          </th>
+                        }
+                      </tr>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="body" let-agg>
+                      <tr>
+                        @for (col of aggColumns(); track trackByField($index, col)) {
+                          <td>
+                            <span [innerHTML]="getFieldValue(agg, col.field) | transform:col.transform"></span>
+                          </td>
+                        }
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+              }
+
+              <!-- FIXED: Summary section with restored grouping logic -->
+              @if (data.summary && data.summary.length > 0) {
+                <div class="content-section summary-section">
+                  <div class="summary-header">
+                    <h4>Summary Data</h4>
+                    
+                    <!-- RESTORED: Group selector -->
+                    @if (availableGroupColumns().length > 0) {
+                      <div class="group-selector">
+                        <label for="groupColumns">Group by:</label>
+                        <p-multiSelect
+                          id="groupColumns"
+                          [options]="availableGroupColumns()"
+                          [(ngModel)]="selectedGroupColumns"
+                          optionLabel="label"
+                          optionValue="value"
+                          placeholder="Select grouping columns"
+                          [maxSelectedLabels]="2"
+                          [showClear]="true">
+                        </p-multiSelect>
+                      </div>
                     }
                   </div>
-                }
-              </div>
-            }
-          </div>
-        }
-      </div>
-    }
+
+                  <!-- FIXED: Summary table with proper grouping and compact styling -->
+                  <p-table 
+                    [value]="getSummaryData(data)" 
+                    [scrollable]="true" 
+                    scrollHeight="300px"
+                    [globalFilterFields]="filterableColumns().map(col => col.field)"
+                    styleClass="p-datatable-sm compact-table"
+                    #summaryTable>
+                    
+                    <ng-template pTemplate="caption">
+                      <div class="table-header">
+                        <span>Total Records: {{ getSummaryData(data).length }}</span>
+                        <span class="p-input-icon-left">
+                          <i class="pi pi-search"></i>
+                          <input 
+                            pInputText 
+                            type="text" 
+                            placeholder="Global search..." 
+                            class="global-search-input"
+                            (input)="summaryTable.filterGlobal($any($event.target).value, 'contains')" />
+                        </span>
+                      </div>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="header">
+                      <tr>
+                        @for (col of summaryColumns(); track trackByField($index, col)) {
+                          <th [style.width]="col.width || 'auto'">
+                            <div class="header-content">
+                              <div class="header-title">{{ col.displayName }}</div>
+                              @if (col.enableFiltering) {
+                                <div class="header-filter">
+                                  <input 
+                                    pInputText 
+                                    type="text" 
+                                    [placeholder]="'Filter ' + col.displayName.toLowerCase() + '...'"
+                                    class="header-filter-input"
+                                    (input)="onSummaryFilter($event, col.field)" />
+                                </div>
+                              }
+                            </div>
+                          </th>
+                        }
+                      </tr>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="body" let-summary let-rowGroup="rowgroup" let-rowspan="rowspan">
+                      <tr>
+                        @for (col of summaryColumns(); track trackByField($index, col)) {
+                          <td [attr.rowspan]="rowspan">
+                            @if (col.field === selectedGroupColumns()[0] && rowGroup) {
+                              <strong>{{ getFieldValue(summary, col.field) }}</strong>
+                              <span class="group-count">({{ calculateGroupTotal(data, summary) }})</span>
+                            } @else {
+                              <span [innerHTML]="getFieldValue(summary, col.field) | transform:col.transform"></span>
+                            }
+                          </td>
+                        }
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
   </div>
 </div>
 
-<!-- Editor Dialog -->
+<!-- Editor Dialog for rule messages -->
 <app-editor-dialog
   [visible]="showEditorDialog()"
   [title]="editorTitle()"
