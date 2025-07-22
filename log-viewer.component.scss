@@ -1,150 +1,416 @@
-.log-viewer-container {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-    }
+// log-viewer.component.scss - Compact and properly sized
+:host {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 0;
+}
 
-    :host ::ng-deep .log-viewer-table {
-      height: 100%;
-      
-      .p-datatable-wrapper {
-        height: 100%;
-      }
-      
-      .p-datatable-tbody > tr {
-        cursor: pointer;
-        transition: background-color 0.2s;
-        
-        &:hover {
-          background-color: var(--surface-hover) !important;
-        }
-      }
-      
-      .p-datatable-thead > tr > th {
-        background: var(--surface-section);
-        border-bottom: 1px solid var(--surface-border);
-        font-weight: 600;
-        font-size: 0.875rem;
-        padding: 0.75rem 0.5rem;
-      }
-      
-      .p-datatable-tbody > tr > td {
-        padding: 0.5rem;
-        border-bottom: 1px solid var(--surface-border);
-        font-size: 0.875rem;
-      }
-    }
+.table-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden; // Prevent container overflow
+}
 
-    .cell-content {
-      position: relative;
+// ================================
+// TABLE CAPTION STYLING
+// ================================
+:host ::ng-deep .table-caption {
+  padding: 0.5rem 1rem; // Reduced padding
+  background: var(--p-content-background);
+  border-bottom: 1px solid var(--p-content-border-color);
+  
+  .p-iconfield {
+    max-width: 300px;
+    
+    .global-search-input {
       width: 100%;
-      
-      &.clickable-cell {
-        cursor: pointer;
-        transition: all 0.2s ease;
+      font-size: 0.875rem;
+      padding: 0.4rem 2rem 0.4rem 2rem; // Reduced padding
+    }
+    
+    .p-inputicon {
+      color: var(--p-text-muted-color);
+    }
+  }
+}
+
+// ================================
+// MAIN DATATABLE STYLING - COMPACT
+// ================================
+:host ::ng-deep .p-datatable.p-component {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; // Prevent table overflow
+  
+  .p-datatable-wrapper {
+    flex-grow: 1;
+    overflow: auto;
+    min-height: 0;
+  }
+  
+  // ================================
+  // COMPACT HEADER STYLING
+  // ================================
+  .p-datatable-thead {
+    tr.column-header {
+      th {
+        padding: 0.375rem 0.4rem !important; // Very compact
+        font-size: 0.85rem !important;
+        font-weight: 600;
+        position: relative;
+        white-space: nowrap;
         
-        &:hover {
-          background-color: var(--primary-50);
-          border-radius: 4px;
-          padding: 2px 4px;
+        // Ensure column width is respected
+        box-sizing: border-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+    
+    // ================================
+    // FILTER ROW - CRITICAL COLUMN WIDTH FIXES
+    // ================================
+    tr.p-filter-row {
+      th.filter-header {
+        padding: 0.15rem !important; // Minimal padding
+        box-sizing: border-box !important;
+        
+        .p-column-filter {
+          width: 100% !important;
+          display: block !important;
+          margin: 0 !important;
+          padding: 0 !important;
           
-          .clickable-icon {
-            opacity: 1;
-            transform: translateX(0);
+          .p-column-filter-element {
+            width: 100% !important;
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            
+            .filter-input {
+              // FORCE EXACT COLUMN WIDTH
+              width: 100% !important;
+              min-width: 100% !important;
+              max-width: 100% !important;
+              box-sizing: border-box !important;
+              
+              // Compact sizing
+              margin: 0 !important;
+              padding: 0.2rem 0.3rem !important;
+              font-size: 0.75rem !important;
+              height: 1.6rem !important;
+              border-radius: 3px;
+              
+              // Focus styling using PrimeNG tokens
+              &:focus {
+                border-color: var(--p-focus-ring-color);
+                box-shadow: var(--p-focus-ring-shadow);
+                outline: none;
+              }
+              
+              // Placeholder styling
+              &::placeholder {
+                color: var(--p-text-muted-color);
+                opacity: 0.7;
+                font-size: 0.7rem;
+              }
+              
+              // HIDE ALL CLEAR BUTTONS
+              &::-webkit-search-cancel-button,
+              &::-webkit-search-decoration,
+              &::-webkit-search-results-button,
+              &::-webkit-search-results-decoration {
+                display: none !important;
+                -webkit-appearance: none !important;
+              }
+              
+              &::-moz-search-cancel-button {
+                display: none !important;
+              }
+            }
+          }
+          
+          // HIDE PRIMENG CLEAR BUTTON COMPLETELY
+          .p-column-filter-clear-button,
+          .p-column-filter-remove-button,
+          .p-button.p-column-filter-clear-button {
+            display: none !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+          
+          .p-column-filter-menu-button {
+            display: none !important;
           }
         }
       }
     }
-
-    .clickable-cell-wrapper {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-    }
-
-    .clickable-icon {
-      opacity: 0;
-      transform: translateX(-5px);
-      transition: all 0.2s ease;
-      font-size: 0.75rem;
-      color: var(--primary-color);
-      flex-shrink: 0;
-    }
-
-    .has-click-action {
-      position: relative;
+  }
+  
+  // ================================
+  // COMPACT BODY STYLING
+  // ================================
+  .p-datatable-tbody {
+    tr.data-row {
+      transition: background-color 0.2s ease;
       
-      &::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 3px;
-        height: 100%;
-        background: var(--primary-color);
-        opacity: 0.3;
-        border-radius: 0 2px 2px 0;
+      &:hover {
+        background-color: var(--p-content-hover-background);
+      }
+      
+      &.clickable-row {
+        cursor: pointer;
+      }
+      
+      td {
+        padding: 0.25rem 0.4rem !important; // Very compact
+        font-size: 0.85rem !important;
+        
+        // Ensure column width is respected
+        box-sizing: border-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        
+        // ================================
+        // CLICKABLE CELL STYLING
+        // ================================
+        &.clickable-cell {
+          cursor: pointer;
+          transition: all 0.2s ease;
+          position: relative;
+          
+          &:hover {
+            background-color: var(--p-content-hover-background);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          }
+          
+          &.transaction-cell {
+            color: var(--p-primary-color);
+            font-weight: 500;
+            
+            &:hover {
+              color: var(--p-primary-contrast-color);
+              background-color: var(--p-primary-color);
+              text-decoration: underline;
+            }
+            
+            &::after {
+              content: '🔗';
+              font-size: 0.6rem;
+              margin-left: 0.2rem;
+              opacity: 0.7;
+            }
+          }
+          
+          &.editor-cell {
+            color: var(--p-orange-500);
+            font-weight: 500;
+            
+            &:hover {
+              color: white;
+              background-color: var(--p-orange-500);
+            }
+            
+            &::after {
+              content: '📝';
+              font-size: 0.6rem;
+              margin-left: 0.2rem;
+              opacity: 0.7;
+            }
+          }
+        }
       }
     }
-
-    .empty-state {
-      text-align: center;
-      padding: 2rem;
-    }
-
-    .loading-cell {
+  }
+  
+  // ================================
+  // COMPACT PAGINATOR
+  // ================================
+  .p-paginator {
+    padding: 0.5rem 1rem; // Reduced padding
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    
+    visibility: visible !important;
+    display: flex !important;
+    
+    .p-paginator-element {
+      min-width: 2rem; // Smaller elements
       height: 2rem;
-      display: flex;
-      align-items: center;
+      font-size: 0.8rem;
     }
-
-    .loading-placeholder {
-      width: 70%;
-      height: 1rem;
-      background: linear-gradient(90deg, 
-        var(--surface-200) 25%, 
-        var(--surface-100) 50%, 
-        var(--surface-200) 75%);
-      background-size: 200% 100%;
-      animation: loading-shimmer 2s infinite;
-      border-radius: 4px;
-    }
-
-    @keyframes loading-shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-
-    /* Dark mode support */
-    :host-context(.app-dark) ::ng-deep .log-viewer-table {
-      .p-datatable-tbody > tr:hover {
-        background-color: var(--surface-hover) !important;
+    
+    .p-dropdown {
+      height: 2rem;
+      
+      .p-dropdown-label {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+      }
+      
+      .p-dropdown-panel {
+        bottom: 100% !important;
+        top: auto !important;
+        transform-origin: bottom;
+        margin-bottom: 2px;
+        z-index: 1400 !important;
       }
     }
+  }
+}
 
-    :host-context(.app-dark) .cell-content.clickable-cell:hover {
-      background-color: var(--primary-900);
+// ================================
+// LOADING AND EMPTY STATES
+// ================================
+.loading-overlay,
+.empty-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem; // Reduced padding
+  color: var(--p-text-muted-color);
+  text-align: center;
+  
+  i {
+    margin-bottom: 0.75rem;
+  }
+  
+  h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--p-text-color);
+    font-size: 1rem;
+  }
+  
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+}
+
+// ================================
+// RESPONSIVE DESIGN
+// ================================
+@media (max-width: 768px) {
+  :host ::ng-deep .p-datatable {
+    .p-datatable-thead tr th,
+    .p-datatable-tbody tr td {
+      padding: 0.2rem 0.25rem !important;
+      font-size: 0.75rem !important;
     }
-
-    :host-context(.app-dark) .loading-placeholder {
-      background: linear-gradient(90deg, 
-        var(--surface-700) 25%, 
-        var(--surface-600) 50%, 
-        var(--surface-700) 75%);
-      background-size: 200% 100%;
+    
+    .filter-input {
+      font-size: 0.7rem !important;
+      height: 1.4rem !important;
+      padding: 0.15rem 0.25rem !important;
     }
+    
+    // Hide cell decorators on mobile
+    .clickable-cell::after {
+      display: none;
+    }
+  }
+  
+  .table-caption {
+    padding: 0.4rem !important;
+    
+    .p-iconfield {
+      max-width: 100%;
+      
+      .global-search-input {
+        font-size: 16px !important; // Prevent zoom on iOS
+      }
+    }
+  }
+}
 
+// ================================
+// PRINT STYLES
+// ================================
+@media print {
+  :host {
+    .table-container {
+      height: auto !important;
+      max-height: none !important;
+    }
+    
+    .p-datatable {
+      .p-paginator,
+      .table-caption {
+        display: none !important;
+      }
+      
+      .p-datatable-wrapper {
+        overflow: visible !important;
+        height: auto !important;
+      }
+      
+      .filter-input {
+        display: none !important;
+      }
+    }
+  }
+}
+    
+// ================================
+// ACCESSIBILITY ENHANCEMENTS
+// ================================
+.clickable-cell:focus,
+.filter-input:focus {
+  outline: 2px solid var(--p-focus-ring-color) !important;
+  outline-offset: 2px !important;
+}
 
-    .transaction-details-layout {
+// ================================
+// PRINT STYLES
+// ================================
+@media print {
+  :host {
+    .table-container {
+      height: auto !important;
+      max-height: none !important;
+    }
+    
+    .p-datatable {
+      .p-paginator,
+      .table-caption {
+        display: none !important;
+      }
+      
+      .p-datatable-wrapper {
+        overflow: visible !important;
+        height: auto !important;
+      }
+      
+      .filter-input {
+        display: none !important;
+      }
+    }
+  }
+}
+
+.transaction-details-layout {
   .log-viewer-section {
+
     // Force table cells to wrap text
     :host ::ng-deep .p-datatable {
       .p-datatable-table {
         table-layout: fixed; // Essential for text wrapping
       }
-      
-      .p-datatable-tbody > tr > td {
+
+      .p-datatable-tbody>tr>td {
         word-wrap: break-word;
         white-space: normal; // Allow text to wrap
         overflow-wrap: break-word;
@@ -156,12 +422,12 @@
 :host ::ng-deep {
   .p-accordion-content {
     overflow: visible !important; // Don't clip pagination
-    
+
     .p-accordion-content-wrapper {
       overflow: visible !important;
     }
   }
-  
+
   // Ensure paginator stays visible
   .p-paginator {
     position: relative !important;
