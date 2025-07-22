@@ -283,9 +283,9 @@
                         scrollHeight="300px"
                         [globalFilterFields]="globalFilterFields()"
                         styleClass="p-datatable-sm compact-table"
-                        [rowGroupMode]="selectedGroupColumns().length > 0 ? 'subheader' : undefined"
-                        [groupRowsBy]="selectedGroupColumns()[0]"
-                        [sortField]="selectedGroupColumns()[0]"
+                        [rowGroupMode]="getGroupColumnsForAccordion(data.api_txnid).length > 0 ? 'rowspan' : undefined"
+                        [groupRowsBy]="getGroupColumnsForAccordion(data.api_txnid)[0]"
+                        [sortField]="getGroupColumnsForAccordion(data.api_txnid)[0]"
                         [sortOrder]="1"
                         #summaryTable>
                         
@@ -299,7 +299,8 @@
                                 <p-multiSelect
                                   id="groupColumns-{{data.api_txnid}}"
                                   [options]="availableGroupColumns()"
-                                  [(ngModel)]="selectedGroupColumns"
+                                  [ngModel]="getGroupColumnsForAccordion(data.api_txnid)"
+                                  (ngModelChange)="setGroupColumnsForAccordion(data.api_txnid, $event)"
                                   optionLabel="label"
                                   optionValue="value"
                                   placeholder="Select grouping columns"
@@ -322,11 +323,19 @@
                           </div>
                         </ng-template>
                         
-                        @if (selectedGroupColumns().length > 0) {
-                          <ng-template pTemplate="groupheader" let-rowData let-rowIndex="rowIndex">
-                            <tr class="p-rowgroup-header">
+                        @if (getGroupColumnsForAccordion(data.api_txnid).length > 0) {
+                          <ng-template pTemplate="groupheader" let-rowData let-rowIndex="rowIndex" let-expanded="expanded" let-onRowToggle="onRowToggle">
+                            <tr>
                               <td [attr.colspan]="summaryColumns().length">
-                                <span class="font-bold">{{ selectedGroupColumns()[0] }}: {{ getFieldValue(rowData, selectedGroupColumns()[0]) }}</span>
+                                <button
+                                  type="button"
+                                  pButton
+                                  class="p-row-toggler p-link"
+                                  [pRowToggler]="rowData"
+                                  (click)="onRowToggle(rowData)">
+                                  <span [class]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></span>
+                                  <span class="font-bold ml-2">{{ getGroupColumnsForAccordion(data.api_txnid)[0] }}: {{ getFieldValue(rowData, getGroupColumnsForAccordion(data.api_txnid)[0]) }}</span>
+                                </button>
                               </td>
                             </tr>
                           </ng-template>

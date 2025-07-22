@@ -146,7 +146,7 @@
 
     // Success/Error indicators with subtle colors
     &.batch-accordion-success {
-      border: 1px solid #e0e0e0;
+      border: 1px solid #d0d0d0;
       
       .custom-accordion-header {
         background: #f1f8e9;
@@ -155,7 +155,7 @@
     }
 
     &.batch-accordion-error {
-      border: 1px solid #e0e0e0;
+      border: 1px solid #d0d0d0;
       
       .custom-accordion-header {
         background: #fce4ec;
@@ -417,8 +417,8 @@
 
   .p-datatable-thead > tr > th {
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
-    border: 1px solid #e0e0e0 !important;
-    padding: 0.5rem !important;
+    border: 1px solid #d0d0d0 !important;
+    padding: 0.4rem 0.5rem !important;
     font-weight: 600 !important;
     color: #0171c5 !important;
     
@@ -435,9 +435,9 @@
       .header-filter {
         .header-filter-input {
           width: 100%;
-          padding: 0.25rem 0.5rem;
-          font-size: 0.875rem;
-          border: 1px solid #e0e0e0;
+          padding: 0.2rem 0.4rem;
+          font-size: 0.8rem;
+          border: 1px solid #d0d0d0;
           border-radius: 4px;
           background: white;
 
@@ -451,8 +451,8 @@
   }
 
   .p-datatable-tbody > tr > td {
-    padding: 0.5rem !important;
-    border: 1px solid #e0e0e0 !important;
+    padding: 0.3rem 0.5rem !important;
+    border: 1px solid #d0d0d0 !important;
     color: var(--text-color) !important;
     font-size: 0.875rem;
     background: white !important;
@@ -462,11 +462,18 @@
     background: #f5f5f5 !important;
   }
 
-  // Row group header styling
-  .p-rowgroup-header td {
+  // Row group header styling - collapsible
+  .p-rowgroup-header td,
+  .p-row-toggler {
     background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
     font-weight: 600 !important;
     color: #0171c5 !important;
+    border: none !important;
+    padding: 0.4rem 0.5rem !important;
+    
+    .pi {
+      font-size: 0.8rem;
+    }
   }
 }
 
@@ -481,18 +488,34 @@
 }
 
 // ================================
-// DROPDOWN IMPROVEMENTS - SMALLER SIZE
+// DROPDOWN IMPROVEMENTS - SMALLER SIZE WITH PROPER OVERLAY
 // ================================
 ::ng-deep .compact-group-dropdown-small {
-  max-height: 120px !important; // 40% smaller
+  .p-multiselect-panel {
+    max-height: 120px !important;
+    background: white !important;
+    border: 1px solid #d0d0d0 !important;
+    z-index: 1100 !important;
+  }
   
   .p-multiselect-items {
     max-height: 100px !important;
+    background: white !important;
   }
   
   .p-multiselect-item {
     padding: 0.3rem 0.5rem !important;
     font-size: 0.8rem !important;
+    background: white !important;
+    
+    &:hover {
+      background: #f5f5f5 !important;
+    }
+    
+    &.p-highlight {
+      background: #e3f2fd !important;
+      color: #0171c5 !important;
+    }
   }
   
   .p-multiselect {
@@ -533,7 +556,7 @@
 
   .custom-accordions .custom-accordion-panel {
     background: var(--surface-800);
-    border-color: var(--surface-600);
+    border-color: var(--surface-500); // Darker, less prominent border
 
     &.expanded {
       border-color: #64b5f6;
@@ -606,12 +629,12 @@
   ::ng-deep .compact-table {
     .p-datatable-header {
       background: var(--surface-700);
-      border-color: var(--surface-600);
+      border-color: var(--surface-500);
     }
 
     .p-datatable-thead > tr > th {
       background: linear-gradient(135deg, var(--surface-700) 0%, var(--surface-600) 100%) !important;
-      border-color: var(--surface-500) !important;
+      border-color: var(--surface-400) !important; // Less prominent borders
       color: #64b5f6 !important;
 
       .header-content .header-title {
@@ -620,7 +643,7 @@
 
       .header-filter .header-filter-input {
         background: var(--surface-700);
-        border-color: var(--surface-500);
+        border-color: var(--surface-400);
         color: var(--text-color);
 
         &:focus {
@@ -630,7 +653,7 @@
     }
 
     .p-datatable-tbody > tr > td {
-      border-color: var(--surface-600) !important;
+      border-color: var(--surface-400) !important; // Less prominent borders
       background: var(--surface-800) !important;
     }
 
@@ -638,9 +661,37 @@
       background: var(--surface-700) !important;
     }
 
-    .p-rowgroup-header td {
+    .p-rowgroup-header td,
+    .p-row-toggler {
       background: linear-gradient(135deg, rgba(100, 181, 246, 0.2) 0%, rgba(100, 181, 246, 0.3) 100%) !important;
       color: #64b5f6 !important;
+      border-color: var(--surface-400) !important;
+    }
+  }
+
+  // Dark mode dropdown fix
+  ::ng-deep .compact-group-dropdown-small {
+    .p-multiselect-panel {
+      background: var(--surface-700) !important;
+      border-color: var(--surface-500) !important;
+    }
+    
+    .p-multiselect-items {
+      background: var(--surface-700) !important;
+    }
+    
+    .p-multiselect-item {
+      background: var(--surface-700) !important;
+      color: var(--text-color) !important;
+      
+      &:hover {
+        background: var(--surface-600) !important;
+      }
+      
+      &.p-highlight {
+        background: rgba(100, 181, 246, 0.2) !important;
+        color: #64b5f6 !important;
+      }
     }
   }
 }

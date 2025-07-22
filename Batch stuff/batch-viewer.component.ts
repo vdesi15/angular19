@@ -1,5 +1,5 @@
-// batch-viewer.component.ts - TARGETED FIX for data flow issue + UI improvements
-import { Component, Input, inject, signal, computed, effect } from '@angular/core';
+// batch-viewer.component.ts - Enhanced with Angular 19 signals and fixes
+import { Component, Input, inject, signal, computed, effect, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AccordionModule } from 'primeng/accordion';
 import { TableModule } from 'primeng/table';
@@ -8,6 +8,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
+import { InputTextModule } from 'primeng/inputtext';
 import { ActiveSearch } from '../../models/search.model';
 import { BatchSSEData } from '../../models/batch-sse.model';
 import { ColumnDefinitionService } from '../../services/column-definition.service';
@@ -15,8 +16,7 @@ import { SearchOrchestratorService } from '../../services/search-orchestrator.se
 import { EditorDialogComponent } from '../editor-dialog/editor-dialog.component';
 import { TransformPipe } from 'src/app/shared/pipes/transform.pipe';
 import { UrlBuilderService } from 'src/app/shared/services/url-builder.service';
-import { get } from 'lodash-es';
-import { SseService } from '../sse.service';
+import { get, groupBy } from 'lodash-es';
 
 @Component({
   selector: 'app-batch-viewer',
@@ -30,6 +30,7 @@ import { SseService } from '../sse.service';
     ButtonModule,
     DialogModule,
     TooltipModule,
+    InputTextModule,
     EditorDialogComponent,
     TransformPipe
   ],
@@ -42,7 +43,6 @@ export class BatchViewerComponent {
   private orchestrator = inject(SearchOrchestratorService);
   private colDefService = inject(ColumnDefinitionService);
   private urlBuilder = inject(UrlBuilderService);
-  private sseService = inject(SseService);
   
   // State - Using Angular 19 signals
   batchData = signal<BatchSSEData[]>([]);
@@ -57,11 +57,17 @@ export class BatchViewerComponent {
   editorContent = signal<any>(null);
   editorTitle = signal('');
   
-  selectedGroupColumns = signal<string[]>([]);
+  selectedGroupColumns: WritableSignal<string[]> = signal([]);
   
   // Streaming state for header display
   isStopButtonHovered = signal(false);
   
+  // Filter signals - using WritableSignal for proper reactivity
+  private ruleFilters: WritableSignal<Map<string, string>> = signal(new Map());
+  private aggFilters: WritableSignal<Map<string, string>> = signal(new Map());
+  private summaryFilters: WritableSignal<Map<string, string>> = signal(new Map());
+  
+  // Available group columns
   availableGroupColumns = computed(() => {
     const summaryColDefs = this.summaryColumns();
     
@@ -72,6 +78,24 @@ export class BatchViewerComponent {
         value: col.field
       }));
   });
+
+  // Get group columns for specific accordion
+  getGroupColumnsForAccordion(txnId: string): string[] {
+    return this.selectedGroupColumns().get(txnId) || [];
+  }
+
+  // Set group columns for specific accordion
+  setGroupColumnsForAccordion(txnId: string, columns: string[]): void {
+    this.selectedGroupColumns.update(map => {
+      const newMap = new Map(map);
+      if (columns.length === 0) {
+        newMap.delete(txnId);
+      } else {
+        newMap.set(txnId, columns);
+      }
+      return newMap;
+    });
+  }
 
   // Column definitions from API
   rulesColumns = computed(() => 
@@ -91,62 +115,70 @@ export class BatchViewerComponent {
     this.summaryColumns().filter(col => col.enableFiltering === true)
   );
 
+  // Computed properties for template binding
+  globalFilterFields = computed(() => 
+    this.filterableColumns().map(col => col.field)
+  );
+
+  // Grouped summary data with proper filtering and grouping
+  groupedSummaryData = computed(() => {
+    const allSummaryData: any[] = [];
+    this.batchData().forEach(batch => {
+      if (batch.summary) {
+        allSummaryData.push(...batch.summary);
+      }
+    });
+
+    // Apply filters first
+    const filters = this.summaryFilters();
+    const filteredData = filters.size === 0 ? allSummaryData : 
+      allSummaryData.filter(summary => {
+        return Array.from(filters.entries()).every(([field, filterValue]) => {
+          if (!filterValue.trim()) return true;
+          const fieldValue = this.getFieldValue(summary, field)?.toString().toLowerCase() || '';
+          return fieldValue.includes(filterValue.toLowerCase());
+        });
+      });
+
+    // If no group columns selected, return all rows
+    const groupColumns = this.selectedGroupColumns();
+    if (groupColumns.length === 0) {
+      return [{ key: 'All Data', data: filteredData }];
+    }
+
+    // Group by selected columns
+    const grouped = groupBy(filteredData, (item) => {
+      return groupColumns.map(col => get(item, col)).join(' | ');
+    });
+
+    return Object.entries(grouped).map(([key, data]) => ({ key, data }));
+  });
+
   constructor() {
-    console.log('[BatchViewer] Constructor called');
-    
-    // TARGETED FIX: Subscribe to orchestrator's activeSearches signal to track the specific search
+    // Data subscription effect - keeping your preferred way
     effect(() => {
       // Get the current search from orchestrator's signal by ID
       const allSearches = this.orchestrator.activeSearches();
       const currentSearch = allSearches.find(s => s.id === this.search?.id);
       const batchDataArray = currentSearch?.batchData;
       
-      console.log('[BatchViewer] Effect triggered - Search ID:', currentSearch?.id);
-      console.log('[BatchViewer] BatchData length:', batchDataArray?.length);
-      console.log('[BatchViewer] BatchData reference:', batchDataArray);
+      console.log('[BatchViewer] 🔄 Data effect triggered:', batchDataArray?.length || 0, 'items');
       
-      if (batchDataArray && batchDataArray.length > 0) {
-        console.log('[BatchViewer] ✅ Processing batch data:', batchDataArray.length);
-        console.log('[BatchViewer] Latest item:', batchDataArray[batchDataArray.length - 1]);
-        
-        // Set the data
+      if (batchDataArray?.length > 0) {
         this.batchData.set([...batchDataArray]);
         
-        // FIXED: Only initialize accordion states for completely new data, don't update existing ones
+        // Update accordion states for new items only
         const currentStates = this.accordionStates();
-        const hasAnyStates = currentStates.size > 0;
+        const needsUpdate = batchDataArray.some(data => !currentStates.has(data.api_txnid));
         
-        if (!hasAnyStates) {
-          // First time loading - initialize all states
-          const newStates = new Map<string, boolean>();
+        if (needsUpdate) {
+          const updatedStates = new Map(currentStates);
           batchDataArray.forEach(data => {
-            newStates.set(data.api_txnid, false);
+            if (!updatedStates.has(data.api_txnid)) {
+              updatedStates.set(data.api_txnid, false);
+            }
           });
-          this.accordionStates.set(newStates);
-          console.log('[BatchViewer] ✅ Initialized accordion states for first load');
-        } else {
-          // Subsequent loads - only add missing states, don't modify existing ones
-          const needsUpdate = batchDataArray.some(data => !currentStates.has(data.api_txnid));
-          
-          if (needsUpdate) {
-            const updatedStates = new Map(currentStates);
-            batchDataArray.forEach(data => {
-              if (!updatedStates.has(data.api_txnid)) {
-                updatedStates.set(data.api_txnid, false);
-              }
-            });
-            this.accordionStates.set(updatedStates);
-            console.log('[BatchViewer] ✅ Added new accordion states only');
-          }
-        }
-        
-        console.log('[BatchViewer] ✅ Updated batchData signal to:', this.batchData().length);
-      } else if (batchDataArray?.length === 0 || !batchDataArray) {
-        console.log('[BatchViewer] ❌ No valid batch data or empty array');
-        // Only clear if we have existing data and this is truly empty (not initial state)
-        if (this.batchData().length > 0 && batchDataArray?.length === 0) {
-          this.batchData.set([]);
-          this.accordionStates.set(new Map());
+          this.accordionStates.set(updatedStates);
         }
       }
     });
@@ -159,7 +191,7 @@ export class BatchViewerComponent {
         .map(col => col.field);
         
       if (defaultGroups.length > 0) {
-        this.selectedGroupColumns.set(defaultGroups);
+        // Don't auto-set defaults, let user choose
       }
     });
   }
@@ -171,69 +203,28 @@ export class BatchViewerComponent {
     const currentState = currentStates.get(txnId) || false;
     currentStates.set(txnId, !currentState);
     this.accordionStates.set(currentStates);
-    
-    console.log(`[BatchViewer] Toggled accordion ${txnId}: ${!currentState}`);
   }
 
+  // Time range selection with proper orchestrator call
+  selectTimeRange(range: string): void {
+    this.selectedTimeRange.set(range);
+    // Use your existing orchestrator method
+    this.orchestrator.triggerBatchSearch(this.search.id, range);
+  }
+
+  // Accordion state utilities
   isAccordionExpanded(txnId: string): boolean {
     return this.accordionStates().get(txnId) || false;
   }
 
-  onTimeRangeClick(range: string, event: Event): void {
-    event.preventDefault();
-    event.stopPropagation();
-    
-    this.selectedTimeRange.set(range);
-    
-    // Stop current SSE and start new one with different days parameter
-    this.orchestrator.stopSseStream(this.search.id);
-    
-    // Create new search with updated days
-    const days = range.replace('d', '');
-    this.sseService.ultMesStreamingDays = days;
-    this.orchestrator.performBatchSearch({
-      query: this.search.query,
-      title: this.search.title,
-      appName: this.search.appName,
-      days: days
-    });
-  }
-
-  // IMPROVED: Professional accordion title with bold API name
-  getAccordionTitle(data: BatchSSEData): string {
-    const localTime = new Date(data.time).toLocaleString();
-    const allRulesPassed = this.calculateAllRulesPassed(data);
-    return `[${localTime}] ${data.api_name} VLine:${data.v_line} Min:${data.min} UG:${data.good_u} MG:${data.good_m} All Rules Passed:${allRulesPassed}`;
-  }
-
-  // NEW: Calculate all rules passed based on actual rules data
   calculateAllRulesPassed(data: BatchSSEData): boolean {
-    if (!data.rules || data.rules.length === 0) {
-      return data.all_rules_passed; // fallback to original value
-    }
-    
-    // Check if all rules have pass: true
-    return data.rules.every(rule => rule.pass === true);
+    if (!data.rules || data.rules.length === 0) return true;
+    return data.rules.every(rule => rule.passed === true);
   }
 
-  // IMPROVED: Professional accordion styling
   getAccordionClass(data: BatchSSEData): string {
     const allRulesPassed = this.calculateAllRulesPassed(data);
     return allRulesPassed ? 'batch-accordion-success' : 'batch-accordion-error';
-  }
-
-  getAccordionHeaderStyle(data: BatchSSEData): any {
-    const allRulesPassed = this.calculateAllRulesPassed(data);
-    const baseStyle = {
-      borderLeft: `4px solid ${allRulesPassed ? '#28a745' : '#dc3545'}`,
-      backgroundColor: allRulesPassed 
-        ? 'rgba(40, 167, 69, 0.1)' 
-        : 'rgba(220, 53, 69, 0.1)',
-      padding: '12px 16px',
-      borderRadius: '6px',
-      marginBottom: '2px'
-    };
-    return baseStyle;
   }
 
   getRuleCellClass(passed: boolean): string {
@@ -244,7 +235,6 @@ export class BatchViewerComponent {
     return get(obj, field);
   }
 
-  // NEW: Build search link using the reusable URL builder service
   buildTransactionSearchLink(txnId: string): string {
     return this.urlBuilder.buildSearchLink(txnId);
   }
@@ -260,99 +250,54 @@ export class BatchViewerComponent {
     this.orchestrator.stopSseStream(this.search.id);
   }
 
-  // State for table filtering
-  private ruleFilters = signal<Map<string, string>>(new Map());
-  private aggFilters = signal<Map<string, string>>(new Map());
-  private summaryFilters = signal<Map<string, string>>(new Map());
-
-  // Filtered data computed signals
-  filteredRules = computed(() => {
-    const filters = this.ruleFilters();
-    if (filters.size === 0) return [];
-    
-    const currentData = this.batchData().find(data => data.rules)?.rules || [];
-    
-    return currentData.filter(rule => {
-      return Array.from(filters.entries()).every(([field, filterValue]) => {
-        if (!filterValue.trim()) return true;
-        const fieldValue = this.getFieldValue(rule, field)?.toString().toLowerCase() || '';
-        return fieldValue.includes(filterValue.toLowerCase());
-      });
-    });
-  });
-
-  filteredAgg = computed(() => {
-    const filters = this.aggFilters();
-    if (filters.size === 0) return [];
-    
-    const currentData = this.batchData().find(data => data.agg)?.agg || [];
-    
-    return currentData.filter(agg => {
-      return Array.from(filters.entries()).every(([field, filterValue]) => {
-        if (!filterValue.trim()) return true;
-        const fieldValue = this.getFieldValue(agg, field)?.toString().toLowerCase() || '';
-        return fieldValue.includes(filterValue.toLowerCase());
-      });
-    });
-  });
-
-  filteredSummary = computed(() => {
-    const filters = this.summaryFilters();
-    if (filters.size === 0) return [];
-    
-    const currentData = this.batchData().find(data => data.summary)?.summary || [];
-    
-    return currentData.filter(summary => {
-      return Array.from(filters.entries()).every(([field, filterValue]) => {
-        if (!filterValue.trim()) return true;
-        const fieldValue = this.getFieldValue(summary, field)?.toString().toLowerCase() || '';
-        return fieldValue.includes(filterValue.toLowerCase());
-      });
-    });
-  });
-
-  // Filter methods with actual implementation
+  // FIXED: Filter methods with proper WritableSignal updates
   onRuleFilter(event: Event, field: string): void {
     const value = (event.target as HTMLInputElement).value;
     console.log(`[BatchViewer] Rule filter applied on ${field}:`, value);
     
-    const currentFilters = new Map(this.ruleFilters());
-    if (value.trim()) {
-      currentFilters.set(field, value);
-    } else {
-      currentFilters.delete(field);
-    }
-    this.ruleFilters.set(currentFilters);
+    this.ruleFilters.update(currentFilters => {
+      const newFilters = new Map(currentFilters);
+      if (value.trim()) {
+        newFilters.set(field, value);
+      } else {
+        newFilters.delete(field);
+      }
+      return newFilters;
+    });
   }
 
   onAggFilter(event: Event, field: string): void {
     const value = (event.target as HTMLInputElement).value;
     console.log(`[BatchViewer] Aggregation filter applied on ${field}:`, value);
     
-    const currentFilters = new Map(this.aggFilters());
-    if (value.trim()) {
-      currentFilters.set(field, value);
-    } else {
-      currentFilters.delete(field);
-    }
-    this.aggFilters.set(currentFilters);
+    this.aggFilters.update(currentFilters => {
+      const newFilters = new Map(currentFilters);
+      if (value.trim()) {
+        newFilters.set(field, value);
+      } else {
+        newFilters.delete(field);
+      }
+      return newFilters;
+    });
   }
 
   onSummaryFilter(event: Event, field: string): void {
     const value = (event.target as HTMLInputElement).value;
     console.log(`[BatchViewer] Summary filter applied on ${field}:`, value);
     
-    const currentFilters = new Map(this.summaryFilters());
-    if (value.trim()) {
-      currentFilters.set(field, value);
-    } else {
-      currentFilters.delete(field);
-    }
-    this.summaryFilters.set(currentFilters);
+    this.summaryFilters.update(currentFilters => {
+      const newFilters = new Map(currentFilters);
+      if (value.trim()) {
+        newFilters.set(field, value);
+      } else {
+        newFilters.delete(field);
+      }
+      return newFilters;
+    });
   }
 
-  // Get the correct data source for tables (filtered or original)
-  getRulesData(data: BatchSSEData) {
+  // FIXED: Data methods with proper filtering
+  getRulesData(data: BatchSSEData): any[] {
     const filters = this.ruleFilters();
     if (filters.size === 0) return data.rules || [];
     
@@ -365,7 +310,7 @@ export class BatchViewerComponent {
     });
   }
 
-  getAggData(data: BatchSSEData) {
+  getAggData(data: BatchSSEData): any[] {
     const filters = this.aggFilters();
     if (filters.size === 0) return data.agg || [];
     
@@ -378,7 +323,7 @@ export class BatchViewerComponent {
     });
   }
 
-  getSummaryData(data: BatchSSEData) {
+  getSummaryData(data: BatchSSEData): any[] {
     const filters = this.summaryFilters();
     if (filters.size === 0) return data.summary || [];
     
@@ -400,12 +345,21 @@ export class BatchViewerComponent {
     return col.id || col.field;
   }
 
-  calculateGroupTotal(data: BatchSSEData, summary: any): number {
-    if (!data.summary || this.selectedGroupColumns().length === 0) {
+  trackByGroupKey(index: number, group: any): string {
+    return group.key;
+  }
+
+  calculateGroupTotal(data: BatchSSEData, summary: any, txnId: string): number {
+    if (!data.summary) {
       return 0;
     }
     
-    const groupField = this.selectedGroupColumns()[0];
+    const groupColumns = this.getGroupColumnsForAccordion(txnId);
+    if (groupColumns.length === 0) {
+      return 0;
+    }
+    
+    const groupField = groupColumns[0];
     const groupValue = get(summary, groupField);
     
     return data.summary.filter(s => get(s, groupField) === groupValue).length;
