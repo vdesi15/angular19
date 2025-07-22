@@ -1,76 +1,51 @@
-<div class="log-viewer-container">
-      <p-table 
-        #logTable
-        [value]="displayData()"
-        [columns]="visibleColumns()"
-        [loading]="isLoading()"
-        [scrollable]="true"
-        scrollHeight="flex"
-        [virtualScroll]="true"
-        [virtualScrollItemSize]="50"
-        styleClass="p-datatable-sm log-viewer-table"
-        [rowTrackBy]="trackByRowId"
-        (onRowSelect)="handleRowClick($event.data)"
-        selectionMode="single">
-        
-        <!-- Dynamic column templates -->
-        @for (col of visibleColumns(); track col.id) {
-          <p-column 
-            [field]="col.field" 
-            [header]="col.displayName"
-            [sortable]="col.sortable !== false"
-            [style]="getColumnStyle(col)"
-            [headerStyle]="getColumnHeaderStyle(col)">
-            
-            <ng-template pTemplate="body" let-rowData let-ri="rowIndex">
-              <div 
-                class="cell-content"
-                [class.clickable-cell]="!!col.onClick"
-                [class.has-click-action]="!!col.onClick"
-                [title]="col.onClick ? getClickTooltip(col.onClick.action) : ''"
-                (click)="handleCellClick($event, col, rowData, getCellValue(rowData, col.field))">
-                
-                <!-- Standard cell content -->
-                @if (!col.onClick) {
-                  <span [innerHTML]="formatCellValue(getCellValue(rowData, col.field), col)"></span>
-                } @else {
-                  <!-- Clickable cell content with indicator -->
-                  <div class="clickable-cell-wrapper">
-                    <span [innerHTML]="formatCellValue(getCellValue(rowData, col.field), col)"></span>
-                    <i class="pi pi-external-link clickable-icon" 
-                       [title]="getClickTooltip(col.onClick.action)"></i>
-                  </div>
-                }
-              </div>
-            </ng-template>
-          </p-column>
+<div #tableContainer class="table-container">
+  <p-table #logTable [value]="tableData" [columns]="visibleColumns" [totalRecords]="totalRecords" dataKey="_id"
+    [paginator]="true" [rows]="20" [rowsPerPageOptions]="[25, 50, 100, 250]" [scrollable]="true" scrollHeight="flex"
+    [resizableColumns]="true" columnResizeMode="expand" showGridlines
+    styleClass="p-datatable-striped p-datatable-sm p-datatable-gridlines compact-filters">
+
+
+    <ng-template pTemplate="header" let-columns>
+      <!-- Column Display Names -->
+      <tr>
+        @for(col of columns; track col.id) {
+        <th pResizableColumn [width]="col.width">
+          {{ col.displayName }}
+        </th>
         }
-
-        <!-- Empty state -->
-        <ng-template pTemplate="emptymessage">
-          <tr>
-            <td [attr.colspan]="visibleColumns().length" class="text-center p-4">
-              <div class="empty-state">
-                <i class="pi pi-search text-4xl text-400 mb-3"></i>
-                <p class="text-600">No log entries found</p>
-              </div>
-            </td>
-          </tr>
-        </ng-template>
-
-        <!-- Loading template -->
-        <ng-template pTemplate="loadingbody">
-          @for (i of loadingArray; track $index) {
-            <tr>
-              @for (col of visibleColumns(); track col.id) {
-                <td>
-                  <div class="loading-cell">
-                    <div class="loading-placeholder"></div>
-                  </div>
-                </td>
-              }
-            </tr>
+      </tr>
+      <!-- Per-Column Filter Inputs -->
+      <tr class="filter-row">
+        @for(col of columns; track col.id) {
+        <th class="filter-header">
+          @if(col.enableFiltering) {
+          <p-columnFilter [field]="col.id+'_filter'" matchMode="contains" [showMenu]="false" showClearButton="false" >
+            <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+              <input type="text" pInputText [ngModel]="value" (ngModelChange)="filter($event)" [style.width]="col.width"
+                class="p-inputtext-sm w-full"
+                [placeholder]="" (click)="$event.stopPropagation()" style="width: 1500px;">
+            </ng-template>
+          </p-columnFilter>
           }
-        </ng-template>
-      </p-table>
-    </div>
+        </th>
+        }
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="body" let-rowData let-columns="columns">
+      <tr (click)="handleRowClick(rowData)" class="p-selectable-row">
+        @for(col of columns; track col.id){
+        <td [class.clickable-cell]="isCellClickable(col, rowData)" (click)="handleCellClick(col, rowData, $event, getCellValue(rowData, col.field))"
+          tooltipPosition="top" [innerHTML]="getCellDisplayValue(rowData, col)">
+        </td>
+        }
+      </tr>
+    </ng-template>
+
+    <ng-template pTemplate="emptymessage" let-columns>
+      <tr>
+        <td [attr.colspan]="columns.length" class="text-center p-4">No records found.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>
