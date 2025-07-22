@@ -1,342 +1,330 @@
-/* batch-viewer.component.scss - Professional styling with light/dark mode support */
+// batch-viewer.component.scss - Clean, elegant styling for light and dark modes
+:host {
+  display: block;
+  width: 100%;
+}
 
+// ================================
+// CONTAINER AND LAYOUT
+// ================================
 .batch-viewer-container {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
   padding: 1rem;
-  
-  .batch-header {
+  margin: 1rem 0;
+}
+
+// ================================
+// BATCH HEADER
+// ================================
+.batch-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--surface-ground);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+
+  .header-left {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background: var(--surface-ground);
-    border-radius: 8px;
-    border: 1px solid var(--surface-border);
-    
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      
-      h2 {
-        margin: 0;
-        color: var(--text-color);
-        font-weight: 600;
-      }
-      
-      .streaming-indicator {
-        .streaming-control-btn {
-          border-radius: 6px;
-          transition: all 0.2s ease;
-          
-          &:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-          }
-        }
-      }
-    }
-    
-    .time-range-selector {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      
-      .time-range-label {
-        font-weight: 500;
-        color: var(--text-color);
-        margin-right: 0.5rem;
-      }
-      
-      /* IMPROVED: Button strip with no gaps */
-      .time-range-button-strip {
-        display: flex;
-        border: 1px solid var(--primary-color);
-        border-radius: 6px;
-        overflow: hidden;
-        
-        .time-range-button {
-          margin: 0 !important;
-          border: none !important;
-          border-radius: 0 !important;
-          border-right: 1px solid var(--primary-color);
-          min-width: 50px;
-          
-          &:last-child {
-            border-right: none;
-          }
-          
-          &.p-button-primary {
-            background-color: var(--primary-color);
-            color: var(--primary-color-text);
-            font-weight: 600;
-          }
-          
-          &.p-button-outlined {
-            background-color: transparent;
-            color: var(--primary-color);
-            
-            &:hover:not(:disabled) {
-              background-color: var(--primary-color);
-              color: var(--primary-color-text);
-            }
-          }
-        }
-      }
-    }
-  }
-  
-  .batch-content {
-    h3 {
+    gap: 1rem;
+
+    h2 {
+      margin: 0;
       color: var(--text-color);
       font-weight: 600;
-      margin-bottom: 1rem;
+      font-size: 1.5rem;
     }
-    
-    .custom-accordions {
-      .custom-accordion-panel {
-        margin-bottom: 0.75rem;
-        border-radius: 8px;
-        overflow: hidden;
-        border: 1px solid var(--surface-border);
-        transition: all 0.3s ease;
-        
-        &.expanded {
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          border-color: var(--primary-color);
+
+    .streaming-indicator .streaming-control-btn {
+      font-size: 0.875rem;
+    }
+  }
+
+  .time-range-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .time-range-label {
+      color: var(--text-color);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .time-range-button-group {
+      display: flex;
+      border-radius: 6px;
+      overflow: hidden;
+
+      .time-range-button {
+        border: none;
+        background: #f8f9fa;
+        color: #0171c5;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        border-right: 1px solid #dee2e6;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &.first-button {
+          border-radius: 6px 0 0 6px;
         }
-        
-        &.batch-accordion-success {
-          border-left: 4px solid var(--green-500);
-          
-          .custom-accordion-header {
-            background-color: var(--green-50);
-            
-            :host-context(.app-dark) & {
-              background-color: rgba(34, 197, 94, 0.1);
-            }
+
+        &.last-button {
+          border-radius: 0 6px 6px 0;
+          border-right: none;
+        }
+
+        &:hover:not(:disabled) {
+          background: #e3f2fd;
+        }
+
+        &.active,
+        &:disabled {
+          background: #0171c5;
+          color: white;
+          cursor: default;
+        }
+      }
+    }
+  }
+}
+
+// ================================
+// BATCH CONTENT
+// ================================
+.batch-content {
+  h3 {
+    color: var(--text-color);
+    font-weight: 600;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+  }
+}
+
+// ================================
+// NO DATA MESSAGE
+// ================================
+.no-data-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: var(--text-color-secondary);
+  font-style: italic;
+  background: var(--surface-ground);
+  border-radius: 6px;
+  border: 1px dashed var(--surface-border);
+
+  i {
+    font-size: 1.2rem;
+  }
+}
+
+// ================================
+// CUSTOM ACCORDIONS - CLEAN AND ELEGANT
+// ================================
+.custom-accordions {
+  .custom-accordion-panel {
+    margin-bottom: 0.75rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--surface-border);
+    background: var(--surface-card);
+    transition: all 0.3s ease;
+
+    &.expanded {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border-color: var(--primary-200);
+    }
+
+    // Success/Error indicators with subtle colors
+    &.batch-accordion-success {
+      border: 1px solid #e0e0e0;
+      
+      .custom-accordion-header {
+        background: #f1f8e9;
+        border-left: 3px solid #4caf50;
+      }
+    }
+
+    &.batch-accordion-error {
+      border: 1px solid #e0e0e0;
+      
+      .custom-accordion-header {
+        background: #fce4ec;
+        border-left: 3px solid #f44336;
+      }
+    }
+
+    // ================================
+    // ACCORDION HEADER - FIXED DARK MODE
+    // ================================
+    .custom-accordion-header {
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--surface-card);
+      border-bottom: 1px solid var(--surface-border);
+
+      &:hover {
+        background: var(--surface-hover);
+      }
+
+      .accordion-title-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+
+        .accordion-toggle-icon {
+          color: var(--text-color-secondary);
+          transition: transform 0.2s ease;
+          font-size: 1rem;
+          flex-shrink: 0;
+
+          &.expanded {
+            transform: rotate(90deg);
           }
         }
-        
-        &.batch-accordion-error {
-          border-left: 4px solid var(--red-500);
-          
-          .custom-accordion-header {
-            background-color: var(--red-50);
-            
-            :host-context(.app-dark) & {
-              background-color: rgba(239, 68, 68, 0.1);
-            }
+
+        .accordion-title {
+          flex: 1;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 12px;
+          font-size: 0.95rem;
+          color: #000000; // Black in light mode
+
+          .timestamp {
+            color: var(--text-color-secondary);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            font-weight: 500;
           }
-        }
-        
-        .custom-accordion-header {
-          padding: 16px 20px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          background: var(--surface-card);
-          
-          &:hover {
-            background: var(--surface-hover);
-            transform: translateY(-1px);
+
+          // FIXED: API Name styling for dark mode
+          .api-name {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 4px 8px;
+            background: var(--primary-50);
+            border-radius: 4px;
+            border: 1px solid var(--primary-200);
           }
-          
-          .accordion-title-section {
+
+          .details {
             display: flex;
             align-items: center;
-            gap: 12px;
-            width: 100%;
-            
-            .pi {
-              color: var(--text-color-secondary);
-              transition: transform 0.2s ease;
-              font-size: 0.875rem;
-            }
-            
-            .accordion-title {
-              flex: 1;
+            gap: 16px;
+            flex-wrap: wrap;
+            color: var(--text-color);
+            font-weight: 500;
+
+            .detail-item {
               display: flex;
-              flex-wrap: wrap;
               align-items: center;
-              gap: 8px;
-              font-size: 0.95rem;
-              
-              .timestamp {
+              gap: 4px;
+              font-size: 0.9rem;
+
+              .detail-label {
                 color: var(--text-color-secondary);
-                font-family: 'Consolas', 'Monaco', monospace;
-                font-size: 0.85rem;
+                font-weight: 600;
               }
-              
-              .api-name {
-                color: var(--primary-color);
-                font-weight: 700;
-                font-size: 1rem;
-                padding: 2px 8px;
-                background: var(--primary-color-text);
-                border-radius: 4px;
-                border: 1px solid var(--primary-color);
-              }
-              
-              .details {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 12px;
+
+              .detail-value {
                 color: var(--text-color);
-                font-size: 0.85rem;
-                
-                .value {
-                  font-weight: 600;
-                  margin-left: 4px;
-                  
-                  &.success {
-                    color: var(--green-600);
-                  }
-                  
-                  &.error {
-                    color: var(--red-600);
-                  }
-                }
+                font-weight: 500;
               }
+            }
+          }
+
+          .rules-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+
+            &.success {
+              background: var(--green-100);
+              color: var(--green-800);
+            }
+
+            &.error {
+              background: var(--red-100);
+              color: var(--red-800);
             }
           }
         }
-        
-        /* IMPROVED: Accordion content with proper background and spacing */
-        .custom-accordion-content {
+      }
+    }
+
+    // ================================
+    // ACCORDION CONTENT - CLEAN SECTIONS
+    // ================================
+    .custom-accordion-content {
+      padding: 0;
+      background: var(--surface-card);
+
+      .content-section {
+        margin: 0;
+        padding: 1.5rem;
+        background: var(--surface-card);
+        border-bottom: 1px solid var(--surface-border);
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        h4 {
+          color: var(--text-color);
+          font-weight: 600;
+          margin-bottom: 1rem;
+          font-size: 1.1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        // Transaction info styling
+        &.transaction-info {
           background: var(--surface-ground);
-          padding: 0;
-          margin-left: 24px; /* Left margin for content */
-          border-top: 1px solid var(--surface-border);
-          
-          :host-context(.app-dark) & {
-            background: var(--surface-section);
-          }
-          
-          .transaction-info,
-          .rules-section,
-          .aggregation-section,
-          .summary-section {
-            padding: 20px;
-            border-bottom: 1px solid var(--surface-border);
-            
-            &:last-child {
-              border-bottom: none;
-            }
-            
-            h4 {
-              color: var(--text-color);
-              font-weight: 600;
-              margin: 0 0 16px 0;
-              font-size: 1.1rem;
-            }
-          }
-          
-          .transaction-info {
-            background: var(--blue-50);
-            
-            :host-context(.app-dark) & {
-              background: rgba(59, 130, 246, 0.1);
-            }
-            
-            p {
-              margin: 0;
-              
-              .transaction-link {
+
+          .transaction-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+
+            .detail-row {
+              display: flex;
+              gap: 1rem;
+              align-items: center;
+
+              strong {
+                min-width: 120px;
+                color: var(--text-color-secondary);
+              }
+
+              .txn-link {
                 color: var(--primary-color);
                 text-decoration: none;
-                font-family: 'Consolas', 'Monaco', monospace;
-                font-weight: 500;
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                padding: 4px 8px;
-                background: var(--primary-color-text);
-                border-radius: 4px;
-                border: 1px solid var(--primary-color);
-                transition: all 0.2s ease;
-                
+                font-family: monospace;
+
                 &:hover {
-                  background: var(--primary-color);
-                  color: var(--primary-color-text);
-                  transform: translateY(-1px);
-                  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                }
-                
-                .pi-external-link {
-                  font-size: 0.75rem;
+                  text-decoration: underline;
                 }
               }
-            }
-          }
-          
-          .rules-section,
-          .aggregation-section {
-            .rule-message {
-              &.clickable {
-                cursor: pointer;
-                color: var(--primary-color);
-                text-decoration: underline;
-                
-                &:hover {
-                  color: var(--primary-color-text);
-                  background: var(--primary-color);
-                  padding: 2px 4px;
-                  border-radius: 3px;
-                }
-              }
-            }
-          }
-          
-          .summary-section {
-            .summary-header {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              margin-bottom: 16px;
-              flex-wrap: wrap;
-              gap: 12px;
-              
-              .group-selector {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                
-                label {
-                  font-weight: 500;
-                  color: var(--text-color);
-                  white-space: nowrap;
-                }
-                
-                p-multiselect {
-                  min-width: 200px;
-                }
-              }
-            }
-            
-            .table-header {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              flex-wrap: wrap;
-              gap: 12px;
-              
-              span:first-child {
-                font-weight: 500;
-                color: var(--text-color);
-              }
-              
-              .p-input-icon-left {
-                input {
-                  min-width: 250px;
-                }
-              }
-            }
-            
-            .group-count {
-              color: var(--text-color-secondary);
-              font-weight: normal;
-              font-size: 0.85rem;
-              margin-left: 6px;
             }
           }
         }
@@ -345,88 +333,363 @@
   }
 }
 
-/* Dark mode specific overrides */
+// ================================
+// SUMMARY SECTION ENHANCEMENTS
+// ================================
+.summary-header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  h4 {
+    margin: 0 !important;
+  }
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  .group-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+
+    label {
+      color: var(--text-color-secondary);
+      font-weight: 500;
+      white-space: nowrap;
+      font-size: 0.9rem;
+    }
+  }
+
+  .global-search-input {
+    max-width: 200px;
+  }
+}
+
+.summary-group {
+  margin-bottom: 1.5rem;
+
+  .group-header {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 1rem;
+    background: var(--primary-50);
+    border-radius: 4px;
+    border-left: 3px solid var(--primary-color);
+
+    h5 {
+      margin: 0;
+      color: var(--primary-color);
+      font-weight: 600;
+      font-size: 1rem;
+    }
+  }
+}
+
+// ================================
+// TABLE STYLING - CLEAN AND READABLE
+// ================================
+::ng-deep .compact-table {
+  .p-datatable-header {
+    background: var(--surface-card);
+    border: 1px solid #e0e0e0;
+    border-bottom: none;
+    padding: 0.75rem;
+
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+
+      .global-search-input {
+        max-width: 250px;
+      }
+    }
+  }
+
+  .p-datatable-thead > tr > th {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+    border: 1px solid #e0e0e0 !important;
+    padding: 0.5rem !important;
+    font-weight: 600 !important;
+    color: #0171c5 !important;
+    
+    .header-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+
+      .header-title {
+        font-weight: 600;
+        color: #0171c5;
+      }
+
+      .header-filter {
+        .header-filter-input {
+          width: 100%;
+          padding: 0.25rem 0.5rem;
+          font-size: 0.875rem;
+          border: 1px solid #e0e0e0;
+          border-radius: 4px;
+          background: white;
+
+          &:focus {
+            border-color: #0171c5;
+            outline: none;
+          }
+        }
+      }
+    }
+  }
+
+  .p-datatable-tbody > tr > td {
+    padding: 0.5rem !important;
+    border: 1px solid #e0e0e0 !important;
+    color: var(--text-color) !important;
+    font-size: 0.875rem;
+    background: white !important;
+  }
+
+  .p-datatable-tbody > tr:hover {
+    background: #f5f5f5 !important;
+  }
+
+  // Row group header styling
+  .p-rowgroup-header td {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+    font-weight: 600 !important;
+    color: #0171c5 !important;
+  }
+}
+
+// Message styling
+.rule-message.clickable {
+  cursor: pointer;
+  color: var(--primary-color);
+  
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// ================================
+// DROPDOWN IMPROVEMENTS - SMALLER SIZE
+// ================================
+::ng-deep .compact-group-dropdown-small {
+  max-height: 120px !important; // 40% smaller
+  
+  .p-multiselect-items {
+    max-height: 100px !important;
+  }
+  
+  .p-multiselect-item {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .p-multiselect {
+    height: 2rem !important;
+    min-height: 2rem !important;
+  }
+}
+
+// ================================
+// DARK MODE ENHANCEMENTS
+// ================================
 :host-context(.app-dark) {
   .batch-viewer-container {
-    .batch-header {
-      background: var(--surface-section);
+    background: var(--surface-800);
+    border-color: var(--surface-600);
+  }
+
+  .batch-header {
+    background: var(--surface-700);
+    border-color: var(--surface-600);
+
+    .time-range-button-group .time-range-button {
+      background: var(--surface-700);
+      color: #64b5f6;
+      border-right-color: var(--surface-600);
+
+      &:hover:not(:disabled) {
+        background: var(--surface-600);
+      }
+
+      &.active,
+      &:disabled {
+        background: #1976d2;
+        color: white;
+      }
     }
-    
-    .custom-accordions {
-      .custom-accordion-panel {
-        &.expanded {
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .custom-accordions .custom-accordion-panel {
+    background: var(--surface-800);
+    border-color: var(--surface-600);
+
+    &.expanded {
+      border-color: #64b5f6;
+      background: rgba(100, 181, 246, 0.03);
+    }
+
+    &.batch-accordion-success .custom-accordion-header {
+      background: rgba(76, 175, 80, 0.15);
+    }
+
+    &.batch-accordion-error .custom-accordion-header {
+      background: rgba(244, 67, 54, 0.15);
+    }
+
+    .custom-accordion-header {
+      background: var(--surface-700);
+      border-color: var(--surface-600);
+
+      &:hover {
+        background: var(--surface-600);
+      }
+
+      .accordion-title-section .accordion-title {
+        color: #ffffff !important; // White text in dark mode
+
+        .api-name {
+          background: rgba(100, 181, 246, 0.2);
+          border-color: rgba(100, 181, 246, 0.4);
+          color: #64b5f6;
         }
-        
-        .custom-accordion-header {
-          background: var(--surface-card);
-          
-          &:hover {
-            background: var(--surface-hover);
+
+        .rules-status {
+          &.success {
+            background: rgba(76, 175, 80, 0.25);
+            color: #81c784;
           }
-        }
-        
-        .custom-accordion-content {
-          .transaction-info {
-            background: rgba(59, 130, 246, 0.15);
+
+          &.error {
+            background: rgba(244, 67, 54, 0.25);
+            color: #e57373;
           }
         }
       }
     }
+
+    .custom-accordion-content {
+      background: var(--surface-800);
+
+      .content-section {
+        background: var(--surface-800);
+        border-color: var(--surface-600);
+
+        &.transaction-info {
+          background: var(--surface-700);
+        }
+      }
+    }
+  }
+
+  .summary-group .group-header {
+    background: rgba(100, 181, 246, 0.15);
+    border-color: #64b5f6;
+
+    h5 {
+      color: #64b5f6;
+    }
+  }
+
+  // Table styling for dark mode
+  ::ng-deep .compact-table {
+    .p-datatable-header {
+      background: var(--surface-700);
+      border-color: var(--surface-600);
+    }
+
+    .p-datatable-thead > tr > th {
+      background: linear-gradient(135deg, var(--surface-700) 0%, var(--surface-600) 100%) !important;
+      border-color: var(--surface-500) !important;
+      color: #64b5f6 !important;
+
+      .header-content .header-title {
+        color: #64b5f6 !important;
+      }
+
+      .header-filter .header-filter-input {
+        background: var(--surface-700);
+        border-color: var(--surface-500);
+        color: var(--text-color);
+
+        &:focus {
+          border-color: #64b5f6;
+        }
+      }
+    }
+
+    .p-datatable-tbody > tr > td {
+      border-color: var(--surface-600) !important;
+      background: var(--surface-800) !important;
+    }
+
+    .p-datatable-tbody > tr:hover {
+      background: var(--surface-700) !important;
+    }
+
+    .p-rowgroup-header td {
+      background: linear-gradient(135deg, rgba(100, 181, 246, 0.2) 0%, rgba(100, 181, 246, 0.3) 100%) !important;
+      color: #64b5f6 !important;
+    }
   }
 }
 
-/* Responsive design */
+// ================================
+// RESPONSIVE DESIGN
+// ================================
 @media (max-width: 768px) {
   .batch-viewer-container {
     padding: 0.5rem;
-    
-    .batch-header {
-      flex-direction: column;
-      gap: 1rem;
-      align-items: stretch;
-      
-      .time-range-selector {
-        justify-content: center;
-        
-        .time-range-button-strip {
-          .time-range-button {
-            min-width: 45px;
-            font-size: 0.85rem;
-          }
-        }
+    margin: 0.5rem 0;
+  }
+
+  .batch-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+    padding: 0.75rem;
+
+    .time-range-selector {
+      justify-content: center;
+
+      .time-range-button-group .time-range-button {
+        min-width: 45px;
+        font-size: 0.85rem;
       }
     }
-    
-    .custom-accordions {
-      .custom-accordion-panel {
-        .custom-accordion-header {
-          padding: 12px 16px;
-          
-          .accordion-title-section {
-            .accordion-title {
-              font-size: 0.85rem;
-              
-              .details {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 4px;
-              }
-            }
-          }
-        }
-        
-        .custom-accordion-content {
-          margin-left: 12px;
-          
-          .transaction-info,
-          .rules-section,
-          .aggregation-section,
-          .summary-section {
-            padding: 16px;
-          }
-        }
+  }
+
+  .custom-accordions .custom-accordion-panel .custom-accordion-header {
+    padding: 12px 16px;
+
+    .accordion-title-section .accordion-title {
+      font-size: 0.85rem;
+
+      .details {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
       }
+    }
+  }
+
+  .summary-header {
+    flex-direction: column;
+    align-items: stretch;
+
+    .group-selector {
+      justify-content: space-between;
     }
   }
 }
