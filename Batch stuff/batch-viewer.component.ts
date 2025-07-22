@@ -186,16 +186,21 @@ export class BatchViewerComponent {
     });
 
     // Set default group columns
-    effect(() => {
-      const summaryColDefs = this.summaryColumns();
-      const defaultGroups = summaryColDefs
-        .filter(col => col.defaultGroup === true)
-        .map(col => col.field);
-        
-      if (defaultGroups.length > 0) {
-        // Don't auto-set defaults, let user choose
-      }
-    });
+   effect(() => {
+  const summaryColDefs = this.summaryColumns();
+  
+  // Only set defaults if no columns are currently selected
+  if (summaryColDefs.length > 0 && this.selectedGroupColumns().length === 0) {
+    const defaultGroups = summaryColDefs
+      .filter(col => col.defaultGroup === true)
+      .map(col => col.field);
+      
+    if (defaultGroups.length > 0) {
+      console.log('[BatchViewer] Setting default group columns:', defaultGroups);
+      this.selectedGroupColumns.set(defaultGroups);
+    }
+  }
+}, { allowSignalWrites: true });
   }
 
   // Individual accordion control
