@@ -1,284 +1,239 @@
-// log-viewer.component.ts - Updated with enhanced click handling
-import { Component, Input, Output, EventEmitter, ViewChild, OnChanges, SimpleChanges, inject, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { AfterViewInit, ChangeDetectorRef, Component, computed, effect, ElementRef, EventEmitter, inject, Input, OnChanges, OnDestroy, OnInit, Output, signal, Signal, SimpleChanges, ViewChild, WritableSignal } from '@angular/core';
+import { CommonModule, JsonPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { get } from 'lodash-es';
-
-// PrimeNG imports
 import { Table, TableModule } from 'primeng/table';
 import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
-import { TooltipModule } from 'primeng/tooltip';
-
-// App imports
+import { TransformPipe } from '../../../core/pipes/transform.pipe';
 import { ActiveSearch, ElkHit } from '../../models/search.model';
-import { ColumnDefinition, CellClickEvent } from 'src/app/core/models/column-definition.model';
-import { TransformPipe } from 'src/app/core/pipes/transform.pipe';
+import { ColumnDefinition } from '../../models/column-definition.model';
+import { ViewDefinitionService } from '../../services/view-definition.service';
+import { FilterService } from 'primeng/api';
+import { CellClickActionService } from '../../services/cell-click-action.service';
 
 @Component({
   selector: 'app-log-viewer',
   standalone: true,
   imports: [
-    CommonModule,
-    TableModule,
-    InputTextModule,
-    IconFieldModule,
-    InputIconModule,
-    TooltipModule,
-    TransformPipe
-  ],
+    CommonModule, FormsModule, TableModule, InputTextModule,
+    IconFieldModule, InputIconModule
+],
   templateUrl: './log-viewer.component.html',
-  styleUrls: ['./log-viewer.component.scss']
+  styleUrls: ['./log-viewer.component.scss'],
+  providers: [TransformPipe]
 })
-export class LogViewerComponent implements OnChanges {
+export class LogViewerComponent implements OnChanges{
   @Input({ required: true }) searchInstance!: ActiveSearch;
   @Input({ required: true }) visibleColumns: ColumnDefinition[] = [];
-  @Input() selectedViewFilter?: string;  
+  @Input() selectedViewFilter?: string; // Applies only to transaction details searches.
+  @Input() selectedViewId?: string;
   @Output() rowDrilldown = new EventEmitter<any>();
   @Output() filteredCountChange = new EventEmitter<number>();
-  
-  // ✨ New output for cell clicks
-  @Output() cellClick = new EventEmitter<CellClickEvent>();
 
   @ViewChild('logTable') logTable!: Table;
   @ViewChild('tableContainer', { static: true }) tableContainer!: ElementRef;
   
-  // Simple properties
+  private searchState: WritableSignal<ActiveSearch> = signal(this.searchInstance);  
+  public visibleColumnsState: WritableSignal<ColumnDefinition[]> = signal([]);
+   
   public tableData: any[] = [];
   public totalRecords: number = 0;
   public isLoading: boolean = false;
 
-  private viewDefService = inject(ViewDefinitionService);
-  private cellClickActionService = inject(CellClickActionService);
-  public globalFilterFields = computed(() => 
-    this.visibleColumns.map(c => c.name)
-  );
-
   private cdr = inject(ChangeDetectorRef);
+  private transformPipe = inject(TransformPipe);
+  private viewService = inject(ViewDefinitionService);
+  private cellClickActionService = inject(CellClickActionService);
   
   constructor() {
-    console.log("[LogViewerComponent] Initialized");
+    console.log("LogViewerComponent created.");
   }
-
-   ngOnChanges(changes: SimpleChanges): void {
-  let shouldReprocessAll = false;
-
-  // Handle search instance changes
-  if (changes['searchInstance']) {
-    const currentSearch = changes['searchInstance'].currentValue as ActiveSearch;
-    const previousSearch = changes['searchInstance'].previousValue as ActiveSearch | undefined;
-
-    this.isLoading = currentSearch.isLoading;
-
-    // New search - reset everything
-    if (!previousSearch || currentSearch.id !== previousSearch.id) {
-      console.log("[LogViewer] New search detected. Resetting table.");
-      this.resetTableData();
-      shouldReprocessAll = true;
-    }
-    // Same search - check for new data
-    else if (this.hasNewData(currentSearch, previousSearch)) {
-      console.log('[LogViewer] New data detected, will reprocess all data');
-      shouldReprocessAll = true;
-    }
-
-    if (currentSearch.error) {
-      console.error(`[LogViewer] Search error: ${currentSearch.error}`);
-    }
-  }
-
-  // 🔥 FIX 1: Add strict checking for view filter changes
-  if (changes['selectedViewFilter']) {
-    const currentFilter = changes['selectedViewFilter'].currentValue;
-    const previousFilter = changes['selectedViewFilter'].previousValue;
-    
-    // Only process if values actually changed AND not first change
-    if (currentFilter !== previousFilter && !changes['selectedViewFilter'].firstChange) {
-      console.log('[LogViewer] View filter changed from', previousFilter, 'to', currentFilter);
-      shouldReprocessAll = true;
-    }
-  }
-
-  // Handle column changes
-  if (changes['visibleColumns']) {
-    const currentColumns = changes['visibleColumns'].currentValue;
-    const previousColumns = changes['visibleColumns'].previousValue;
-    
-    // Only process if columns actually changed AND not first change
-    const columnsChanged = !changes['visibleColumns'].firstChange && 
-                          JSON.stringify(currentColumns) !== JSON.stringify(previousColumns);
-    
-    if (columnsChanged) {
-      console.log("[LogViewer] Visible columns updated:", this.visibleColumns.length);
-      shouldReprocessAll = true;
-    }
-  }
-
-  // Reprocess all data if needed (single point of processing)
-  if (shouldReprocessAll) {
-    console.log('[LogViewer] REPROCESSING - Reason:', {
-      searchChange: !!changes['searchInstance'],
-      filterChange: !!changes['selectedViewFilter'],
-      columnChange: !!changes['visibleColumns']
-    });
-    this.reprocessAllData();
-  }
-}
-/**
- * SINGLE METHOD: Process all current data from scratch
- * This ensures consistent filtering across all data
- */
-private reprocessAllData(): void {
-  const allHits = this.searchInstance.data || [];
-  console.log(`[LogViewer] Reprocessing all data: ${allHits.length} hits with view filter: ${this.selectedViewFilter}`);
   
-  if (allHits.length === 0) {
-    this.resetTableData();
-    return;
-  }
-
-  // Apply view filter first, then transform
-  const filteredAndTransformed = this.processHits(allHits);
   
-  this.tableData = filteredAndTransformed;
-  this.totalRecords = this.tableData.length;
-  this.cdr.detectChanges();
-  
-  // Notify parent
-  setTimeout(() => {
-    this.filteredCountChange.emit(this.tableData.length);
-  }, 0);
-
-  console.log(`[LogViewer] Processed ${allHits.length} → ${this.tableData.length} rows`);
-}
-
-
   /**
-   * Check if there's new data compared to previous search
+   * Public method called by the parent to reset column visibility.
    */
-  private hasNewData(current: ActiveSearch, previous: ActiveSearch): boolean {
-    const currentLength = current.data?.length || 0;
-    const previousLength = previous.data?.length || 0;
-    return currentLength > previousLength;
+  public resetColumnsToDefault(): void {
+    // Filter the available columns to only those marked as `visible: true` by the API.
+    const defaultVisible = this.visibleColumnsState().filter(c => c.visible);
+    this.visibleColumnsState.set(defaultVisible);
   }
 
   /**
-   * Reset table to empty state
+   * Called by the global filter input in the table's caption.
    */
-  private resetTableData(): void {
-    this.tableData = [];
-    this.totalRecords = 0;
-    
-    setTimeout(() => {
-      this.filteredCountChange.emit(0);
-    }, 0);
-    
-    if (this.logTable) {
-      this.logTable.first = 0;
+  applyGlobalFilter(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.logTable.filterGlobal(value, 'contains');
+  }
+  
+  /**
+   * Emits the original source data of a row when clicked for drill-down.
+   */
+  handleRowClick(rowData: any): void {
+    const drilldownQuery = rowData._original?.user?.id; // Example drill-down field
+    if (drilldownQuery) {
+      this.rowDrilldown.emit(drilldownQuery);
     }
   }
 
   /**
-   * Public method for external reprocessing (if needed)
+   * Check if a cell should be clickable (contains identifier)
    */
-  public reprocessCurrentData(): void {
-    this.reprocessAllData();
+  public isCellClickable(column: ColumnDefinition, rowData: any): boolean {
+    // Make certain fields clickable for drilldown
+    const clickableFields = ['_source.tifw.txnid', '_source.message', '_source.timestamp', `_source['@timestamp']` ];
+    
+    return clickableFields.includes(column.field);
   }
 
-  private getNewHits(current: ActiveSearch, previous: ActiveSearch | undefined): ElkHit[] {
-    const currentData = current?.data ?? [];
-    if (!previous) { 
-      return currentData; 
-    }
-    
-    const previousLength = previous.data?.length ?? 0;
-    if (currentData.length <= previousLength) { 
-      return []; 
-    }
-    
-    return currentData.slice(previousLength);
-  }
-
-  private processHits(hits: ElkHit[]): any[] {
-    const columns = this.visibleColumns;
-    
-    // Step 1: Apply view filter ONLY for transaction searches
-    let filteredHits = hits;
-    if (this.searchInstance.type === 'transaction' && this.selectedViewFilter) {
-      filteredHits = this.viewDefService.applyViewFilter(hits, this.selectedViewFilter);
-      console.log(`[LogViewer] View filter applied: ${hits.length} → ${filteredHits.length} rows`);
-    }
-    
-    // Step 2: Your existing transformation logic
-    return filteredHits.map(hit => {
-      const row: any = { 
-        _id: hit._id, 
-        _original: hit._source
-      };
-      
-      columns.forEach(col => {
-        const rawValue = get(hit._source, col.field, null);
-        row[col.id] = rawValue;
-        const transformedValue = this.transformPipe.transform(rawValue, col.transform, hit);
-        const filterFieldName = `${col.id}_filter`;
-        row[filterFieldName] = String(transformedValue);
+  /**
+   * Handle cell-specific clicks
+   */
+  public handleCellClick(columnDef: ColumnDefinition, rowData: any, event: Event, cellValue: any): void {
+    if (this.isCellClickable(columnDef, rowData)) {
+      event.stopPropagation();
+      this.cellClickActionService.handleCellClick({
+        columnDef: columnDef,
+        rowData: rowData,
+        cellValue: cellValue,
+        transactionDetails: this.searchInstance.transactionDetails,
+        activeSearch: this.searchInstance
       });
-      
-      return row;
-    });
-  }
-
-  public applyGlobalFilter(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    if (this.logTable) {
-      this.logTable.filterGlobal(target.value, 'contains');
-      
-      setTimeout(() => {
-        const filteredCount = this.logTable.filteredValue?.length ?? this.tableData.length;
-        this.filteredCountChange.emit(filteredCount);
-      }, 200);
     }
   }
 
+  /**
+   * Get cell value with support for nested properties
+   */
+  public getCellValue(rowData: any, fieldPath: string): any {
+    if (!rowData || !fieldPath) return null;
+
+    const keys = fieldPath.split('.');
+    let value = get(rowData._original, fieldPath, '');
+    return value;
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['searchInstance']) {
+      const currentSearch = changes['searchInstance'].currentValue as ActiveSearch;
+      const previousSearch = changes['searchInstance'].previousValue as ActiveSearch | undefined;
+
+      // If this is a completely different search result, clear everything.
+      if (!previousSearch || currentSearch.id !== previousSearch.id) {
+        console.log("[LogViewer] New search detected. Resetting table.");
+        this.tableData = [];
+
+        // Reset paginator to the first page
+        if (this.logTable) {
+          this.logTable.first = 0;
+        }
+      }
+
+      if(changes['selectedViewId']) {
+        console.log(`[LogViewer] View filter changed, reprocessing data. New View Filter : `, this.selectedViewFilter);
+        //this.reProcessCurrentData();
+      }
+
+      const newHits = this.getNewHits(currentSearch, previousSearch);
+
+      if (newHits.length > 0) {
+        const processedNewRows = this.processHits(newHits);
+        this.tableData.push(...processedNewRows);
+        this.totalRecords = this.tableData.length; 
+        /*       
+        setTimeout(()=>{
+          this.filteredCountChange.emit(this.tableData.length);  
+        });  
+        */
+        this.cdr.detectChanges();
+        console.log(`[LogViewer] Appended ${processedNewRows.length} rows. Total now: ${this.tableData.length}`);
+      }
+    }
+  }
+
+  /**
+   * repocess the table data if needed.
+   */
+  public reProcessCurrentData(): void {
+    if(this.searchInstance.data.length > 0) {
+      this.tableData = this.processHits(this.searchInstance.data);
+      this.totalRecords = this.tableData.length;
+      this.cdr.detectChanges();
+
+      /*
+      setTimeout(() => {
+        this.filteredCountChange.emit(this.tableData.length);
+      }); 
+      */
+    }
+  }
+
+  /**
+   * Called when the user uses the filter bar.
+   */
   public onFilter(): void {
+    // This gets called by PrimeNG whenever any filtering occurs
+    /*
     setTimeout(() => {
       const filteredCount = this.logTable?.filteredValue?.length ?? this.tableData.length;
       console.log(`[LogViewer] Filter applied, new count: ${filteredCount}`);
       this.filteredCountChange.emit(filteredCount);
     }, 200);
+    */
   }
 
-  public handleRowClick(rowData: any): void {
-    const identifier = this.extractIdentifierFromRow(rowData);
-    if (identifier) {
-      console.log(`[LogViewer] Row clicked, drilling down with: ${identifier}`);
-      this.rowDrilldown.emit(identifier);
+  /**
+   * Load the newly streamed hits.
+   */
+  private getNewHits(current: ActiveSearch, previous: ActiveSearch | undefined): ElkHit[] {
+    const currentData = current?.data ?? [];
+    if (!previous) { return currentData; }
+    const previousLength = previous.data?.length ?? 0;
+    if (currentData.length <= previousLength) { return []; }
+    return currentData.slice(previousLength);
+  }
+
+  /**
+   * This takes in the incoming ELK hits and applies transform on them.
+   * @param hits ELK hits
+   * @returns Processed ELK hits
+   */
+  private processHits(hits: ElkHit[]): any[] {
+    const columns = this.visibleColumns;
+
+    let filteredHits = hits;
+    if(this.searchInstance.type === 'transaction' && this.selectedViewFilter) {
+      filteredHits = this.viewService.filterByViews(hits, this.selectedViewFilter);
+      this.filteredCountChange.emit(filteredHits.length);
     }
-  }
+    else if (this.searchInstance.type === 'jira' && this.selectedViewFilter) {
+      filteredHits = this.viewService.filterByViews(hits, this.selectedViewFilter);
+      this.filteredCountChange.emit(filteredHits.length);
+    }
 
-  public handleCellClick(column: ColumnDefinition, rowData: any, event: Event, cellValue: string): void {
-    if(this.isCellClickable(column)) {
-       event.stopPropagation(); 
-       this.cellClickActionService.handleCellClick({
-        column,
-        rowData,
-        cellValue,
-        transactionDetails: this.searchInstance.transactionDetails,
-        this.searchInstance
+    return filteredHits.map(hit => {
+      const row: any = { _id: hit._id, _original: hit };
+      columns.forEach(col => {
+        const rawValue = get(hit, col.field, '');
+        row[col.id] = rawValue;
+        const transformedValue = this.transformPipe.transform(rawValue, col.transform, hit);
+        const filterFieldName = `${col.id}_filter`;
+        row[filterFieldName] = String(transformedValue);
       });
-    }
+      return row;
+    });
   }
 
-  // ✨ Updated method to check if cell is clickable
-  public isCellClickable(column: ColumnDefinition): boolean {
-    return column.isClickable === true;
+  /**
+   * Return the value of each cell.
+   * @param rowData ELK Row data
+   * @param col Current Column
+   * @returns value of the cell
+   */
+  getCellDisplayValue(rowData: any, col: ColumnDefinition): string {
+    return rowData[col.id+'_filter'];
   }
-
-  public exportData(): void {
-    console.log(`[LogViewer] Export requested for ${this.tableData.length} rows`);
-  }
-
-  public refresh(): void {
-    console.log("[LogViewer] Manual refresh requested");
-  }
-}
+}     
