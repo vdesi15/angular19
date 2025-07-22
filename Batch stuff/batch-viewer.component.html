@@ -281,11 +281,10 @@
                         [value]="getSummaryData(data)" 
                         [scrollable]="true" 
                         scrollHeight="300px"
-                        [globalFilterFields]="globalFilterFields()"
                         styleClass="p-datatable-sm compact-table"
-                        [rowGroupMode]="getGroupColumnsForAccordion(data.api_txnid).length > 0 ? 'rowspan' : undefined"
-                        [groupRowsBy]="getGroupColumnsForAccordion(data.api_txnid)[0]"
-                        [sortField]="getGroupColumnsForAccordion(data.api_txnid)[0]"
+                        [rowGroupMode]="selectedGroupColumns().length > 0 ? 'rowspan' : undefined"
+                        [groupRowsBy]="selectedGroupColumns()[0]"
+                        [sortField]="selectedGroupColumns()[0]"
                         [sortOrder]="1"
                         #summaryTable>
                         
@@ -299,8 +298,7 @@
                                 <p-multiSelect
                                   id="groupColumns-{{data.api_txnid}}"
                                   [options]="availableGroupColumns()"
-                                  [ngModel]="getGroupColumnsForAccordion(data.api_txnid)"
-                                  (ngModelChange)="setGroupColumnsForAccordion(data.api_txnid, $event)"
+                                  [(ngModel)]="selectedGroupColumns"
                                   optionLabel="label"
                                   optionValue="value"
                                   placeholder="Select grouping columns"
@@ -311,19 +309,10 @@
                                 </p-multiSelect>
                               </div>
                             }
-                            <span class="p-input-icon-left">
-                              <i class="pi pi-search"></i>
-                              <input 
-                                pInputText 
-                                type="text" 
-                                placeholder="Global search..." 
-                                class="global-search-input"
-                                (input)="summaryTable.filterGlobal($any($event.target).value, 'contains')" />
-                            </span>
                           </div>
                         </ng-template>
                         
-                        @if (getGroupColumnsForAccordion(data.api_txnid).length > 0) {
+                        @if (selectedGroupColumns().length > 0) {
                           <ng-template pTemplate="groupheader" let-rowData let-rowIndex="rowIndex" let-expanded="expanded" let-onRowToggle="onRowToggle">
                             <tr>
                               <td [attr.colspan]="summaryColumns().length">
@@ -334,7 +323,7 @@
                                   [pRowToggler]="rowData"
                                   (click)="onRowToggle(rowData)">
                                   <span [class]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></span>
-                                  <span class="font-bold ml-2">{{ getGroupColumnsForAccordion(data.api_txnid)[0] }}: {{ getFieldValue(rowData, getGroupColumnsForAccordion(data.api_txnid)[0]) }}</span>
+                                  <span class="font-bold ml-2">{{ selectedGroupColumns()[0] }}: {{ getFieldValue(rowData, selectedGroupColumns()[0]) }}</span>
                                 </button>
                               </td>
                             </tr>
