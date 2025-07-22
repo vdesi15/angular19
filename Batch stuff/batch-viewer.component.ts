@@ -212,6 +212,23 @@ export class BatchViewerComponent {
     this.accordionStates.set(currentStates);
   }
 
+  expandedSummaryRows: any = {};
+
+  onSummaryRowToggle(event: any): void {
+  this.expandedSummaryRows = event.data;
+  console.log('[BatchViewer] Summary row toggled:', event);
+}
+
+// Get count of items in a group
+getGroupCount(data: BatchSSEData, rowData: any, groupField: string): number {
+  if (!data.summary) return 0;
+  
+  const groupValue = this.getFieldValue(rowData, groupField);
+  return data.summary.filter(item => 
+    this.getFieldValue(item, groupField) === groupValue
+  ).length;
+}
+
   // Time range selection with proper orchestrator call
   selectTimeRange(range: string): void {
     this.selectedTimeRange.set(range);

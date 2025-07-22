@@ -244,7 +244,6 @@
                   </div>
                 }
 
-                <!-- Summary Section with Enhanced Grouping -->
                 <!-- Summary Section with Fixed Grouping -->
 @if (data.summary && data.summary.length > 0) {
   <div class="content-section summary-section">
@@ -277,7 +276,7 @@
         <span>No data matches the current filters</span>
       </div>
     } @else {
-      <!-- Summary Table with Proper Grouping -->
+      <!-- Summary Table with Collapsible Grouping -->
       <p-table 
         [value]="getSummaryData(data)" 
         [scrollable]="true" 
@@ -287,6 +286,9 @@
         [groupRowsBy]="selectedGroupColumns().length > 0 ? selectedGroupColumns()[0] : undefined"
         [sortField]="selectedGroupColumns().length > 0 ? selectedGroupColumns()[0] : undefined"
         [sortOrder]="1"
+        [expandableRowGroups]="selectedGroupColumns().length > 0"
+        [expandedRows]="expandedSummaryRows"
+        (onRowToggle)="onSummaryRowToggle($event)"
         #summaryTable>
         
         <ng-template pTemplate="caption">
@@ -295,12 +297,22 @@
           </div>
         </ng-template>
         
-        <!-- Group header template -->
+        <!-- Collapsible Group header template -->
         @if (selectedGroupColumns().length > 0) {
-          <ng-template pTemplate="groupheader" let-rowData>
+          <ng-template pTemplate="groupheader" let-rowData let-rowIndex="rowIndex" let-expanded="expanded">
             <tr class="p-rowgroup-header">
               <td [attr.colspan]="summaryColumns().length">
-                <span class="font-bold">{{ selectedGroupColumns()[0] }}: {{ getFieldValue(rowData, selectedGroupColumns()[0]) }}</span>
+                <button
+                  type="button"
+                  pButton
+                  class="p-row-toggler p-link group-toggle-btn"
+                  [pRowToggler]="rowData">
+                  <span [class]="expanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></span>
+                  <span class="font-bold ml-2">
+                    {{ selectedGroupColumns()[0] }}: {{ getFieldValue(rowData, selectedGroupColumns()[0]) }}
+                    <span class="group-count">({{ getGroupCount(data, rowData, selectedGroupColumns()[0]) }} items)</span>
+                  </span>
+                </button>
               </td>
             </tr>
           </ng-template>

@@ -744,3 +744,43 @@
     }
   }
 }
+
+::ng-deep .compact-table {
+  .group-toggle-btn {
+    background: none !important;
+    border: none !important;
+    padding: 0.2rem 0.5rem !important;
+    color: #0171c5 !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.3rem !important;
+    
+    &:hover {
+      background: rgba(1, 113, 197, 0.1) !important;
+    }
+    
+    .pi {
+      font-size: 0.8rem;
+      transition: transform 0.2s ease;
+    }
+    
+    .group-count {
+      font-weight: normal;
+      color: var(--text-color-secondary);
+      font-size: 0.85rem;
+      margin-left: 0.5rem;
+    }
+  }
+  
+  // Dark mode styling
+  :host-context(.app-dark) & {
+    .group-toggle-btn {
+      color: #64b5f6 !important;
+      
+      &:hover {
+        background: rgba(100, 181, 246, 0.1) !important;
+      }
+    }
+  }
+}
