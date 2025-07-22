@@ -134,3 +134,39 @@
         var(--surface-700) 75%);
       background-size: 200% 100%;
     }
+
+
+    .transaction-details-layout {
+  .log-viewer-section {
+    // Force table cells to wrap text
+    :host ::ng-deep .p-datatable {
+      .p-datatable-table {
+        table-layout: fixed; // Essential for text wrapping
+      }
+      
+      .p-datatable-tbody > tr > td {
+        word-wrap: break-word;
+        white-space: normal; // Allow text to wrap
+        overflow-wrap: break-word;
+      }
+    }
+  }
+}
+
+:host ::ng-deep {
+  .p-accordion-content {
+    overflow: visible !important; // Don't clip pagination
+    
+    .p-accordion-content-wrapper {
+      overflow: visible !important;
+    }
+  }
+  
+  // Ensure paginator stays visible
+  .p-paginator {
+    position: relative !important;
+    z-index: 100 !important;
+    background: var(--surface-card) !important;
+    margin: 0.5rem 0 !important;
+  }
+}
