@@ -57,7 +57,8 @@ export class BatchViewerComponent {
   editorContent = signal<any>(null);
   editorTitle = signal('');
   
-  selectedGroupColumns: WritableSignal<string[]> = signal([]);
+  // Group by functionality with WritableSignal - per accordion
+  selectedGroupColumns: WritableSignal<Map<string, string[]>> = signal(new Map());
   
   // Streaming state for header display
   isStopButtonHovered = signal(false);
@@ -81,13 +82,14 @@ export class BatchViewerComponent {
 
   // Get group columns for specific accordion
   getGroupColumnsForAccordion(txnId: string): string[] {
-    return this.selectedGroupColumns().get(txnId) || [];
+    const groupMap = this.selectedGroupColumns();
+    return groupMap.get(txnId) || [];
   }
 
   // Set group columns for specific accordion
   setGroupColumnsForAccordion(txnId: string, columns: string[]): void {
-    this.selectedGroupColumns.update(map => {
-      const newMap = new Map(map);
+    this.selectedGroupColumns.update(currentMap => {
+      const newMap = new Map(currentMap);
       if (columns.length === 0) {
         newMap.delete(txnId);
       } else {
