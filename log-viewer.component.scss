@@ -1,217 +1,86 @@
 :host ::ng-deep .elegant-table {
   
-  // 🔥 Force table layout to respect column widths
+  // Force table to respect column widths
   .p-datatable-table {
     table-layout: fixed !important;
-    width: 100% !important;
   }
   
   // Clean header styling
-  .header-row {
-    background: #f8fafc !important; // Clean light gray
-    border-bottom: 1px solid #e2e8f0 !important;
+  .header-row .elegant-header {
+    padding: 0.75rem 0.5rem;
+    font-weight: 600;
+    background: var(--surface-100);
+    color: var(--text-color);
+    border-right: 1px solid var(--surface-border);
+  }
+  
+  // Clean filter row
+  .filter-row .filter-header {
+    padding: 0.4rem;
+    background: var(--surface-50);
+    border-right: 1px solid var(--surface-border);
     
-    .elegant-header {
-      padding: 0.75rem 0.5rem !important;
-      font-weight: 600;
-      color: #1a202c !important;
-      border-right: 1px solid #e2e8f0 !important;
-      background: transparent !important;
+    .elegant-filter-input {
+      width: 100% !important;
+      padding: 0.5rem;
+      border: 1px solid var(--surface-300);
+      border-radius: 6px;
+      background: var(--surface-0);
       
-      .header-content {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        
-        .column-title {
-          font-size: 0.875rem;
-          letter-spacing: 0.3px;
-        }
-      }
-      
-      &:hover {
-        background: #f1f5f9 !important;
+      &:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px var(--primary-color-alpha);
       }
     }
   }
   
-  // Clean filter row styling
-  .filter-row {
-    background: #ffffff !important; // Pure white
-    border-bottom: 1px solid #e2e8f0 !important;
-    
-    .filter-header {
-      padding: 0.4rem !important;
-      border-right: 1px solid #e2e8f0 !important;
-      background: transparent !important;
-      
-      .elegant-filter-input {
-        padding: 0.5rem 0.75rem !important;
-        font-size: 0.875rem !important;
-        border: 1px solid #d1d5db !important;
-        border-radius: 8px !important;
-        background: #ffffff !important;
-        color: #374151 !important;
-        transition: all 0.2s ease !important;
-        box-sizing: border-box !important;
-        
-        &:focus {
-          border-color: #3b82f6 !important; // Your blue theme
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-          outline: none !important;
-        }
-        
-        &::placeholder {
-          color: #9ca3af !important;
-          font-weight: 400;
-        }
-      }
-    }
-  }
-  
-  // Clean body row styling
+  // Body rows
   .elegant-row {
-    transition: all 0.15s ease;
-    background: #ffffff !important;
-    
-    &:nth-child(even) {
-      background: #fafbfc !important; // Very subtle stripe
-    }
-    
     &:hover {
-      background: #f0f9ff !important; // Light blue hover
-      transform: none; // Remove the lift effect
+      background: var(--surface-hover);
     }
     
     .elegant-cell {
-      padding: 0.75rem 0.5rem !important;
-      border-right: 1px solid #f3f4f6 !important;
-      vertical-align: top;
-      color: #374151 !important;
-      
-      // 🔥 Force text wrapping
+      padding: 0.75rem 0.5rem;
+      border-right: 1px solid var(--surface-border);
       word-wrap: break-word;
-      word-break: break-word;
       white-space: normal;
-      overflow-wrap: break-word;
-      max-width: 0;
       
       &.clickable-cell {
+        color: var(--primary-color);
         cursor: pointer;
-        color: #3b82f6 !important; // Your blue theme
-        font-weight: 500;
-        
-        &:hover {
-          background: #dbeafe !important;
-          color: #1d4ed8 !important;
-        }
-      }
-    }
-  }
-  
-  // Clean empty state
-  .empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    
-    .empty-content {
-      color: #6b7280;
-      
-      i {
-        font-size: 2rem;
-        margin-bottom: 1rem;
-        display: block;
-        color: #3b82f6;
-      }
-      
-      p {
-        margin: 0;
-        font-size: 1rem;
       }
     }
   }
 }
 
 // ================================
-// 🔥 CLEAN PAGINATION STYLING
+// 🔥 SIMPLE STICKY PAGINATION
 // ================================
 :host ::ng-deep {
-  
-  // Force accordion content to be visible for pagination
   .p-accordion-content {
     overflow: visible !important;
     
     .p-accordion-content-wrapper {
       overflow: visible !important;
-      padding-bottom: 4rem !important;
+      padding-bottom: 3rem !important;
     }
   }
   
-  // Clean pagination styling
+  // Sticky paginator
   .p-paginator {
     position: sticky !important;
     bottom: 0 !important;
-    z-index: 1000 !important;
-    background: #ffffff !important; // Solid white
-    border-top: 1px solid #e5e7eb !important;
-    border-radius: 0 !important;
-    padding: 1rem !important;
-    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.1) !important;
+    z-index: 100 !important;
+    background: var(--surface-card) !important;
+    border-top: 1px solid var(--surface-border) !important;
     
-    .paginator-info {
-      font-size: 0.875rem;
-      color: #6b7280 !important;
-      font-weight: 500;
-    }
-    
-    // 🔥 Dropdown opens upward
-    .p-dropdown {
-      .p-dropdown-panel {
-        bottom: 100% !important;
-        top: auto !important;
-        margin-bottom: 8px !important;
-        z-index: 1500 !important;
-        transform-origin: bottom center !important;
-        border: 1px solid #d1d5db !important;
-        border-radius: 8px !important;
-        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15) !important;
-      }
-    }
-    
-    // Clean page buttons
-    .p-paginator-pages .p-paginator-page {
-      min-width: 2.5rem;
-      height: 2.5rem;
-      border-radius: 6px !important;
-      transition: all 0.2s ease;
-      border: 1px solid #e5e7eb !important;
-      color: #374151 !important;
-      
-      &.p-paginator-page-selected {
-        background: #3b82f6 !important; // Your blue
-        color: white !important;
-        border-color: #3b82f6 !important;
-      }
-      
-      &:hover:not(.p-paginator-page-selected) {
-        background: #f3f4f6 !important;
-        border-color: #d1d5db !important;
-      }
-    }
-    
-    // Navigation buttons
-    .p-paginator-first,
-    .p-paginator-prev,
-    .p-paginator-next,
-    .p-paginator-last {
-      border: 1px solid #e5e7eb !important;
-      border-radius: 6px !important;
-      color: #374151 !important;
-      
-      &:hover {
-        background: #f3f4f6 !important;
-        border-color: #d1d5db !important;
-      }
+    // Dropdown opens up
+    .p-dropdown .p-dropdown-panel {
+      bottom: 100% !important;
+      top: auto !important;
+      margin-bottom: 8px !important;
+      z-index: 1500 !important;
     }
   }
 }
