@@ -1,135 +1,110 @@
 :host {
-  // Sets up a flex container for the sticky paginator magic.
+  // This sets up a "sticky context" for the paginator.
+  // The height is calculated to stop just above the site footer.
   .table-container {
-    display: flex;
-    flex-direction: column;
-    height: 100%; // Make sure the container takes up all available vertical space.
-    overflow: hidden; // Prevents double scrollbars.
-  }
-}
-
-/*
- * CORE TABLE STYLES
- * Polished, elegant, and structured table theme.
- */
-:host ::ng-deep .elegant-table {
-  // 🔥 FIX #1: This is the most important rule for respecting column widths.
-  .p-datatable-table {
-    table-layout: fixed !important;
-  }
-
-  // 🔥 FIX #2: Subtle but effective borders for the entire table.
-  border: 1px solid var(--surface-border);
-  border-radius: 6px; // Soft rounded corners for the whole table container.
-  overflow: hidden; // Clips the content to the rounded corners.
-
-  // Header styling for a clean, unified look.
-  .p-datatable-thead th {
-    background-color: var(--surface-50);
-    border-color: var(--surface-border);
-    border-style: solid;
-    border-width: 0 0 1px 0; // Only a bottom border for each header cell.
-  }
-  
-  // Header row with display names.
-  .header-row th {
-    padding: 0.75rem; // Consistent padding.
-    font-weight: 600;
-    text-align: left;
-    white-space: nowrap;
+    display: block; // Use block instead of flex for simpler height calculation.
+    // 🔥 FIX #3: Respects the site footer. Assumes footer is ~50px tall.
+    // Adjust '50px' to the actual height of your .site-footer.
+    height: calc(100% - 50px);
     overflow: hidden;
-    text-overflow: ellipsis;
-
-    // A subtle right border for column separation.
-    &:not(:last-child) {
-      border-right-width: 1px;
-    }
   }
 
-  // 🔥 FIX #2: Make the filter row compact and visually balanced.
-  .filter-row th {
-    padding: 0.25rem 0.5rem; // Reduced padding for a tighter look.
-    background-color: var(--surface-100);
-
-    &:not(:last-child) {
-      border-right-width: 1px;
+  /*
+   * We use ::ng-deep but scope it inside :host to prevent it from leaking out.
+   * The .elegant-table class provides the necessary specificity.
+   */
+  ::ng-deep .elegant-table {
+    
+    // This is the most important rule for respecting column widths.
+    .p-datatable-table {
+      table-layout: fixed !important;
     }
 
-    .p-column-filter {
-      width: 100%;
+    // 🔥 FIX #1 & #2: Compact layout with smaller fonts and no outer border.
+    font-size: 0.8rem; // Smaller base font for the entire table.
+
+    // Header styling for a clean, unified look.
+    .p-datatable-thead th {
+      background-color: var(--surface-100);
+      border-bottom: 1px solid var(--surface-border) !important;
+      padding: 0.5rem 0.6rem; // Reduced padding
+      font-weight: 600;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .elegant-filter-input {
-      width: 100%;
-      // Make filter input height smaller to feel proportional.
-      font-size: 0.875rem;
-      padding: 0.4rem 0.6rem; // Reduced padding.
-      border: 1px solid var(--surface-300);
-      border-radius: 4px;
-      transition: all 0.2s ease-in-out;
+    // Filter row - even more compact
+    .filter-row th {
+      padding: 0.2rem 0.4rem; // Very tight padding
+      background-color: var(--surface-50);
+      border-bottom-width: 2px; // Heavier border to separate header from data
 
-      &:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 1px var(--primary-color);
-        outline: none;
+      .p-column-filter { width: 100%; }
+
+      .elegant-filter-input {
+        width: 100%;
+        font-size: 0.75rem; // Smaller font for filters
+        padding: 0.3rem 0.5rem; // Compact padding
+        border: 1px solid var(--surface-200);
+        border-radius: 4px;
       }
     }
-  }
 
-  // Body row styling.
-  .elegant-row {
-    .elegant-cell {
-      padding: 0.6rem 0.75rem;
+    // Body row styling for data density.
+    .p-datatable-tbody tr td {
+      padding: 0.4rem 0.6rem; // Reduced padding
       border-bottom: 1px solid var(--surface-border);
       word-wrap: break-word;
       white-space: normal;
-
-      &:not(:last-child) {
-        border-right: 1px solid var(--surface-border);
-      }
-      
-      &.clickable-cell { /* ... no changes needed here ... */ }
     }
   }
-}
 
-/*
- * 🔥 FIX #3: OPAQUE & STICKY PAGINATOR
- * This ensures the paginator stays at the bottom of its container.
- */
-:host ::ng-deep .p-paginator {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  // Opaque background that matches the application's theme.
-  background: var(--surface-card) !important;
-  border-top: 1px solid var(--surface-border) !important;
-  // Remove rounded corners that might look weird when stuck to the bottom.
-  border-radius: 0;
-}
+  /*
+   * 🔥 FIX #3 & #4: OPAQUE, STICKY PAGINATOR WITH UPWARD-OPENING DROPDOWN
+   */
+  ::ng-deep .p-paginator {
+    position: sticky;
+    bottom: 0;
+    z-index: 10; // High z-index to stay on top of table content
+    background: var(--surface-card);
+    border-top: 1px solid var(--surface-border);
+    font-size: 0.8rem; // Compact paginator font
+    padding: 0.25rem 0.5rem;
 
-/*
- * DARK MODE ENHANCEMENTS
- */
-:host-context(.app-dark) ::ng-deep {
-  .elegant-table {
-    border-color: var(--surface-700);
-
-    .p-datatable-thead th {
-      background-color: var(--surface-800);
-      border-color: var(--surface-700);
+    // Target the dropdown panel specifically
+    .p-dropdown .p-dropdown-panel {
+      // This forces the dropdown to open upwards from the button.
+      bottom: 100%;
+      top: auto !important;
+      margin-bottom: 4px; // Small space between dropdown and paginator bar
     }
-    .filter-row {
-      background-color: var(--surface-700);
-      .elegant-filter-input {
+  }
+
+  /*
+   * DARK MODE ENHANCEMENTS
+   */
+  &.app-dark ::ng-deep {
+    // 🔥 FIX #2: No ugly white border in dark mode.
+    // The background color of the table will blend with the container.
+    .elegant-table {
+      .p-datatable-thead th {
         background-color: var(--surface-800);
-        border-color: var(--surface-600);
+        border-color: var(--surface-700);
+      }
+      .filter-row {
+        background-color: var(--surface-700);
+        .elegant-filter-input {
+          background-color: var(--surface-800);
+          border-color: var(--surface-600);
+          color: var(--text-color);
+        }
       }
     }
-  }
-
-  .p-paginator {
-    background: var(--surface-800) !important;
-    border-top-color: var(--surface-700) !important;
+    .p-paginator {
+      background: var(--surface-800);
+      border-top-color: var(--surface-700);
+    }
   }
 }
