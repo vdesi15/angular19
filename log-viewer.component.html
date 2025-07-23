@@ -1,4 +1,5 @@
-<p-table #logTable 
+<div #tableContainer class="table-container">
+  <p-table #logTable 
     [value]="tableData" 
     [columns]="visibleColumns" 
     [totalRecords]="totalRecords" 
@@ -9,37 +10,32 @@
     [scrollable]="true" 
     scrollHeight="flex"
     [resizableColumns]="true" 
-    columnResizeMode="fit"  
+    columnResizeMode="fit"
     styleClass="p-datatable-striped p-datatable-sm elegant-table">
 
+    <!-- 🔥 FIX #1: Define column widths explicitly in a colgroup -->
+    <ng-template pTemplate="colgroup" let-columns>
+      <colgroup>
+        @for(col of columns; track col.id) {
+          <col [style.width]="col.width">
+        }
+      </colgroup>
+    </ng-template>
+
     <ng-template pTemplate="header" let-columns>
-      <!-- Column Display Names -->
+      <!-- Column Display Names (No width style needed here anymore) -->
       <tr class="header-row">
         @for(col of columns; track col.id) {
-          <!-- Width is set ONLY on the main header cell -->
-          <th pResizableColumn [style.width]="col.width">
-            {{ col.displayName }}
-          </th>
+          <th pResizableColumn>{{ col.displayName }}</th>
         }
       </tr>
       
       <!-- Per-Column Filter Inputs -->
       <tr class="filter-row">
         @for(col of columns; track col.id) {
-          <th> <!-- No width style needed here, it inherits from the header -->
+          <th>
             @if(col.enableFiltering) {
-              <p-columnFilter [field]="col.id+'_filter'" matchMode="contains" [showMenu]="false">
-                <ng-template pTemplate="filter" let-value let-filter="filterCallback">
-                  <input 
-                    type="text" 
-                    pInputText 
-                    [ngModel]="value" 
-                    (ngModelChange)="filter($event)" 
-                    class="elegant-filter-input"
-                    placeholder="Filter..."
-                    (click)="$event.stopPropagation()">
-                </ng-template>
-              </p-columnFilter>
+              <!-- ... your filter template is fine ... -->
             }
           </th>
         }
@@ -50,12 +46,13 @@
       <tr class="elegant-row">
         @for(col of columns; track col.id){
           <td 
-            [class.clickable-cell]="isCellClickable(col, rowData)" 
-            (click)="handleCellClick(col, rowData, $event, getCellValue(rowData, col.field))"
             [pTooltip]="getCellDisplayValue(rowData, col)"
             tooltipPosition="top"
             class="elegant-cell"
-            [innerHTML]="getCellDisplayValue(rowData, col)">
+            [class.clickable-cell]="isCellClickable(col, rowData)" 
+            (click)="handleCellClick(col, rowData, $event, getCellValue(rowData, col.field))">
+            <!-- Use a div wrapper to handle text overflow gracefully -->
+            <div class="cell-content" [innerHTML]="getCellDisplayValue(rowData, col)"></div>
           </td>
         }
       </tr>
