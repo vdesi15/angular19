@@ -1,180 +1,136 @@
 :host ::ng-deep .elegant-table {
-  
-  // Force table to respect column widths
+  // 🔥 FIX 1: This is the most important rule for respecting column widths.
+  // It tells the browser to use the widths defined on the columns/headers, not auto-calculate.
   .p-datatable-table {
     table-layout: fixed !important;
   }
-  
-  // Clean header styling
-  .header-row .elegant-header {
-    padding: 0.75rem 0.5rem;
-    font-weight: 600;
-    background: var(--surface-100);
+
+  // Common styles for both header rows for a unified look.
+  .p-datatable-thead th {
+    background-color: var(--surface-100);
     color: var(--text-color);
-    border-right: 1px solid var(--surface-border);
+    border-bottom: 1px solid var(--surface-border) !important;
   }
-  
-  // Clean filter row
-  .filter-row .filter-header {
-    padding: 0.4rem;
-    background: var(--surface-50);
-    border-right: 1px solid var(--surface-border);
-    
+
+  // Header row containing the column display names.
+  .header-row th {
+    padding: 0.5rem 0.75rem; // Reduced padding for a more compact look
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // 🔥 FIX 2: Style the filter row to be compact and aligned.
+  .filter-row th {
+    padding: 0.25rem; // Minimal padding around the filter input
+
+    .p-column-filter {
+      width: 100%;
+      display: flex; // Allows the input to fill the space
+    }
+
     .elegant-filter-input {
       width: 100% !important;
-      padding: 0.5rem;
+      font-size: 0.875rem; // Slightly smaller font
+      padding: 0.5rem 0.75rem; // Match header padding for vertical rhythm
       border: 1px solid var(--surface-300);
-      border-radius: 6px;
-      background: var(--surface-0);
-      
+      border-radius: 4px; // Softer corners
+      background: var(--surface-card);
+      transition: border-color 0.2s, box-shadow 0.2s;
+
       &:focus {
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 2px var(--primary-color-alpha);
+        box-shadow: 0 0 0 1px var(--primary-color); // More subtle focus ring
+        outline: none;
       }
     }
   }
-  
-  // Body rows
+
+  // Body row styling for readability and interaction.
   .elegant-row {
+    transition: background-color 0.2s;
     &:hover {
-      background: var(--surface-hover);
+      background-color: var(--surface-hover);
     }
-    
+
     .elegant-cell {
-      padding: 0.75rem 0.5rem;
-      border-right: 1px solid var(--surface-border);
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--surface-border);
+      vertical-align: top; // Aligns content to the top for multi-line cells
+
+      // Prevents long text from breaking the layout.
       word-wrap: break-word;
       white-space: normal;
-      
+
       &.clickable-cell {
         color: var(--primary-color);
         cursor: pointer;
-      }
-    }
-  }
-}
-
-// ================================
-// 🔥 SIMPLE STICKY PAGINATION
-// ================================
-:host ::ng-deep {
-  .p-accordion-content {
-    overflow: visible !important;
-    
-    .p-accordion-content-wrapper {
-      overflow: visible !important;
-      padding-bottom: 3rem !important;
-    }
-  }
-  
-  // Sticky paginator
-  .p-paginator {
-    position: sticky !important;
-    bottom: 0 !important;
-    z-index: 100 !important;
-    background: var(--surface-card) !important;
-    border-top: 1px solid var(--surface-border) !important;
-    
-    // Dropdown opens up
-    .p-dropdown .p-dropdown-panel {
-      bottom: 100% !important;
-      top: auto !important;
-      margin-bottom: 8px !important;
-      z-index: 1500 !important;
-    }
-  }
-}
-
-// ================================
-// 🔥 FIX 4: TRANSACTION LAYOUT COORDINATION
-// ================================
-.transaction-details-layout {
-  .timeline-section {
-    // Match timeline header height to table header + filter
-    ::ng-deep .timeline-header {
-      height: 7rem !important; // Match table header (3.5rem) + filter row (3.5rem)
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      padding: 1rem;
-      
-      h5 {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 600;
-      }
-      
-      .event-count {
-        margin-top: 0.5rem;
-        font-size: 0.875rem;
-        color: var(--text-color-secondary);
-      }
-    }
-  }
-}
-
-// ================================
-// DARK MODE ENHANCEMENTS
-// ================================
-:host-context(.app-dark) {
-  ::ng-deep .elegant-table {
-    .header-row {
-      background: linear-gradient(135deg, var(--surface-800) 0%, var(--surface-700) 100%);
-      border-bottom-color: var(--primary-400);
-    }
-    
-    .filter-row {
-      background: var(--surface-800);
-      
-      .elegant-filter-input {
-        background: var(--surface-900);
-        border-color: var(--surface-600);
-        color: var(--text-color);
-        
-        &:focus {
-          border-color: var(--primary-400);
-          box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.3);
+        font-weight: 500;
+        &:hover {
+          text-decoration: underline;
         }
       }
     }
-    
-    .elegant-row {
-      &:hover {
-        background: var(--surface-700) !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      }
-      
-      .elegant-cell.clickable-cell:hover {
-        background: var(--primary-900);
+  }
+
+  // Styling for the "No records found" message.
+  .empty-state {
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-color-secondary);
+    .empty-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      i {
+        font-size: 1.5rem;
       }
     }
-  }
-  
-  .p-paginator {
-    background: var(--surface-800) !important;
-    border-top-color: var(--surface-600) !important;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3) !important;
   }
 }
 
-// ================================
-// RESPONSIVE ADJUSTMENTS
-// ================================
-@media (max-width: 768px) {
-  :host ::ng-deep .elegant-table {
-    .elegant-header,
-    .elegant-cell {
-      padding: 0.375rem 0.25rem !important;
-      font-size: 0.8rem !important;
+/*
+ * STICKY PAGINATOR
+ * Keeps the paginator visible at the bottom of the container.
+ */
+:host ::ng-deep .p-datatable-wrapper {
+  // This is crucial for scrollHeight="flex" to work correctly with a sticky paginator
+  display: flex;
+  flex-direction: column;
+}
+
+:host ::ng-deep .p-paginator {
+  position: sticky;
+  bottom: 0;
+  z-index: 2; // Needs to be above the table content
+  background: var(--surface-card);
+  border-top: 1px solid var(--surface-border);
+  margin-top: auto; // Pushes the paginator to the bottom in a flex container
+}
+
+/*
+ * DARK MODE ENHANCEMENTS
+ * Overrides for a polished dark theme experience.
+ */
+:host-context(.app-dark) ::ng-deep {
+  .elegant-table {
+    .p-datatable-thead th {
+      background-color: var(--surface-800);
+      border-color: var(--surface-700);
     }
-    
-    .elegant-filter-input {
-      padding: 0.25rem 0.375rem !important;
-      font-size: 0.75rem !important;
+
+    .filter-row .elegant-filter-input {
+      background: var(--surface-700);
+      border-color: var(--surface-600);
+      color: var(--text-color);
     }
   }
-  
-  .transaction-details-layout .timeline-section ::ng-deep .timeline-header {
-    height: 6rem !important; // Smaller on mobile
+
+  .p-paginator {
+    background: var(--surface-800);
+    border-top-color: var(--surface-700);
   }
 }

@@ -5,65 +5,59 @@
     [totalRecords]="totalRecords" 
     dataKey="_id"
     [paginator]="true" 
-    [rows]="getOptimalRowsPerPage()" 
-    [rowsPerPageOptions]="[10, 20, 30, 50]" 
+    [rows]="20" <!-- Start with a sensible default -->
+    [rowsPerPageOptions]="[10, 20, 50, 100]" 
     [scrollable]="true" 
     scrollHeight="flex"
     [resizableColumns]="true" 
-    columnResizeMode="expand" 
-    showGridlines
-    styleClass="p-datatable-striped p-datatable-sm elegant-table"
-    [paginatorPosition]="'bottom'"
-    [alwaysShowPaginator]="true">
+    columnResizeMode="fit" <!-- 'fit' mode is often better with defined widths -->
+    styleClass="p-datatable-striped p-datatable-sm elegant-table">
 
     <ng-template pTemplate="header" let-columns>
       <!-- Column Display Names -->
       <tr class="header-row">
         @for(col of columns; track col.id) {
-        <th pResizableColumn [style.width]="col.width" class="elegant-header">
-          <div class="header-content">
-            <span class="column-title">{{ col.displayName }}</span>
-          </div>
-        </th>
+          <!-- Width is set ONLY on the header cell -->
+          <th pResizableColumn [style.width]="col.width" class="elegant-header">
+            {{ col.displayName }}
+          </th>
         }
       </tr>
       
       <!-- Per-Column Filter Inputs -->
       <tr class="filter-row">
         @for(col of columns; track col.id) {
-        <th class="filter-header" [style.width]="col.width">
-          @if(col.enableFiltering) {
-          <p-columnFilter [field]="col.id+'_filter'" matchMode="contains" [showMenu]="false" [showClearButton]="false">
-            <ng-template pTemplate="filter" let-value let-filter="filterCallback">
-              <input 
-                type="text" 
-                pInputText 
-                [ngModel]="value" 
-                (ngModelChange)="filter($event)" 
-                class="elegant-filter-input"
-                [style.width]="col.width"
-                [placeholder]="'Filter ' + col.displayName"
-                (click)="$event.stopPropagation()">
-            </ng-template>
-          </p-columnFilter>
-          }
-        </th>
+          <th> <!-- No width style needed here, it inherits from the header -->
+            @if(col.enableFiltering) {
+              <p-columnFilter [field]="col.id+'_filter'" matchMode="contains" [showMenu]="false">
+                <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+                  <input 
+                    type="text" 
+                    pInputText 
+                    [ngModel]="value" 
+                    (ngModelChange)="filter($event)" 
+                    class="elegant-filter-input"
+                    [placeholder]="'Filter...'"
+                    (click)="$event.stopPropagation()">
+                </ng-template>
+              </p-columnFilter>
+            }
+          </th>
         }
       </tr>
     </ng-template>
 
     <ng-template pTemplate="body" let-rowData let-columns="columns">
-      <tr (click)="handleRowClick(rowData)" class="elegant-row">
+      <tr class="elegant-row">
         @for(col of columns; track col.id){
-        <td 
-          [class.clickable-cell]="isCellClickable(col, rowData)" 
-          (click)="handleCellClick(col, rowData, $event, getCellValue(rowData, col.field))"
-          [pTooltip]="getCellDisplayValue(rowData, col)"
-          tooltipPosition="top" 
-          class="elegant-cell"
-          [style.width]="col.width"
-          [innerHTML]="getCellDisplayValue(rowData, col)">
-        </td>
+          <td 
+            [class.clickable-cell]="isCellClickable(col, rowData)" 
+            (click)="handleCellClick(col, rowData, $event, getCellValue(rowData, col.field))"
+            [pTooltip]="getCellDisplayValue(rowData, col)"
+            tooltipPosition="top"
+            class="elegant-cell"
+            [innerHTML]="getCellDisplayValue(rowData, col)">
+          </td>
         }
       </tr>
     </ng-template>
