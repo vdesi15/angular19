@@ -81,7 +81,7 @@
     <!-- 🔥 FIX 3: Custom paginator template for visibility -->
     <ng-template pTemplate="paginatorleft">
       <div class="paginator-info">
-        Showing {{ (logTable.first || 0) + 1 }} to {{ Math.min((logTable.first || 0) + (logTable.rows || 20), totalRecords) }} of {{ totalRecords }}
+        Showing {{ getPaginatorStartRange() }} to {{ getPaginatorEndRange() }} of {{ totalRecords }}
       </div>
     </ng-template>
 

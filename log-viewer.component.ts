@@ -188,6 +188,34 @@ public getOptimalRowsPerPage(): number {
   return Math.max(10, Math.min(50, calculatedRows));
 }
 
+// 🔥 FIX: Helper methods for template
+public getPaginatorEndRange(): number {
+  const start = (this.logTable?.first || 0);
+  const rows = (this.logTable?.rows || 20);
+  const end = start + rows;
+  return end > this.totalRecords ? this.totalRecords : end;
+}
+
+public getPaginatorStartRange(): number {
+  return (this.logTable?.first || 0) + 1;
+}
+
+  /**
+   * repocess the table data if needed.
+   */
+  public reProcessCurrentData(): void {
+    if(this.searchInstance.data.length > 0) {
+      this.tableData = this.processHits(this.searchInstance.data);
+      this.totalRecords = this.tableData.length;
+      this.cdr.detectChanges();
+
+      /*
+      setTimeout(() => {
+        this.filteredCountChange.emit(this.tableData.length);
+      }); 
+      */
+    }
+  }
 
   /**
    * Called when the user uses the filter bar.
