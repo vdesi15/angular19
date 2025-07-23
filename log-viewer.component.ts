@@ -116,60 +116,78 @@ export class LogViewerComponent implements OnChanges{
     return value;
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['searchInstance']) {
-      const currentSearch = changes['searchInstance'].currentValue as ActiveSearch;
-      const previousSearch = changes['searchInstance'].previousValue as ActiveSearch | undefined;
+ ngOnChanges(changes: SimpleChanges): void {
+  if (changes['searchInstance']) {
+    const currentSearch = changes['searchInstance'].currentValue as ActiveSearch;
+    const previousSearch = changes['searchInstance'].previousValue as ActiveSearch | undefined;
 
-      // If this is a completely different search result, clear everything.
-      if (!previousSearch || currentSearch.id !== previousSearch.id) {
-        console.log("[LogViewer] New search detected. Resetting table.");
-        this.tableData = [];
+    // If this is a completely different search result, clear everything.
+    if (!previousSearch || currentSearch.id !== previousSearch.id) {
+      console.log("[LogViewer] New search detected. Resetting table.");
+      this.tableData = [];
 
-        // Reset paginator to the first page
-        if (this.logTable) {
-          this.logTable.first = 0;
-        }
-      }
-
-      if(changes['selectedViewId']) {
-        console.log(`[LogViewer] View filter changed, reprocessing data. New View Filter : `, this.selectedViewFilter);
-        //this.reProcessCurrentData();
-      }
-
-      const newHits = this.getNewHits(currentSearch, previousSearch);
-
-      if (newHits.length > 0) {
-        const processedNewRows = this.processHits(newHits);
-        this.tableData.push(...processedNewRows);
-        this.totalRecords = this.tableData.length; 
-        /*       
-        setTimeout(()=>{
-          this.filteredCountChange.emit(this.tableData.length);  
-        });  
-        */
-        this.cdr.detectChanges();
-        console.log(`[LogViewer] Appended ${processedNewRows.length} rows. Total now: ${this.tableData.length}`);
+      // Reset paginator to the first page
+      if (this.logTable) {
+        this.logTable.first = 0;
       }
     }
-  }
 
-  /**
-   * repocess the table data if needed.
-   */
-  public reProcessCurrentData(): void {
-    if(this.searchInstance.data.length > 0) {
-      this.tableData = this.processHits(this.searchInstance.data);
-      this.totalRecords = this.tableData.length;
+    // 🔥 FIX 1: Only process selectedViewId changes that are NOT first change
+    if(changes['selectedViewId'] && !changes['selectedViewId'].firstChange) {
+      console.log(`[LogViewer] View filter changed, reprocessing data. New View Filter : `, this.selectedViewFilter);
+      this.reProcessCurrentData();
+      return; // Early return to prevent duplicate processing
+    }
+
+    const newHits = this.getNewHits(currentSearch, previousSearch);
+
+    if (newHits.length > 0) {
+      const processedNewRows = this.processHits(newHits);
+      this.tableData.push(...processedNewRows);
+      this.totalRecords = this.tableData.length; 
       this.cdr.detectChanges();
-
-      /*
-      setTimeout(() => {
-        this.filteredCountChange.emit(this.tableData.length);
-      }); 
-      */
+      console.log(`[LogViewer] Appended ${processedNewRows.length} rows. Total now: ${this.tableData.length}`);
     }
   }
+
+  // 🔥 FIX 1: Handle view filter changes separately to prevent duplication
+  if (changes['selectedViewFilter'] && !changes['selectedViewFilter'].firstChange) {
+    console.log('[LogViewer] View filter changed, reprocessing all data');
+    this.reProcessCurrentData();
+  }
+}
+
+// 🔥 FIX 1: Enhanced reprocessing method
+public reProcessCurrentData(): void {
+  if(this.searchInstance.data.length > 0) {
+    console.log('[LogViewer] Reprocessing current data with view filter:', this.selectedViewFilter);
+    this.tableData = this.processHits(this.searchInstance.data);
+    this.totalRecords = this.tableData.length;
+    this.cdr.detectChanges();
+    
+    // Reset table to first page when reprocessing
+    if (this.logTable) {
+      this.logTable.first = 0;
+    }
+  }
+}
+
+// 🔥 FIX 2: Dynamic rows calculation based on container height
+public getOptimalRowsPerPage(): number {
+  if (!this.tableContainer?.nativeElement) return 20;
+  
+  const containerHeight = this.tableContainer.nativeElement.offsetHeight;
+  const headerHeight = 80; // Approximate header + filter height
+  const paginatorHeight = 50; // Paginator height
+  const rowHeight = 35; // Approximate row height
+  
+  const availableHeight = containerHeight - headerHeight - paginatorHeight;
+  const calculatedRows = Math.floor(availableHeight / rowHeight);
+  
+  // Ensure reasonable bounds
+  return Math.max(10, Math.min(50, calculatedRows));
+}
+
 
   /**
    * Called when the user uses the filter bar.

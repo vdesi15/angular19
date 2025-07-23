@@ -436,3 +436,282 @@
     margin: 0.5rem 0 !important;
   }
 }
+
+
+
+:host ::ng-deep .elegant-table {
+  
+  // Header styling
+  .header-row {
+    background: linear-gradient(135deg, var(--surface-100) 0%, var(--surface-50) 100%);
+    border-bottom: 2px solid var(--primary-200);
+    
+    .elegant-header {
+      padding: 0.75rem 0.5rem !important;
+      font-weight: 600;
+      color: var(--text-color);
+      border-right: 1px solid var(--surface-border);
+      
+      .header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        
+        .column-title {
+          font-size: 0.875rem;
+          letter-spacing: 0.5px;
+        }
+      }
+      
+      &:hover {
+        background: var(--surface-hover);
+      }
+    }
+  }
+  
+  // Filter row styling
+  .filter-row {
+    background: var(--surface-50);
+    
+    .filter-header {
+      padding: 0.25rem !important;
+      border-right: 1px solid var(--surface-border);
+      
+      .elegant-filter-input {
+        width: 100% !important;
+        padding: 0.375rem 0.5rem;
+        font-size: 0.8rem;
+        border: 1px solid var(--surface-300);
+        border-radius: 4px;
+        background: var(--surface-0);
+        transition: all 0.2s ease;
+        
+        &:focus {
+          border-color: var(--primary-color);
+          box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
+          outline: none;
+        }
+        
+        &::placeholder {
+          color: var(--text-color-secondary);
+          font-style: italic;
+        }
+      }
+    }
+  }
+  
+  // Body row styling
+  .elegant-row {
+    transition: all 0.15s ease;
+    
+    &:hover {
+      background: var(--surface-hover) !important;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .elegant-cell {
+      padding: 0.5rem !important;
+      border-right: 1px solid var(--surface-border);
+      vertical-align: top;
+      
+      // 🔥 FIX 2: Force text wrapping
+      word-wrap: break-word;
+      word-break: break-word;
+      white-space: normal;
+      overflow-wrap: break-word;
+      max-width: 0; // Force wrapping
+      
+      &.clickable-cell {
+        cursor: pointer;
+        color: var(--primary-color);
+        font-weight: 500;
+        
+        &:hover {
+          background: var(--primary-50);
+          color: var(--primary-700);
+        }
+      }
+    }
+  }
+  
+  // Empty state styling
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    
+    .empty-content {
+      color: var(--text-color-secondary);
+      
+      i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        display: block;
+      }
+      
+      p {
+        margin: 0;
+        font-size: 1rem;
+      }
+    }
+  }
+}
+
+// ================================
+// 🔥 FIX 3: PAGINATION VISIBILITY FIXES
+// ================================
+:host ::ng-deep {
+  
+  // Force accordion content to be visible for pagination
+  .p-accordion-content {
+    overflow: visible !important;
+    
+    .p-accordion-content-wrapper {
+      overflow: visible !important;
+      padding-bottom: 4rem !important; // Extra space for paginator
+    }
+  }
+  
+  // Enhanced paginator styling
+  .p-paginator {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 1000 !important;
+    background: var(--surface-card) !important;
+    border-top: 2px solid var(--surface-border) !important;
+    border-radius: 0 0 6px 6px !important;
+    padding: 0.75rem 1rem !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
+    
+    // Paginator info styling
+    .paginator-info {
+      font-size: 0.875rem;
+      color: var(--text-color-secondary);
+      font-weight: 500;
+    }
+    
+    // Dropdown positioning fix
+    .p-dropdown {
+      .p-dropdown-panel {
+        bottom: 100% !important;
+        top: auto !important;
+        margin-bottom: 4px !important;
+        z-index: 1500 !important;
+        transform-origin: bottom center !important;
+      }
+    }
+    
+    // Page buttons styling
+    .p-paginator-pages .p-paginator-page {
+      min-width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      
+      &.p-paginator-page-selected {
+        background: var(--primary-color);
+        color: var(--primary-color-text);
+        transform: scale(1.05);
+      }
+      
+      &:hover:not(.p-paginator-page-selected) {
+        background: var(--surface-hover);
+        transform: translateY(-1px);
+      }
+    }
+  }
+}
+
+// ================================
+// 🔥 FIX 4: TRANSACTION LAYOUT COORDINATION
+// ================================
+.transaction-details-layout {
+  .timeline-section {
+    // Match timeline header height to table header + filter
+    ::ng-deep .timeline-header {
+      height: 7rem !important; // Match table header (3.5rem) + filter row (3.5rem)
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 1rem;
+      
+      h5 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      
+      .event-count {
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--text-color-secondary);
+      }
+    }
+  }
+}
+
+// ================================
+// DARK MODE ENHANCEMENTS
+// ================================
+:host-context(.app-dark) {
+  ::ng-deep .elegant-table {
+    .header-row {
+      background: linear-gradient(135deg, var(--surface-800) 0%, var(--surface-700) 100%);
+      border-bottom-color: var(--primary-400);
+    }
+    
+    .filter-row {
+      background: var(--surface-800);
+      
+      .elegant-filter-input {
+        background: var(--surface-900);
+        border-color: var(--surface-600);
+        color: var(--text-color);
+        
+        &:focus {
+          border-color: var(--primary-400);
+          box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.3);
+        }
+      }
+    }
+    
+    .elegant-row {
+      &:hover {
+        background: var(--surface-700) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+      
+      .elegant-cell.clickable-cell:hover {
+        background: var(--primary-900);
+      }
+    }
+  }
+  
+  .p-paginator {
+    background: var(--surface-800) !important;
+    border-top-color: var(--surface-600) !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3) !important;
+  }
+}
+
+// ================================
+// RESPONSIVE ADJUSTMENTS
+// ================================
+@media (max-width: 768px) {
+  :host ::ng-deep .elegant-table {
+    .elegant-header,
+    .elegant-cell {
+      padding: 0.375rem 0.25rem !important;
+      font-size: 0.8rem !important;
+    }
+    
+    .elegant-filter-input {
+      padding: 0.25rem 0.375rem !important;
+      font-size: 0.75rem !important;
+    }
+  }
+  
+  .transaction-details-layout .timeline-section ::ng-deep .timeline-header {
+    height: 6rem !important; // Smaller on mobile
+  }
+}
