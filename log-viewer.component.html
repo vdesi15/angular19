@@ -21,7 +21,7 @@
       <!-- Column Display Names -->
       <tr class="header-row">
         @for(col of columns; track col.id) {
-        <th pResizableColumn [style.width]="col.width" class="elegant-header">
+        <th pResizableColumn [style.width]="col.width" [style.min-width]="col.width" [style.max-width]="col.width" class="elegant-header">
           <div class="header-content">
             <span class="column-title">{{ col.displayName }}</span>
           </div>
@@ -32,7 +32,7 @@
       <!-- Per-Column Filter Inputs -->
       <tr class="filter-row">
         @for(col of columns; track col.id) {
-        <th class="filter-header">
+        <th class="filter-header" [style.width]="col.width" [style.min-width]="col.width" [style.max-width]="col.width">
           @if(col.enableFiltering) {
           <p-columnFilter [field]="col.id+'_filter'" matchMode="contains" [showMenu]="false" [showClearButton]="false">
             <ng-template pTemplate="filter" let-value let-filter="filterCallback">
@@ -42,6 +42,7 @@
                 [ngModel]="value" 
                 (ngModelChange)="filter($event)" 
                 class="elegant-filter-input"
+                [style.width]="'calc(' + col.width + ' - 10px)'"
                 [placeholder]="'Filter ' + col.displayName"
                 (click)="$event.stopPropagation()">
             </ng-template>

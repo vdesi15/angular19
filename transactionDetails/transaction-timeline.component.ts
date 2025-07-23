@@ -58,260 +58,392 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     </div>
   `,
   styles: [`
-    .timeline-container {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      background: var(--surface-card);
-      border: 1px solid var(--surface-border);
-      border-radius: 8px;
-      overflow: hidden;
-    }
+   // transaction-timeline.component.scss - Elegant styling to match the table
 
-    /* Fixed Header */
-    .timeline-header {
-      padding: 1rem;
-      background: var(--surface-50);
-      border-bottom: 1px solid var(--surface-border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0; /* Prevent header from shrinking */
-      position: sticky;
+.timeline-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+/* 🔥 Elegant Header - Matches table header height and style */
+.timeline-header {
+  height: 7rem !important; // Match table header (3.5rem) + filter row (3.5rem)
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 2px solid #5a67d8;
+}
+
+.timeline-header h5 {
+  margin: 0;
+  color: white !important;
+  font-weight: 600;
+  font-size: 1rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.5px;
+}
+
+.event-count {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  display: inline-block;
+  backdrop-filter: blur(10px);
+  font-weight: 500;
+  width: fit-content;
+}
+
+/* Scrollable Timeline Area */
+.timeline-scrollable {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1.5rem 1rem;
+  position: relative;
+  background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
+}
+
+/* Enhanced Timeline Event Styling */
+:host ::ng-deep {
+  
+  /* Hide the opposite side completely */
+  .p-timeline-event-opposite {
+    display: none !important;
+  }
+
+  /* Enhanced timeline events */
+  .p-timeline-event {
+    position: relative !important;
+    margin-bottom: 1.5rem !important;
+    display: flex !important;
+    align-items: flex-start !important;
+  }
+
+  /* Enhanced timeline connector line */
+  .p-timeline-event-connector {
+    position: absolute !important;
+    left: 20px !important;
+    top: 0 !important;
+    width: 3px !important;
+    background: linear-gradient(to bottom, #667eea, #764ba2) !important;
+    height: 100% !important;
+    border-radius: 2px !important;
+  }
+
+  /* Enhanced timeline marker */
+  .p-timeline-event-marker {
+    position: absolute !important;
+    left: 20px !important;
+    top: 0.5rem !important;
+    width: 14px !important;
+    height: 14px !important;
+    margin: 0 !important;
+    transform: translateX(-50%) !important;
+    background: linear-gradient(135deg, #667eea, #764ba2) !important;
+    border: 3px solid white !important;
+    border-radius: 50% !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3) !important;
+    z-index: 5 !important;
+  }
+
+  /* Enhanced event content */
+  .p-timeline-event-content {
+    margin-left: 45px !important;
+    width: calc(100% - 55px) !important;
+    background: white !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 1rem !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1) !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+    
+    &:hover {
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2) !important;
+      border-color: #667eea !important;
+    }
+    
+    /* Add elegant corner accent */
+    &::before {
+      content: '';
+      position: absolute;
       top: 0;
-      z-index: 10;
-    }
-
-    .timeline-header h5 {
-      margin: 0;
-      color: var(--text-color);
-      font-weight: 600;
-    }
-
-    .event-count {
-      font-size: 0.875rem;
-      color: var(--text-color-secondary);
-      background: var(--surface-100);
-      padding: 0.25rem 0.5rem;
-      border-radius: 12px;
-    }
-
-    /* Scrollable Timeline Area */
-    .timeline-scrollable {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding: 1rem;
-      position: relative;
-    }
-
-    /* Hide the opposite side completely to prevent center alignment */
-    ::ng-deep .p-timeline-event-opposite {
-      display: none !important;
-    }
-
-    /* Force left alignment and proper spacing */
-    ::ng-deep .p-timeline-event {
-      position: relative !important;
-      margin-bottom: 1.5rem !important;
-      display: flex !important;
-      align-items: flex-start !important;
-    }
-
-    /* Fixed timeline connector line - always at 20px */
-    ::ng-deep .p-timeline-event-connector {
-      position: absolute !important;
-      left: 20px !important;
-      top: 0 !important;
-      width: 2px !important;
-      background: var(--surface-300) !important;
-      height: 100% !important;
-    }
-
-    /* Fixed marker position - always at 20px */
-    ::ng-deep .p-timeline-event-marker {
-      position: absolute !important;
-      left: 20px !important;
-      top: 0.5rem !important;
-      width: 12px !important;
-      height: 12px !important;
-      margin: 0 !important;
-      transform: translateX(-50%) !important;
-      border: none !important;
-      padding: 0 !important;
-      z-index: 2 !important;
-    }
-
-    /* Timeline marker styling */
-    .timeline-marker {
-      width: 100%;
+      left: 0;
+      width: 4px;
       height: 100%;
-      border-radius: 50%;
-      background: var(--surface-400);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 8px 0 0 8px;
+    }
+  }
+
+  /* Event wrapper styling */
+  .timeline-event-wrapper {
+    width: 100% !important;
+    
+    &.current-transaction {
+      .p-timeline-event-content {
+        border-color: #667eea !important;
+        background: linear-gradient(135deg, #667eea10, #764ba210) !important;
+        
+        &::before {
+          background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+        }
+      }
+      
+      .p-timeline-event-marker {
+        background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+        border-color: white !important;
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4) !important;
+      }
+    }
+  }
+
+  /* Event action styling */
+  .event-action {
+    margin-bottom: 0.75rem;
+    
+    .action-link {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #667eea !important;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        color: #5a67d8 !important;
+        text-decoration: underline;
+      }
+    }
+  }
+
+  /* Event timestamp styling */
+  .event-timestamp {
+    display: block;
+    font-size: 0.75rem;
+    color: #718096 !important;
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background: #f7fafc;
+    border-radius: 4px;
+    display: inline-block;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  }
+
+  /* Event description styling */
+  .event-description {
+    font-size: 0.8rem;
+    color: #4a5568 !important;
+    line-height: 1.5;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    margin-top: 0.5rem;
+  }
+
+  /* No events state */
+  .no-events {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #718096;
+    gap: 1rem;
+    height: 200px;
+    text-align: center;
+    
+    i {
+      font-size: 2.5rem;
+      opacity: 0.5;
+      color: #667eea;
+    }
+
+    p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #a0aec0;
+    }
+  }
+}
+
+/* Dark mode support */
+:host-context(.app-dark) {
+  .timeline-container {
+    background: #1a202c !important;
+    border-color: #4a5568 !important;
+  }
+  
+  .timeline-header {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%) !important;
+    color: #e2e8f0 !important;
+    border-bottom-color: #4a5568 !important;
+    
+    h5 {
+      color: #e2e8f0 !important;
+    }
+    
+    .event-count {
+      color: #e2e8f0 !important;
+      background: rgba(255, 255, 255, 0.1) !important;
+    }
+  }
+
+  .timeline-scrollable {
+    background: linear-gradient(to bottom, #1a202c 0%, #2d3748 100%) !important;
+  }
+
+  ::ng-deep {
+    .p-timeline-event-content {
+      background: #2d3748 !important;
+      border-color: #4a5568 !important;
+      color: #e2e8f0 !important;
+      
+      &:hover {
+        border-color: #667eea !important;
+        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3) !important;
+      }
+    }
+    
+    .timeline-event-wrapper.current-transaction {
+      .p-timeline-event-content {
+        border-color: #667eea !important;
+        background: linear-gradient(135deg, #667eea20, #764ba220) !important;
+      }
+    }
+    
+    .event-action .action-link {
+      color: #90cdf4 !important;
+      
+      &:hover {
+        color: #63b3ed !important;
+      }
+    }
+    
+    .event-timestamp {
+      background: #1a202c !important;
+      color: #a0aec0 !important;
+    }
+    
+    .event-description {
+      color: #cbd5e0 !important;
+    }
+    
+    .no-events {
+      color: #a0aec0 !important;
       
       i {
-        font-size: 8px;
-        color: white;
+        color: #667eea !important;
       }
       
-      &.current {
-        background: #22c55e; /* Green for current transaction */
-        
-        i {
-          color: white;
-        }
+      p {
+        color: #718096 !important;
       }
     }
+  }
+}
 
-    /* Content area - fixed positioning with proper width */
-    ::ng-deep .p-timeline-event-content {
-      margin-left: 40px !important; /* Start content 40px from left */
-      padding: 0 !important;
-      width: calc(100% - 50px) !important; /* Take remaining width with some right padding */
-      min-width: 0 !important; /* Allow shrinking */
-      flex: 1 !important;
+/* Custom scrollbar for timeline content */
+.timeline-scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.timeline-scrollable::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.timeline-scrollable::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 3px;
+  
+  &:hover {
+    background: linear-gradient(135deg, #5a67d8, #6b46c1);
+  }
+}
+
+/* Dark mode scrollbar */
+:host-context(.app-dark) {
+  .timeline-scrollable::-webkit-scrollbar-track {
+    background: #2d3748;
+  }
+  
+  .timeline-scrollable::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #4a5568, #667eea);
+    
+    &:hover {
+      background: linear-gradient(135deg, #667eea, #764ba2);
     }
+  }
+}
 
-    /* Timeline event content wrapper */
-    .timeline-event-wrapper {
-      padding: 0.5rem 0.75rem;
-      border-radius: 6px;
-      transition: background-color 0.2s ease;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      
-      &.current-transaction {
-        background: rgba(34, 197, 94, 0.1); /* Light green background */
-        border: 1px solid rgba(34, 197, 94, 0.3);
-      }
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  ::ng-deep .p-timeline-event-content {
+    margin-left: 35px !important;
+    width: calc(100% - 45px) !important;
+    padding: 0.75rem !important;
+  }
+  
+  .timeline-header {
+    padding: 0.75rem !important;
+    height: 6rem !important;
+    
+    h5 {
+      font-size: 0.9rem !important;
     }
-
-    .event-time {
-      font-size: 0.75rem;
-      color: var(--text-color-secondary);
-      font-family: var(--font-family-mono, 'Courier New', monospace);
-      margin-bottom: 0.25rem;
-      font-weight: 600;
-      line-height: 1.2;
+  }
+  
+  .timeline-scrollable {
+    padding: 1rem 0.75rem !important;
+  }
+  
+  ::ng-deep {
+    .event-action .action-link {
+      font-size: 0.8rem !important;
     }
-
-    .event-action {
-      margin-bottom: 0.25rem;
-      
-      .action-link {
-        color: var(--primary-color);
-        text-decoration: none;
-        font-size: 0.875rem;
-        font-weight: 600;
-        line-height: 1.3;
-        word-break: break-word;
-        display: inline-block;
-        max-width: 100%;
-        
-        &:hover {
-          text-decoration: underline;
-          color: var(--primary-color-text);
-        }
-        
-        &:visited {
-          color: var(--primary-color);
-        }
-      }
-    }
-
+    
     .event-description {
-      font-size: 0.75rem;
-      color: var(--text-color-secondary);
-      line-height: 1.4;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
+      font-size: 0.75rem !important;
     }
-
-    .no-events {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-color-secondary);
-      gap: 0.5rem;
-      height: 200px;
+    
+    .event-timestamp {
+      font-size: 0.7rem !important;
     }
+  }
+}
 
-    .no-events i {
-      font-size: 2rem;
-      opacity: 0.5;
-    }
-
-    .no-events p {
-      margin: 0;
-      font-size: 0.875rem;
-    }
-
-    /* Dark mode support */
-    :host-context(.app-dark) {
-      .timeline-header {
-        background: var(--surface-800);
-        border-bottom-color: var(--surface-600);
-      }
-
-      .event-count {
-        background: var(--surface-700);
-      }
-      
-      .timeline-event-wrapper.current-transaction {
-        background: rgba(34, 197, 94, 0.2);
-        border-color: rgba(34, 197, 94, 0.4);
-      }
-
-      ::ng-deep .p-timeline-event-connector {
-        background: var(--surface-600) !important;
-      }
-    }
-
-    /* Custom scrollbar for timeline content only */
-    .timeline-scrollable::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .timeline-scrollable::-webkit-scrollbar-track {
-      background: var(--surface-ground);
-    }
-
-    .timeline-scrollable::-webkit-scrollbar-thumb {
-      background: var(--text-color-secondary);
-      border-radius: 3px;
-    }
-
-    .timeline-scrollable::-webkit-scrollbar-thumb:hover {
-      background: var(--primary-color);
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 480px) {
-      ::ng-deep .p-timeline-event-content {
-        margin-left: 35px !important;
-        width: calc(100% - 45px) !important;
-      }
-      
-      .timeline-header {
-        padding: 0.75rem;
-      }
-      
-      .timeline-scrollable {
-        padding: 0.75rem;
-      }
-      
-      .event-action .action-link {
-        font-size: 0.8rem;
-      }
-      
-      .event-description {
-        font-size: 0.7rem;
-      }
-    }
+/* Print styles */
+@media print {
+  .timeline-container {
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+  }
+  
+  .timeline-header {
+    background: #f5f5f5 !important;
+    color: #000 !important;
+  }
+  
+  ::ng-deep .p-timeline-event-content {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+}
   `]
 })
 export class TransactionTimelineComponent {
