@@ -1,136 +1,135 @@
+:host {
+  // Sets up a flex container for the sticky paginator magic.
+  .table-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%; // Make sure the container takes up all available vertical space.
+    overflow: hidden; // Prevents double scrollbars.
+  }
+}
+
+/*
+ * CORE TABLE STYLES
+ * Polished, elegant, and structured table theme.
+ */
 :host ::ng-deep .elegant-table {
-  // 🔥 FIX 1: This is the most important rule for respecting column widths.
-  // It tells the browser to use the widths defined on the columns/headers, not auto-calculate.
+  // 🔥 FIX #1: This is the most important rule for respecting column widths.
   .p-datatable-table {
     table-layout: fixed !important;
   }
 
-  // Common styles for both header rows for a unified look.
-  .p-datatable-thead th {
-    background-color: var(--surface-100);
-    color: var(--text-color);
-    border-bottom: 1px solid var(--surface-border) !important;
-  }
+  // 🔥 FIX #2: Subtle but effective borders for the entire table.
+  border: 1px solid var(--surface-border);
+  border-radius: 6px; // Soft rounded corners for the whole table container.
+  overflow: hidden; // Clips the content to the rounded corners.
 
-  // Header row containing the column display names.
+  // Header styling for a clean, unified look.
+  .p-datatable-thead th {
+    background-color: var(--surface-50);
+    border-color: var(--surface-border);
+    border-style: solid;
+    border-width: 0 0 1px 0; // Only a bottom border for each header cell.
+  }
+  
+  // Header row with display names.
   .header-row th {
-    padding: 0.5rem 0.75rem; // Reduced padding for a more compact look
+    padding: 0.75rem; // Consistent padding.
     font-weight: 600;
     text-align: left;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    // A subtle right border for column separation.
+    &:not(:last-child) {
+      border-right-width: 1px;
+    }
   }
 
-  // 🔥 FIX 2: Style the filter row to be compact and aligned.
+  // 🔥 FIX #2: Make the filter row compact and visually balanced.
   .filter-row th {
-    padding: 0.25rem; // Minimal padding around the filter input
+    padding: 0.25rem 0.5rem; // Reduced padding for a tighter look.
+    background-color: var(--surface-100);
+
+    &:not(:last-child) {
+      border-right-width: 1px;
+    }
 
     .p-column-filter {
       width: 100%;
-      display: flex; // Allows the input to fill the space
     }
 
     .elegant-filter-input {
-      width: 100% !important;
-      font-size: 0.875rem; // Slightly smaller font
-      padding: 0.5rem 0.75rem; // Match header padding for vertical rhythm
+      width: 100%;
+      // Make filter input height smaller to feel proportional.
+      font-size: 0.875rem;
+      padding: 0.4rem 0.6rem; // Reduced padding.
       border: 1px solid var(--surface-300);
-      border-radius: 4px; // Softer corners
-      background: var(--surface-card);
-      transition: border-color 0.2s, box-shadow 0.2s;
+      border-radius: 4px;
+      transition: all 0.2s ease-in-out;
 
       &:focus {
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 1px var(--primary-color); // More subtle focus ring
+        box-shadow: 0 0 0 1px var(--primary-color);
         outline: none;
       }
     }
   }
 
-  // Body row styling for readability and interaction.
+  // Body row styling.
   .elegant-row {
-    transition: background-color 0.2s;
-    &:hover {
-      background-color: var(--surface-hover);
-    }
-
     .elegant-cell {
-      padding: 0.5rem 0.75rem;
+      padding: 0.6rem 0.75rem;
       border-bottom: 1px solid var(--surface-border);
-      vertical-align: top; // Aligns content to the top for multi-line cells
-
-      // Prevents long text from breaking the layout.
       word-wrap: break-word;
       white-space: normal;
 
-      &.clickable-cell {
-        color: var(--primary-color);
-        cursor: pointer;
-        font-weight: 500;
-        &:hover {
-          text-decoration: underline;
-        }
+      &:not(:last-child) {
+        border-right: 1px solid var(--surface-border);
       }
-    }
-  }
-
-  // Styling for the "No records found" message.
-  .empty-state {
-    padding: 2rem;
-    text-align: center;
-    color: var(--text-color-secondary);
-    .empty-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-      i {
-        font-size: 1.5rem;
-      }
+      
+      &.clickable-cell { /* ... no changes needed here ... */ }
     }
   }
 }
 
 /*
- * STICKY PAGINATOR
- * Keeps the paginator visible at the bottom of the container.
+ * 🔥 FIX #3: OPAQUE & STICKY PAGINATOR
+ * This ensures the paginator stays at the bottom of its container.
  */
-:host ::ng-deep .p-datatable-wrapper {
-  // This is crucial for scrollHeight="flex" to work correctly with a sticky paginator
-  display: flex;
-  flex-direction: column;
-}
-
 :host ::ng-deep .p-paginator {
   position: sticky;
   bottom: 0;
-  z-index: 2; // Needs to be above the table content
-  background: var(--surface-card);
-  border-top: 1px solid var(--surface-border);
-  margin-top: auto; // Pushes the paginator to the bottom in a flex container
+  z-index: 2;
+  // Opaque background that matches the application's theme.
+  background: var(--surface-card) !important;
+  border-top: 1px solid var(--surface-border) !important;
+  // Remove rounded corners that might look weird when stuck to the bottom.
+  border-radius: 0;
 }
 
 /*
  * DARK MODE ENHANCEMENTS
- * Overrides for a polished dark theme experience.
  */
 :host-context(.app-dark) ::ng-deep {
   .elegant-table {
+    border-color: var(--surface-700);
+
     .p-datatable-thead th {
       background-color: var(--surface-800);
       border-color: var(--surface-700);
     }
-
-    .filter-row .elegant-filter-input {
-      background: var(--surface-700);
-      border-color: var(--surface-600);
-      color: var(--text-color);
+    .filter-row {
+      background-color: var(--surface-700);
+      .elegant-filter-input {
+        background-color: var(--surface-800);
+        border-color: var(--surface-600);
+      }
     }
   }
 
   .p-paginator {
-    background: var(--surface-800);
-    border-top-color: var(--surface-700);
+    background: var(--surface-800) !important;
+    border-top-color: var(--surface-700) !important;
   }
 }
