@@ -150,12 +150,27 @@ export class LogViewerComponent implements OnChanges{
     }
   }
 
-  // 🔥 FIX 1: Handle view filter changes separately to prevent duplication
-  if (changes['selectedViewFilter'] && !changes['selectedViewFilter'].firstChange) {
-    console.log('[LogViewer] View filter changed, reprocessing all data');
-    this.reProcessCurrentData();
-  }
+  // This part handles a view change within the same search instance
+    if (this.isViewChanged(changes)) {
+      console.log('[LogViewer] View has changed. Reprocessing data and resetting paginator.');
+      this.reProcessCurrentData();
+    }
 }
+
+/**
+   * Helper function to detect if the view filter has actually changed.
+   */
+  private isViewChanged(changes: SimpleChanges): boolean {
+    const viewFilterChange = changes['selectedViewFilter'];
+    if (viewFilterChange && !viewFilterChange.firstChange && viewFilterChange.currentValue !== viewFilterChange.previousValue) {
+      return true;
+    }
+    // You can add other view-related inputs here if needed
+    // const viewIdChange = changes['selectedViewId'];
+    // if (viewIdChange && !viewIdChange.firstChange && ...) return true;
+    
+    return false;
+  }
 
 // 🔥 FIX 1: Enhanced reprocessing method
 public reProcessCurrentData(): void {
@@ -188,6 +203,21 @@ public getOptimalRowsPerPage(): number {
   return Math.max(10, Math.min(50, calculatedRows));
 }
 
+/**
+   * Helper function to detect if the view filter has actually changed.
+   */
+  private isViewChanged(changes: SimpleChanges): boolean {
+    const viewFilterChange = changes['selectedViewFilter'];
+    if (viewFilterChange && !viewFilterChange.firstChange && viewFilterChange.currentValue !== viewFilterChange.previousValue) {
+      return true;
+    }
+    // You can add other view-related inputs here if needed
+    // const viewIdChange = changes['selectedViewId'];
+    // if (viewIdChange && !viewIdChange.firstChange && ...) return true;
+    
+    return false;
+  }
+
 // 🔥 FIX: Helper methods for template
 public getPaginatorEndRange(): number {
   const start = (this.logTable?.first || 0);
@@ -200,22 +230,6 @@ public getPaginatorStartRange(): number {
   return (this.logTable?.first || 0) + 1;
 }
 
-  /**
-   * repocess the table data if needed.
-   */
-  public reProcessCurrentData(): void {
-    if(this.searchInstance.data.length > 0) {
-      this.tableData = this.processHits(this.searchInstance.data);
-      this.totalRecords = this.tableData.length;
-      this.cdr.detectChanges();
-
-      /*
-      setTimeout(() => {
-        this.filteredCountChange.emit(this.tableData.length);
-      }); 
-      */
-    }
-  }
 
   /**
    * Called when the user uses the filter bar.
