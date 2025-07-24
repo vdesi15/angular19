@@ -1,97 +1,162 @@
 :host {
-  display: block; // The component is a simple block.
-}
+  // The component host is treated as a block that can be sized.
+  display: block;
+  height: 100%;
 
-.table-container {
-  // No height or overflow needed. The parent `.results-area` handles scrolling.
-  width: 100%;
+  // The .table-container is the direct child that holds the table.
+  // It's crucial for calculating height and managing overflow.
+  .table-container {
+    display: block; // Use block for simpler height calculation.
+    // 🔥 Respects the site footer. Assumes footer is ~50px tall.
+    // Adjust '50px' to the actual height of your .site-footer.
+    height: calc(100vh - 250px); // A more robust calculation based on viewport height. Adjust as needed.
+    overflow: hidden; // Prevents double scrollbars.
+  }
 }
 
 /*
- * Use ::ng-deep but scope it inside :host to prevent styles from leaking globally.
+ * 2. CORE TABLE STYLES
+ * A polished, elegant, and structured table theme.
  */
-:host ::ng-deep {
+:host ::ng-deep .elegant-table {
 
-  /*
-   * 🔥 STICKY PAGINATOR & UPWARD DROPDOWN FIXES
-   */
-  .p-paginator {
-    // position: sticky makes it stick to the bottom of the SCROLLING ANCESTOR,
-    // which is now the `.results-area` container in the parent component.
-    position: sticky;
-    bottom: -1px; // A -1px value ensures the top border is hidden by the container's bottom edge.
-    z-index: 10;
-    background: var(--surface-card);
-    border-top: 1px solid var(--surface-border);
+  // 🔥 CORE FIX for COLUMN WIDTHS:
+  // This is the most important rule. It forces the browser to use the widths
+  // defined in <colgroup>, not auto-calculate based on content.
+  .p-datatable-table {
+    table-layout: fixed !important;
   }
 
-  // This targets the dropdown panel only when it's inside a paginator.
-  .p-dropdown-panel {
-    .p-paginator & {
-      // This combination reliably forces the dropdown to open upwards.
-      top: auto !important;
-      bottom: 100% !important;
-      margin-bottom: 4px;
+  // 🔥 Data-dense layout with smaller fonts.
+  font-size: 0.8rem;
+
+  // Header styling for a clean, unified look.
+  .p-datatable-thead th {
+    background-color: var(--surface-100);
+    border-bottom: 1px solid var(--surface-border) !important;
+    padding: 0.5rem 0.6rem; // Compact padding
+    font-weight: 600;
+    text-align: left;
+    // These three rules work together to handle long header titles gracefully.
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Filter row - even more compact for data density.
+  .filter-row th {
+    padding: 0.2rem 0.4rem; // Very tight padding
+    background-color: var(--surface-50);
+    border-bottom-width: 2px; // Heavier border to separate header from data
+
+    .p-column-filter { width: 100%; }
+
+    .elegant-filter-input {
+      width: 100%;
+      font-size: 0.75rem; // Smaller font for filters
+      padding: 0.3rem 0.5rem; // Compact padding
+      border: 1px solid var(--surface-200);
+      border-radius: 4px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+
+      &:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 1px var(--primary-color); // More subtle focus ring
+        outline: none;
+      }
     }
   }
 
-  /*
-   * CORE TABLE STYLING
-   */
-  .elegant-table {
-    // 🔥 GUARANTEED COLUMN WIDTHS FIX:
-    // This is the most important rule. It forces the browser to use the widths
-    // defined in <colgroup>, not auto-calculate based on content.
-    .p-datatable-table {
-      table-layout: fixed !important;
-    }
+  // Body row styling for data density.
+  .p-datatable-tbody tr td {
+    padding: 0.4rem 0.6rem; // Reduced padding
+    border-bottom: 1px solid var(--surface-border);
+    vertical-align: middle; // Better for single-line content.
 
-    // Data-dense layout with smaller fonts.
-    font-size: 0.8rem;
-
-    // Compact header cells
-    .p-datatable-thead th {
-      padding: 0.5rem 0.6rem;
-      font-weight: 600;
+    // The div wrapper inside the <td> for perfect text control.
+    .cell-content {
+      // Prevents content from overflowing its fixed-width cell.
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      background-color: var(--surface-100);
-      border-bottom: 2px solid var(--surface-border) !important;
-    }
-    
-    // Compact filter inputs
-    .filter-row th {
-      padding: 0.2rem 0.4rem;
-      .elegant-filter-input {
-        width: 100%;
-        font-size: 0.75rem;
-        padding: 0.3rem 0.5rem;
-      }
     }
 
-    // Compact body cells
-    .p-datatable-tbody tr td {
-      padding: 0.4rem 0.6rem;
-      border-bottom: 1px solid var(--surface-border);
-      // Allow long text to wrap within the fixed-width cell.
-      word-wrap: break-word;
-      white-space: normal;
+    &.clickable-cell {
+      color: var(--primary-color);
+      cursor: pointer;
+      font-weight: 500;
+      &:hover {
+        .cell-content {
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+
+  // Styling for the "No records found" message.
+  .p-datatable-emptymessage td {
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-color-secondary);
+  }
+}
+
+/*
+ * 3. STICKY & OPAQUE PAGINATOR
+ * This ensures the paginator stays at the bottom of its container
+ * and the "rows per page" dropdown opens upwards.
+ */
+:host ::ng-deep {
+  // This is crucial for scrollHeight="flex" to work correctly with a sticky paginator
+  .p-datatable .p-datatable-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .p-paginator {
+    position: sticky;
+    bottom: 0;
+    z-index: 10; // Stays on top of table content.
+    background: var(--surface-card);
+    border-top: 1px solid var(--surface-border);
+    margin-top: auto; // Pushes the paginator to the bottom in a flex container.
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+
+    // 🔥 UPWARD-OPENING DROPDOWN FIX
+    .p-dropdown .p-dropdown-panel {
+      // This forces the dropdown to open upwards from the button.
+      bottom: 100%;
+      top: auto !important;
+      margin-bottom: 4px; // Small space between dropdown and paginator bar.
     }
   }
 }
 
 /*
- * DARK MODE THEME
+ * 4. DARK MODE ENHANCEMENTS
+ * Overrides for a polished dark theme experience.
  */
 :host-context(.app-dark) ::ng-deep {
+
+  .elegant-table {
+    .p-datatable-thead th {
+      background-color: var(--surface-800);
+      border-color: var(--surface-700);
+    }
+    .filter-row {
+      background-color: var(--surface-700);
+      .elegant-filter-input {
+        background-color: var(--surface-800);
+        border-color: var(--surface-600);
+        color: var(--text-color);
+      }
+    }
+  }
+
   .p-paginator {
     background: var(--surface-800);
     border-top-color: var(--surface-700);
-  }
-
-  .elegant-table .p-datatable-thead th {
-    background-color: var(--surface-800);
-    border-color: var(--surface-700);
   }
 }

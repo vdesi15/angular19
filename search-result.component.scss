@@ -1,31 +1,246 @@
+// search-result.component.scss - Enhanced styles preserving your layouts
 :host {
-  // The component should just be a simple block container that fits its content.
   display: block;
   width: 100%;
-}
+  margin-bottom: 1rem;
 
-// Use ::ng-deep to customize the PrimeNG accordion within this component.
-:host ::ng-deep {
-
-  // We want the content area of the accordion to have no padding,
-  // so the log-viewer component can be edge-to-edge inside it.
-  .p-accordion .p-accordion-content {
-    padding: 0 !important;
-    border: none; // The log viewer will have its own borders.
-  }
-
-  // Style the accordion header for a clean look.
-  .p-accordion .p-accordion-header .p-accordion-header-link {
-    background-color: var(--surface-section);
+  .custom-search-result {
     border: 1px solid var(--surface-border);
-    font-weight: 600;
-  }
-}
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: var(--surface-card);
+    transition: all 0.2s ease;
 
-// Dark mode adjustments for the accordion header.
-:host-context(.app-dark) ::ng-deep {
-  .p-accordion .p-accordion-header .p-accordion-header-link {
-    background-color: var(--surface-800);
-    border-color: var(--surface-700);
+    &:hover {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    &.expanded {
+      .result-header {
+        border-bottom: 1px solid var(--surface-border);
+        
+        .toggle-icon {
+          transform: rotate(90deg);
+        }
+      }
+    }
+  }
+
+  // ================================
+  // HEADER STYLING (Matches p-accordion)
+  // ================================
+  .result-header {
+    background: #f8f9fa;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    position: relative;
+
+    &:hover {
+      background: #e9ecef;
+    }
+
+    &:focus {
+      outline: 2px solid var(--primary-color);
+      outline-offset: -2px;
+    }
+
+    &.active {
+      background: #e9ecef;
+    }
+
+    .accordion-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: 1rem;
+      flex-shrink: 0;
+    }
+
+    .toggle-icon {
+      margin-right: 0.75rem;
+      transition: transform 0.3s ease;
+      color: var(--primary-color);
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+  }
+
+  // ================================
+  // CONTENT AREA STYLING
+  // ================================
+  .result-content {
+    background: var(--surface-card);
+    overflow: hidden;
+    
+    .content-wrapper {
+      // Let child components handle their own spacing
+    }
+  }
+
+  // ================================
+  // PRESERVE YOUR EXISTING LAYOUTS
+  // ================================
+  
+  // Transaction details layout (70%/30% split)
+  .transaction-details-layout {
+    display: flex;
+    height: 600px; // Or whatever height you prefer
+    
+    .log-viewer-section {
+      flex: 0 0 70%; // 70% width
+      border-right: 1px solid var(--surface-border);
+      overflow: hidden;
+    }
+    
+    .timeline-section {
+      flex: 0 0 30%; // 30% width
+      overflow: hidden;
+      
+      .transaction-timeline {
+        height: 100%;
+      }
+    }
+  }
+
+  // Result content wrapper
+  .result-content-wrapper {
+    // Your existing styles for content wrapper
+    max-height: 80vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  // Error container
+  .error-container {
+    padding: 1rem;
+    text-align: center;
+    
+    p {
+      margin-bottom: 1rem;
+    }
+  }
+
+  // ================================
+  // DARK MODE SUPPORT
+  // ================================
+  :host-context(.app-dark) {
+    .custom-search-result {
+      background: var(--surface-800);
+      border-color: var(--surface-600);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
+      &:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+      }
+    }
+
+    .result-header {
+      background: var(--surface-700);
+      
+      &:hover {
+        background: var(--surface-600);
+      }
+
+      &.active {
+        background: var(--surface-600);
+      }
+    }
+
+    .result-content {
+      background: var(--surface-800);
+    }
+  }
+
+  // ================================
+  // BUTTON STYLING IN HEADER
+  // ================================
+  .streaming-control-btn {
+    font-size: 0.875rem;
+    
+    &.p-button-success {
+      background-color: var(--green-500);
+      border-color: var(--green-500);
+      
+      &:hover {
+        background-color: var(--green-600);
+        border-color: var(--green-600);
+      }
+    }
+
+    &.p-button-danger {
+      background-color: var(--red-500);
+      border-color: var(--red-500);
+      
+      &:hover {
+        background-color: var(--red-600);
+        border-color: var(--red-600);
+      }
+    }
+  }
+
+  // ================================
+  // RESPONSIVE DESIGN
+  // ================================
+  @media (max-width: 768px) {
+    .result-header {
+      padding: 0.75rem 1rem;
+      
+      .header-left {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+
+      .header-right {
+        margin-left: 0.5rem;
+      }
+    }
+
+    .toggle-icon {
+      margin-right: 0.5rem !important;
+    }
+
+    // Stack transaction layout on mobile
+    .transaction-details-layout {
+      flex-direction: column;
+      height: auto;
+      
+      .log-viewer-section {
+        flex: none;
+        border-right: none;
+        border-bottom: 1px solid var(--surface-border);
+      }
+      
+      .timeline-section {
+        flex: none;
+      }
+    }
+  }
+
+  // ================================
+  // ACCESSIBILITY ENHANCEMENTS
+  // ================================
+  .result-header {
+    &:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+    }
   }
 }
