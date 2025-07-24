@@ -5,15 +5,16 @@
     [totalRecords]="totalRecords" 
     dataKey="_id"
     [paginator]="true" 
-    [rows]="20"
-    [rowsPerPageOptions]="[10, 20, 50, 100]" 
+    [rows]="dynamicRows()"
     [scrollable]="true" 
     scrollHeight="flex"
     [resizableColumns]="true" 
     columnResizeMode="fit"
     styleClass="p-datatable-striped p-datatable-sm elegant-table">
 
-    <!-- 🔥 FIX #1: Define column widths explicitly in a colgroup -->
+    <!-- REMOVED: [rowsPerPageOptions] - no longer needed -->
+
+    <!-- Rest of template remains exactly the same -->
     <ng-template pTemplate="colgroup" let-columns>
       <colgroup>
         @for(col of columns; track col.id) {
@@ -23,19 +24,17 @@
     </ng-template>
 
     <ng-template pTemplate="header" let-columns>
-      <!-- Column Display Names (No width style needed here anymore) -->
       <tr class="header-row">
         @for(col of columns; track col.id) {
           <th pResizableColumn>{{ col.displayName }}</th>
         }
       </tr>
       
-      <!-- Per-Column Filter Inputs -->
       <tr class="filter-row">
         @for(col of columns; track col.id) {
           <th>
             @if(col.enableFiltering) {
-              <!-- ... your filter template is fine ... -->
+              <!-- ... your existing filter template ... -->
             }
           </th>
         }
@@ -51,7 +50,6 @@
             class="elegant-cell"
             [class.clickable-cell]="isCellClickable(col, rowData)" 
             (click)="handleCellClick(col, rowData, $event, getCellValue(rowData, col.field))">
-            <!-- Use a div wrapper to handle text overflow gracefully -->
             <div class="cell-content" [innerHTML]="getCellDisplayValue(rowData, col)"></div>
           </td>
         }

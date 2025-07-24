@@ -41,15 +41,38 @@ export class LogViewerComponent implements OnChanges{
   public tableData: any[] = [];
   public totalRecords: number = 0;
   public isLoading: boolean = false;
+  dynamicRows = signal<number>(20);
 
   private cdr = inject(ChangeDetectorRef);
   private transformPipe = inject(TransformPipe);
   private viewService = inject(ViewDefinitionService);
   private cellClickActionService = inject(CellClickActionService);
+  private dynamicRowsService = inject(DynamicRowsService);
   
   constructor() {
     console.log("LogViewerComponent created.");
+    afterNextRender(() => {
+      this.setupResizeObserver();
+    });
   }
+
+  private setupResizeObserver(): void {
+    if (!this.tableContainer?.nativeElement) return;
+    
+    const resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const height = entry.contentRect.height;
+        this.dynamicRowsService.updateContainerHeight(height);
+      }
+    });
+    
+    resizeObserver.observe(this.tableContainer.nativeElement);
+  }
+
+  private rowsEffect = effect(() => {
+    const rows = this.dynamicRowsService.optimalRowsPerPage();
+    this.dynamicRows.set(rows);
+  });
   
   
   /**
