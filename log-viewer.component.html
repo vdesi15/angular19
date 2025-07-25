@@ -37,22 +37,21 @@
       </tr>
 
       <tr class="filter-row">
-        @for(col of columns; track col.id) {
-          <th [style.width]="col.width" 
-              [style.min-width]="col.width" 
-              [style.max-width]="col.width">
-            @if(col.enableFiltering) {
-              <input 
-                type="text" 
-                pInputText 
-                class="custom-column-filter"
-                [placeholder]="'Filter ' + col.displayName"
-                (input)="applyColumnFilter($event, col.id+'_filter', 'contains')"
-                (click)="$event.stopPropagation()">
-            }
-          </th>
-        }
-      </tr>
+      @for(col of columns; track col.id) {
+        <th>
+          @if(col.enableFiltering) {
+            <input 
+              type="text" 
+              pInputText 
+              class="custom-column-filter"
+              [placeholder]="'Filter ' + col.displayName"
+              (input)="applyColumnFilter($event, col.id+'_filter', 'contains')"
+              (click)="$event.stopPropagation()"
+              style="width: 100% !important; max-width: 100% !important; min-width: 0 !important; box-sizing: border-box !important;">
+          }
+        </th>
+      }
+</tr>
     </ng-template>
 
     <ng-template pTemplate="body" let-rowData let-columns="columns">
