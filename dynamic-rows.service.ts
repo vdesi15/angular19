@@ -7,30 +7,33 @@ import { DOCUMENT } from '@angular/common';
 export class DynamicRowsService {
   private document = inject(DOCUMENT);
   
-  // Signals for responsive row calculation
+  // 🔥 UPDATED: Compact table measurements
   private containerHeight = signal<number>(0);
-  private headerHeight = signal<number>(140); // Header + filter rows
-  private paginatorHeight = signal<number>(50); // Paginator height
-  private rowHeight = signal<number>(35); // Individual row height
+  private headerHeight = signal<number>(100); // Reduced: Header + filter rows (compact)
+  private paginatorHeight = signal<number>(40); // Reduced: Compact paginator
+  private rowHeight = signal<number>(28); // Reduced: Compact row height
   
   // Computed optimal rows per page
   readonly optimalRowsPerPage = computed(() => {
     const available = this.containerHeight() - this.headerHeight() - this.paginatorHeight();
     const rows = Math.floor(available / this.rowHeight());
-    return Math.max(5, Math.min(50, rows)); // Min 5, max 50 rows
+    
+    // 🔥 ENHANCED: Better bounds for compact display
+    return Math.max(8, Math.min(60, rows)); // Min 8, max 60 rows for compact view
   });
   
   /**
-   * Calculate optimal rows for a specific accordion content area
+   * 🔥 ENHANCED: Calculate optimal rows for accordion with better measurements
    */
   calculateRowsForAccordion(containerElement: HTMLElement): number {
-    if (!containerElement) return 20;
+    if (!containerElement) return 25; // Increased default for compact view
     
     const containerRect = containerElement.getBoundingClientRect();
     const availableHeight = containerRect.height - this.headerHeight() - this.paginatorHeight();
     const calculatedRows = Math.floor(availableHeight / this.rowHeight());
     
-    return Math.max(5, Math.min(50, calculatedRows));
+    // 🔥 ENHANCED: Better bounds for accordion tables
+    return Math.max(8, Math.min(60, calculatedRows));
   }
   
   /**
@@ -41,10 +44,29 @@ export class DynamicRowsService {
   }
   
   /**
-   * Get fixed height for accordion content based on row count
+   * 🔥 ENHANCED: Get exact height for accordion content based on row count
    */
   getAccordionContentHeight(rowCount: number): string {
     const totalHeight = this.headerHeight() + (rowCount * this.rowHeight()) + this.paginatorHeight();
-    return `${totalHeight}px`;
+    return `${Math.min(totalHeight, 600)}px`; // Cap at 600px max height
+  }
+  
+  /**
+   * 🔥 NEW: Get optimal height for table container in accordion
+   */
+  getOptimalTableHeight(): string {
+    const rows = this.optimalRowsPerPage();
+    return this.getAccordionContentHeight(rows);
+  }
+  
+  /**
+   * 🔥 NEW: Calculate rows based on available viewport height
+   */
+  calculateRowsForViewport(): number {
+    const viewportHeight = this.document.defaultView?.innerHeight || 800;
+    const availableHeight = viewportHeight * 0.6; // Use 60% of viewport
+    const calculatedRows = Math.floor((availableHeight - this.headerHeight() - this.paginatorHeight()) / this.rowHeight());
+    
+    return Math.max(10, Math.min(50, calculatedRows));
   }
 }

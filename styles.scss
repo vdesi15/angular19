@@ -18,24 +18,21 @@ body {
 
 
 // ================================
-// ACCORDION CONTENT HEIGHT MATCHING & SCROLLING FIX
+// ACCORDION CONTENT HEIGHT MATCHING & SCROLLING FIX - ENHANCED
 // ================================
 .p-accordion {
   .p-accordion-content {
-    // NEW: Set fixed height based on content rows
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
     
     .p-accordion-content-wrapper {
-      // NEW: Ensure wrapper takes full height
       height: 100% !important;
       display: flex !important;
       flex-direction: column !important;
       overflow: visible !important;
       max-height: none !important;
       
-      // NEW: Content area with calculated height
       .result-content-wrapper {
         flex: 1 !important;
         display: flex !important;
@@ -43,13 +40,17 @@ body {
         overflow: hidden !important;
         max-height: 80vh;
         
-        // NEW: Table container with exact height
+        // 🔥 ENHANCED: Better table container sizing for compact view
         .table-container {
           flex: 1 !important;
           display: flex !important;
           flex-direction: column !important;
-          height: 500px !important; // Fixed height for consistency
+          height: 550px !important; // Increased for compact rows
+          min-height: 400px !important;
+          max-height: 70vh !important;
           overflow: hidden !important;
+          border: 1px solid var(--surface-border) !important;
+          border-radius: 6px !important;
           
           .p-datatable {
             height: 100% !important;
@@ -73,7 +74,6 @@ body {
 // ================================
 :host ::ng-deep {
   .p-datatable {
-    // NEW: Ensure table is flex container
     display: flex !important;
     flex-direction: column !important;
     height: 100% !important;
@@ -81,111 +81,33 @@ body {
     .p-datatable-wrapper {
       flex: 1 !important;
       overflow-y: auto !important;
-      position: relative !important;
-      display: flex;
-      flex-direction: column;
+      overflow-x: hidden !important;
     }
     
-    // NEW: Enhanced sticky paginator
     .p-paginator {
       position: sticky !important;
       bottom: 0 !important;
-      z-index: 15 !important;
+      z-index: 10 !important;
       background: var(--surface-card) !important;
-      border-top: 2px solid var(--surface-border) !important;
+      border-top: 1px solid var(--surface-border) !important;
       margin-top: auto !important;
-      flex-shrink: 0 !important;
-      box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1) !important;
-      font-size: 0.8rem;
-      padding: 0.25rem 0.5rem;
-      
-      // NEW: Hide rows per page dropdown completely
-      .p-paginator-rpp-options {
-        display: none !important;
-      }
-      
-      // NEW: Adjust spacing without dropdown
-      .p-paginator-left {
-        margin-right: auto !important;
-      }
-      
-      .p-paginator-right {
-        margin-left: auto !important;
-      }
-
-      // 🔥 UPWARD-OPENING DROPDOWN FIX (if any dropdowns remain)
-      .p-dropdown .p-dropdown-panel {
-        bottom: 100%;
-        top: auto !important;
-        margin-bottom: 4px;
-      }
+      font-size: 0.7rem !important;
+      padding: 0.25rem 0.5rem !important;
+      min-height: 2rem !important;
     }
   }
 }
 
 // ================================
-// TOOLTIP STYLING
-// ================================
-.p-tooltip {
-  max-width: 300px !important;
-  word-wrap: break-word !important;
-  white-space: normal !important;
-  z-index: 9999 !important;
-}
-
-// ================================
-// DIALOG POSITIONING FIX
-// ================================
-.p-dialog {
-  z-index: 1400 !important;
-}
-
-// ================================
-// HORIZONTAL SCROLL PREVENTION
-// ================================
-.result-content-wrapper {
-  overflow-x: auto !important;
-  overflow-y: auto !important;
-  
-  .p-datatable-wrapper {
-    overflow-x: auto !important;
-  }
-}
-
-// ================================
-// ACCESSIBILITY (Still Important)
-// ================================
-.p-button:focus,
-.p-inputtext:focus,
-.p-dropdown:focus,
-.p-multiselect:focus {
-  outline: 2px solid var(--p-focus-ring-color) !important;
-  outline-offset: 2px !important;
-}
-
-// ================================
-// REDUCED MOTION SUPPORT
-// ================================
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-// ================================
-// RESPONSIVE ACCORDION HEIGHT
+// RESPONSIVE ACCORDION HEIGHT - ENHANCED
 // ================================
 @media (max-width: 1200px) {
   .p-accordion {
     .p-accordion-content {
       .result-content-wrapper {
         .table-container {
-          height: 400px !important; // Smaller on medium screens
+          height: 450px !important;
+          min-height: 350px !important;
         }
       }
     }
@@ -194,26 +116,27 @@ body {
 
 @media (max-width: 768px) {
   .p-datatable .p-datatable-thead tr.p-filter-row th {
-    padding: 0.1rem !important;
+    padding: 0.15rem !important;
     
     .p-inputtext {
       padding: 0.2rem 0.3rem !important;
-      font-size: 0.75rem !important;
-      height: 1.6rem !important;
+      font-size: 0.65rem !important;
+      height: 1.4rem !important;
     }
   }
   
   .p-datatable-thead tr th,
   .p-datatable-tbody tr td {
     padding: 0.2rem 0.3rem !important;
-    font-size: 0.8rem !important;
+    font-size: 0.7rem !important;
   }
 
   .p-accordion {
     .p-accordion-content {
       .result-content-wrapper {
         .table-container {
-          height: 300px !important; // Even smaller on mobile
+          height: 400px !important;
+          min-height: 300px !important;
         }
       }
     }
@@ -284,7 +207,7 @@ body {
   .p-datatable .p-datatable-thead > tr > th {
     background-color: #2d3748 !important;
     color: #e2e8f0 !important;
-    border-bottom-color: #2d3748 !important;
+    border-bottom-color: #4a5568 !important;
   }
 
   .p-accordion {
@@ -292,6 +215,7 @@ body {
       .result-content-wrapper {
         .table-container {
           border-color: var(--surface-600) !important;
+          background: var(--surface-900) !important;
           
           .p-datatable {
             .p-paginator {
@@ -562,6 +486,141 @@ body {
     
     .p-accordion-toggle-icon {
       transition: transform 0.3s ease !important;
+    }
+  }
+}
+
+// ================================
+// 🔥 ENHANCED TABLE STYLING - LOG VIEWER SPECIFIC
+// ================================
+
+// Global table improvements for better compact display
+.p-datatable {
+  font-size: 0.75rem !important;
+  
+  .p-datatable-table {
+    table-layout: fixed !important;
+    width: 100% !important;
+  }
+  
+  // Enhanced header styling
+  .p-datatable-thead th {
+    padding: 0.4rem 0.5rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    box-sizing: border-box !important;
+  }
+  
+  // Enhanced filter row
+  .p-datatable-thead tr.p-filter-row th {
+    padding: 0.25rem 0.4rem !important;
+    background-color: #f8f9fa !important;
+    
+    .p-inputtext {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      font-size: 0.7rem !important;
+      padding: 0.25rem 0.4rem !important;
+      height: 1.6rem !important;
+      border: 1px solid #ddd !important;
+      border-radius: 3px !important;
+      background: white !important;
+      
+      &:focus {
+        border-color: var(--primary-color) !important;
+        outline: none !important;
+        box-shadow: 0 0 0 1px var(--primary-color) !important;
+      }
+      
+      &::placeholder {
+        color: #999 !important;
+        font-size: 0.65rem !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+      }
+    }
+  }
+  
+  // Enhanced body rows
+  .p-datatable-tbody tr td {
+    padding: 0.3rem 0.5rem !important;
+    border-bottom: 1px solid #eee !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
+    
+    .cell-content {
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      max-height: 1.5rem !important;
+    }
+  }
+  
+  // Enhanced pagination
+  .p-paginator {
+    .p-paginator-rpp-options {
+      display: none !important;
+    }
+    
+    .p-paginator-pages .p-paginator-page {
+      min-width: 1.5rem !important;
+      height: 1.5rem !important;
+      font-size: 0.7rem !important;
+    }
+    
+    .p-paginator-first,
+    .p-paginator-prev,
+    .p-paginator-next,
+    .p-paginator-last {
+      min-width: 1.5rem !important;
+      height: 1.5rem !important;
+    }
+  }
+}
+
+// Dark mode table enhancements
+.app-dark {
+  .p-datatable {
+    .p-datatable-thead tr.p-filter-row th {
+      background-color: #374151 !important;
+      
+      .p-inputtext {
+        background-color: #1f2937 !important;
+        border-color: #4b5563 !important;
+        color: #f9fafb !important;
+        
+        &:focus {
+          border-color: var(--primary-color) !important;
+          background-color: #111827 !important;
+        }
+        
+        &::placeholder {
+          color: #9ca3af !important;
+        }
+      }
+    }
+    
+    .p-datatable-tbody tr {
+      &:nth-child(even) {
+        background-color: #1f2937 !important;
+      }
+      
+      td {
+        border-bottom-color: #374151 !important;
+        color: #f9fafb !important;
+      }
     }
   }
 }

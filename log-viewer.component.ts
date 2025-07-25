@@ -64,18 +64,65 @@ export class LogViewerComponent implements OnChanges{
 
 
 
-  private setupResizeObserver(): void {
-    if (!this.tableContainer?.nativeElement) return;
-
-    const resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        const height = entry.contentRect.height;
-        this.dynamicRowsService.updateContainerHeight(height);
-      }
-    });
-
-    resizeObserver.observe(this.tableContainer.nativeElement);
+  public dynamicrows(): number {
+  if (!this.tableContainer?.nativeElement) {
+    return 25; // Increased default for compact view
   }
+
+  const containerElement = this.tableContainer.nativeElement;
+  const containerHeight = containerElement.offsetHeight;
+  
+  // 🔥 COMPACT measurements
+  const headerHeight = 80;    // Compact header + filter
+  const paginatorHeight = 35; // Compact paginator  
+  const rowHeight = 28;       // Compact row height
+  
+  const availableHeight = containerHeight - headerHeight - paginatorHeight;
+  const calculatedRows = Math.floor(availableHeight / rowHeight);
+  
+  // 🔥 ENHANCED: Better bounds for compact table
+  const optimalRows = Math.max(8, Math.min(60, calculatedRows));
+  
+  console.log(`[LogViewer] Container height: ${containerHeight}px, Calculated rows: ${optimalRows}`);
+  
+  return optimalRows;
+}
+
+/**
+ * 🔥 ENHANCED: Setup resize observer with better calculations
+ */
+private setupResizeObserver(): void {
+  if (!this.tableContainer?.nativeElement) return;
+
+  const resizeObserver = new ResizeObserver(entries => {
+    for (const entry of entries) {
+      const height = entry.contentRect.height;
+      
+      // 🔥 IMMEDIATE update to dynamic rows
+      const newRows = this.calculateOptimalRows(height);
+      this.dynamicRows.set(newRows);
+      
+      this.dynamicRowsService.updateContainerHeight(height);
+      this.cdr.detectChanges();
+    }
+  });
+
+  resizeObserver.observe(this.tableContainer.nativeElement);
+}
+
+/**
+ * 🔥 NEW: Calculate optimal rows from height
+ */
+private calculateOptimalRows(containerHeight: number): number {
+  const headerHeight = 80;
+  const paginatorHeight = 35;
+  const rowHeight = 28;
+  
+  const availableHeight = containerHeight - headerHeight - paginatorHeight;
+  const calculatedRows = Math.floor(availableHeight / rowHeight);
+  
+  return Math.max(8, Math.min(60, calculatedRows));
+}
 
   private rowsEffect = effect(() => {
     const rows = this.dynamicRowsService.optimalRowsPerPage();
