@@ -1,11 +1,31 @@
-:host ::ng-deep .elegant-table {
+// ================================
+// LOG VIEWER COMPONENT - COMPLETE STYLING
+// ================================
 
-  // 🔥 CRITICAL: Table layout and sizing fixes
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.table-container {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+// ================================
+// COMPACT PROFESSIONAL TABLE STYLING
+// ================================
+
+:host ::ng-deep {
+  
   .p-datatable {
-    font-size: 0.75rem !important; // Smaller font for more data visibility
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
+    font-size: 0.75rem !important;
     
     .p-datatable-table {
       table-layout: fixed !important;
@@ -21,11 +41,11 @@
 
   // 🔥 PROFESSIONAL HEADER STYLING
   .p-datatable-thead th {
-    background-color: var(--table-header-bg) !important;
+    background-color: var(--table-header-bg, #CDCDCD) !important;
     color: #2c3e50 !important;
     font-weight: 600 !important;
     border-bottom: 2px solid #a8a8a8 !important;
-    padding: 0.4rem 0.5rem !important; // Compact padding
+    padding: 0.4rem 0.5rem !important;
     font-size: 0.75rem !important;
     text-align: left !important;
     white-space: nowrap !important;
@@ -34,19 +54,17 @@
     box-sizing: border-box !important;
   }
 
-  // 🔥 ENHANCED FILTER ROW - Key Fix for Width Issues
-  .filter-row th {
+  // 🔥 FIXED FILTER ROW - Proper Column Width Handling
+  .p-datatable-thead tr.filter-row th {
     padding: 0.25rem 0.4rem !important;
     background-color: #f8f9fa !important;
     border-bottom: 1px solid var(--surface-border) !important;
     box-sizing: border-box !important;
-    width: inherit !important;
-    overflow: hidden !important;
-
-    .custom-column-filter,
-    input[type="text"] {
+    
+    // 🔥 KEY FIX: Let column width determine filter input width
+    .custom-column-filter {
       width: 100% !important;
-      max-width: 100% !important;
+      max-width: none !important;
       min-width: 0 !important;
       box-sizing: border-box !important;
       font-size: 0.7rem !important;
@@ -56,30 +74,22 @@
       border-radius: 3px !important;
       background: white !important;
       
-      // 🔥 PREVENT INPUT EXPANSION
-      flex-shrink: 1 !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
-
       &:focus {
         border-color: var(--primary-color) !important;
         outline: none !important;
         box-shadow: 0 0 0 1px var(--primary-color) !important;
       }
-
+      
       &::placeholder {
         color: #999 !important;
         font-size: 0.65rem !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        white-space: nowrap !important;
       }
     }
   }
 
   // 🔥 COMPACT BODY ROWS
   .p-datatable-tbody tr td {
-    padding: 0.3rem 0.5rem !important; // Compact padding
+    padding: 0.3rem 0.5rem !important;
     border-bottom: 1px solid #eee !important;
     vertical-align: middle !important;
     box-sizing: border-box !important;
@@ -93,7 +103,7 @@
       text-overflow: ellipsis !important;
       width: 100% !important;
       box-sizing: border-box !important;
-      max-height: 1.5rem !important; // Limit cell height
+      max-height: 1.5rem !important;
     }
 
     &.clickable-cell {
@@ -134,7 +144,7 @@
     }
   }
 
-  // 🔥 COMPACT PAGINATION
+  // 🔥 FIXED STICKY PAGINATION
   .p-paginator {
     position: sticky !important;
     bottom: 0 !important;
@@ -145,6 +155,7 @@
     font-size: 0.7rem !important;
     padding: 0.25rem 0.5rem !important;
     min-height: 2rem !important;
+    flex-shrink: 0 !important;
 
     .p-paginator-rpp-options {
       display: none !important;
@@ -169,19 +180,18 @@
 // ================================
 // DARK MODE SUPPORT (.app-dark)
 // ================================
-:host-context(.app-dark) ::ng-deep .elegant-table {
+:host-context(.app-dark) ::ng-deep {
   .p-datatable-thead th {
     background-color: #2d3748 !important;
     color: #e2e8f0 !important;
     border-bottom-color: #4a5568 !important;
   }
 
-  .filter-row th {
+  .p-datatable-thead tr.filter-row th {
     background-color: #374151 !important;
     border-bottom-color: #4b5563 !important;
 
-    .custom-column-filter,
-    input[type="text"] {
+    .custom-column-filter {
       background-color: #1f2937 !important;
       border-color: #4b5563 !important;
       color: #f9fafb !important;
@@ -212,5 +222,28 @@
     background: #1f2937 !important;
     border-top-color: #374151 !important;
     color: #f9fafb !important;
+  }
+}
+
+// ================================
+// RESPONSIVE DESIGN
+// ================================
+@media (max-width: 768px) {
+  :host ::ng-deep {
+    .p-datatable-thead tr.filter-row th {
+      padding: 0.15rem !important;
+      
+      .custom-column-filter {
+        padding: 0.2rem 0.3rem !important;
+        font-size: 0.65rem !important;
+        height: 1.4rem !important;
+      }
+    }
+    
+    .p-datatable-thead tr th,
+    .p-datatable-tbody tr td {
+      padding: 0.2rem 0.3rem !important;
+      font-size: 0.7rem !important;
+    }
   }
 }

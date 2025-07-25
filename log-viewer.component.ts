@@ -65,50 +65,52 @@ export class LogViewerComponent implements OnChanges{
 
 
   public dynamicrows(): number {
-  if (!this.tableContainer?.nativeElement) {
-    return 25; // Increased default for compact view
-  }
-
-  const containerElement = this.tableContainer.nativeElement;
-  const containerHeight = containerElement.offsetHeight;
-  
-  // 🔥 COMPACT measurements
-  const headerHeight = 80;    // Compact header + filter
-  const paginatorHeight = 35; // Compact paginator  
-  const rowHeight = 28;       // Compact row height
-  
-  const availableHeight = containerHeight - headerHeight - paginatorHeight;
-  const calculatedRows = Math.floor(availableHeight / rowHeight);
-  
-  // 🔥 ENHANCED: Better bounds for compact table
-  const optimalRows = Math.max(8, Math.min(60, calculatedRows));
-  
-  console.log(`[LogViewer] Container height: ${containerHeight}px, Calculated rows: ${optimalRows}`);
-  
-  return optimalRows;
+  // Use the service's calculation
+  return this.dynamicRowsService.optimalRowsPerPage();
 }
 
 /**
- * 🔥 ENHANCED: Setup resize observer with better calculations
+ * 🔥 ENHANCED: Setup resize observer with immediate effect
  */
 private setupResizeObserver(): void {
   if (!this.tableContainer?.nativeElement) return;
 
-  const resizeObserver = new ResizeObserver(entries => {
-    for (const entry of entries) {
-      const height = entry.contentRect.height;
-      
-      // 🔥 IMMEDIATE update to dynamic rows
-      const newRows = this.calculateOptimalRows(height);
-      this.dynamicRows.set(newRows);
-      
-      this.dynamicRowsService.updateContainerHeight(height);
-      this.cdr.detectChanges();
-    }
+  const updateRows = () => {
+    const containerHeight = this.tableContainer.nativeElement.offsetHeight;
+    this.dynamicRowsService.updateContainerHeight(containerHeight);
+    
+    // 🔥 KEY FIX: Force immediate update
+    this.cdr.detectChanges();
+  };
+
+  const resizeObserver = new ResizeObserver(() => {
+    updateRows();
   });
 
   resizeObserver.observe(this.tableContainer.nativeElement);
+  
+  // 🔥 IMMEDIATE: Calculate initial rows
+  updateRows();
 }
+
+/**
+ * 🔥 ENHANCED: Effect that responds to dynamic rows changes
+ */
+private rowsEffect = effect(() => {
+  const optimalRows = this.dynamicRowsService.optimalRowsPerPage();
+  
+  if (optimalRows !== this.dynamicRows()) {
+    console.log(`[LogViewer] Updating rows: ${this.dynamicRows()} -> ${optimalRows}`);
+    this.dynamicRows.set(optimalRows);
+    
+    // 🔥 KEY: Force table to update pagination
+    if (this.logTable) {
+      this.logTable.rows = optimalRows;
+      this.logTable.updatePaginatorState();
+    }
+  }
+});
+
 
 /**
  * 🔥 NEW: Calculate optimal rows from height
