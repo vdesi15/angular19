@@ -57,6 +57,12 @@ export class LogViewerComponent implements OnChanges{
     });
   }
 
+  public applyColumnFilter(event: Event, field: string, matchMode: string): void {
+  const value = (event.target as HTMLInputElement).value;
+  this.logTable?.filter(value, field, matchMode);
+}
+
+
   private setupResizeObserver(): void {
     if (!this.tableContainer?.nativeElement) return;
 

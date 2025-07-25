@@ -3,8 +3,6 @@
     [paginator]="true" [rows]="dynamicRows()" [scrollable]="true" scrollHeight="flex" [resizableColumns]="true"
     columnResizeMode="fit" styleClass="p-datatable-striped p-datatable-sm elegant-table">
 
-
-    <!-- Rest of template remains exactly the same -->
     <ng-template pTemplate="colgroup" let-columns>
       <colgroup>
         @for(col of columns; track col.id) {
@@ -20,16 +18,18 @@
         }
       </tr>
 
+      <!-- 🔥 SOLUTION 1: Custom filter row without p-columnFilter -->
       <tr class="filter-row">
         @for(col of columns; track col.id) {
         <th>
           @if(col.enableFiltering) {
-          <p-columnFilter [field]="col.id+'_filter'" matchMode="contains" [showMenu]="false" showClearButton="false">
-            <ng-template pTemplate="filter" let-value let-filter="filterCallback">
-              <input type="text" pInputText [ngModel]="value" (ngModelChange)="filter($event)" [style.width]="col.width"
-                class="p-inputtext-sm w-full" [placeholder]="" (click)="$event.stopPropagation()" style="width: 1500px;">
-            </ng-template>
-          </p-columnFilter>
+            <input 
+              type="text" 
+              pInputText 
+              class="custom-column-filter"
+              [placeholder]="'Filter ' + col.displayName"
+              (input)="applyColumnFilter($event, col.id+'_filter', 'contains')"
+              (click)="$event.stopPropagation()">
           }
         </th>
         }
