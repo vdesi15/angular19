@@ -1,5 +1,5 @@
 :host ::ng-deep .elegant-table {
-  
+
   // 🔥 CRITICAL: Table layout must be fixed
   .p-datatable-table {
     table-layout: fixed !important;
@@ -14,7 +14,7 @@
     box-sizing: border-box !important;
     width: inherit !important; // Inherit from colgroup
     overflow: hidden !important; // Critical: prevent expansion
-    
+
     // 🔥 KEY FIX: Force input to fit container
     .custom-column-filter,
     input[type="text"] {
@@ -26,18 +26,18 @@
       padding: 0.3rem 0.5rem !important;
       border: 1px solid var(--surface-200) !important;
       border-radius: 4px !important;
-      
+
       // 🔥 PREVENT: Input from determining th width
       flex-shrink: 1 !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
-      
+
       &:focus {
         border-color: var(--primary-color) !important;
         outline: none !important;
         box-shadow: 0 0 0 1px var(--primary-color) !important;
       }
-      
+
       &::placeholder {
         color: var(--text-color-secondary) !important;
         font-size: 0.7rem !important;
@@ -83,6 +83,7 @@
       color: var(--primary-color);
       cursor: pointer;
       font-weight: 500;
+
       &:hover {
         .cell-content {
           text-decoration: underline;
@@ -128,10 +129,10 @@
     background-color: var(--surface-800);
     border-color: var(--surface-700);
   }
-  
+
   .filter-row th {
     background-color: var(--surface-700);
-    
+
     .custom-column-filter,
     input[type="text"] {
       background-color: var(--surface-800);
