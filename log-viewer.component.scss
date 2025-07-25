@@ -1,84 +1,103 @@
 :host {
-  // The component host is treated as a block that can be sized.
   display: block;
   height: 100%;
 
-  // The .table-container is the direct child that holds the table.
-  // It's crucial for calculating height and managing overflow.
   .table-container {
-    display: block; // Use block for simpler height calculation.
-    // 🔥 Respects the site footer. Assumes footer is ~50px tall.
-    // Adjust '50px' to the actual height of your .site-footer.
-    height: calc(100vh - 250px); // A more robust calculation based on viewport height. Adjust as needed.
-    overflow: hidden; // Prevents double scrollbars.
+    display: block;
+    height: calc(100vh - 250px);
+    overflow: hidden;
   }
 }
 
-/*
- * 2. CORE TABLE STYLES
- * A polished, elegant, and structured table theme.
- */
+// 🔥 CRITICAL FIX: Force table layout and column width compliance
 :host ::ng-deep .elegant-table {
-
-  // 🔥 CORE FIX for COLUMN WIDTHS:
-  // This is the most important rule. It forces the browser to use the widths
-  // defined in <colgroup>, not auto-calculate based on content.
+  
+  // 🔥 MOST IMPORTANT: Force table to use fixed layout
   .p-datatable-table {
     table-layout: fixed !important;
+    width: 100% !important;
   }
 
-  // 🔥 Data-dense layout with smaller fonts.
+  // 🔥 Ensure colgroup widths are respected
+  colgroup col {
+    // Force the browser to respect the width attribute
+    min-width: var(--col-width) !important;
+    max-width: var(--col-width) !important;
+  }
+
   font-size: 0.8rem;
 
-  // Header styling for a clean, unified look.
   .p-datatable-thead th {
     background-color: var(--surface-100);
     border-bottom: 1px solid var(--surface-border) !important;
-    padding: 0.5rem 0.6rem; // Compact padding
+    padding: 0.5rem 0.6rem;
     font-weight: 600;
     text-align: left;
-    // These three rules work together to handle long header titles gracefully.
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    // 🔥 CRITICAL: Don't override width here
+    box-sizing: border-box !important;
   }
 
-  // Filter row - even more compact for data density.
+  // 🔥 FILTER ROW: Critical fixes for width compliance
   .filter-row th {
-    padding: 0.2rem 0.4rem; // Very tight padding
+    padding: 0.2rem 0.4rem;
     background-color: var(--surface-50);
-    border-bottom-width: 2px; // Heavier border to separate header from data
+    border-bottom-width: 2px;
+    box-sizing: border-box !important;
+    // 🔥 CRITICAL: Don't set width here, let colgroup handle it
+    
+    // 🔥 FIX: p-columnFilter container
+    .p-column-filter {
+      width: 100% !important;
+      box-sizing: border-box !important;
+      
+      // 🔥 FIX: Filter input container
+      .p-fluid {
+        width: 100% !important;
+      }
+    }
 
-    .p-column-filter { width: 100%; }
-
+    // 🔥 ENHANCED: Filter input styling
     .elegant-filter-input {
-      width: 100%;
-      font-size: 0.75rem; // Smaller font for filters
-      padding: 0.3rem 0.5rem; // Compact padding
+      width: 100% !important;
+      box-sizing: border-box !important;
+      font-size: 0.75rem;
+      padding: 0.3rem 0.5rem;
       border: 1px solid var(--surface-200);
       border-radius: 4px;
       transition: border-color 0.2s, box-shadow 0.2s;
+      min-width: 0 !important; // Allow shrinking
+      max-width: 100% !important; // Prevent overflow
 
       &:focus {
         border-color: var(--primary-color);
-        box-shadow: 0 0 0 1px var(--primary-color); // More subtle focus ring
+        box-shadow: 0 0 0 1px var(--primary-color);
         outline: none;
+      }
+
+      &::placeholder {
+        color: var(--text-color-secondary);
+        font-size: 0.7rem;
       }
     }
   }
 
-  // Body row styling for data density.
   .p-datatable-tbody tr td {
-    padding: 0.4rem 0.6rem; // Reduced padding
+    padding: 0.4rem 0.6rem;
     border-bottom: 1px solid var(--surface-border);
-    vertical-align: middle; // Better for single-line content.
+    vertical-align: middle;
+    box-sizing: border-box !important;
+    // 🔥 CRITICAL: Cell overflow handling
+    overflow: hidden !important;
 
-    // The div wrapper inside the <td> for perfect text control.
     .cell-content {
-      // Prevents content from overflowing its fixed-width cell.
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      width: 100% !important;
+      box-sizing: border-box !important;
     }
 
     &.clickable-cell {
@@ -93,7 +112,6 @@
     }
   }
 
-  // Styling for the "No records found" message.
   .p-datatable-emptymessage td {
     padding: 2rem;
     text-align: center;
@@ -101,13 +119,8 @@
   }
 }
 
-/*
- * 3. STICKY & OPAQUE PAGINATOR
- * This ensures the paginator stays at the bottom of its container
- * and the "rows per page" dropdown opens upwards.
- */
+// 🔥 ENHANCED: Hide rows per page dropdown
 :host ::ng-deep {
-  // This is crucial for scrollHeight="flex" to work correctly with a sticky paginator
   .p-datatable .p-datatable-wrapper {
     display: flex;
     flex-direction: column;
@@ -117,40 +130,50 @@
   .p-paginator {
     position: sticky;
     bottom: 0;
-    z-index: 10; // Stays on top of table content.
+    z-index: 10;
     background: var(--surface-card);
     border-top: 1px solid var(--surface-border);
-    margin-top: auto; // Pushes the paginator to the bottom in a flex container.
+    margin-top: auto;
     font-size: 0.8rem;
     padding: 0.25rem 0.5rem;
 
-    // 🔥 UPWARD-OPENING DROPDOWN FIX
+    // 🔥 HIDE: Rows per page dropdown
+    .p-paginator-rpp-options {
+      display: none !important;
+    }
+
     .p-dropdown .p-dropdown-panel {
-      // This forces the dropdown to open upwards from the button.
       bottom: 100%;
       top: auto !important;
-      margin-bottom: 4px; // Small space between dropdown and paginator bar.
+      margin-bottom: 4px;
     }
   }
 }
 
-/*
- * 4. DARK MODE ENHANCEMENTS
- * Overrides for a polished dark theme experience.
- */
+// 🔥 DARK MODE: Enhanced support
 :host-context(.app-dark) ::ng-deep {
-
   .elegant-table {
     .p-datatable-thead th {
       background-color: var(--surface-800);
       border-color: var(--surface-700);
     }
-    .filter-row {
+    
+    .filter-row th {
       background-color: var(--surface-700);
+      
       .elegant-filter-input {
         background-color: var(--surface-800);
         border-color: var(--surface-600);
         color: var(--text-color);
+
+        &:focus {
+          border-color: var(--primary-color);
+          background-color: var(--surface-700);
+        }
+
+        &::placeholder {
+          color: var(--text-color-secondary);
+        }
       }
     }
   }
