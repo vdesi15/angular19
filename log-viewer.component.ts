@@ -63,6 +63,7 @@ export class LogViewerComponent implements OnChanges{
 }
 
 
+
   private setupResizeObserver(): void {
     if (!this.tableContainer?.nativeElement) return;
 
