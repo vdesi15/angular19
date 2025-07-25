@@ -1,72 +1,36 @@
 <div #tableContainer class="table-container">
   <p-table #logTable [value]="tableData" [columns]="visibleColumns" [totalRecords]="totalRecords" dataKey="_id"
-    [paginator]="true" [rows]="dynamicRows()" [scrollable]="true" scrollHeight="flex" [resizableColumns]="true"
-    columnResizeMode="fit" styleClass="p-datatable-striped p-datatable-sm elegant-table">
+    [paginator]="true" [rows]="20" [scrollable]="true" scrollHeight="flex" >
 
-    <!-- 🔥 DEBUG: Add this temporarily to see what col.width values you have -->
-    <!-- Remove this after debugging -->
-    <div style="display: none;">
-      DEBUG COLUMN WIDTHS:
-      @for(col of visibleColumns; track col.id) {
-        <span>{{ col.displayName }}: {{ col.width }} | </span>
-      }
-    </div>
-
-    <!-- 🔥 BULLETPROOF: Force colgroup with explicit widths -->
-    <ng-template pTemplate="colgroup" let-columns>
-      <colgroup>
-        @for(col of columns; track col.id) {
-          <!-- 🔥 DEBUG: Log the width being applied -->
-          <!-- {{ logColumnWidth(col) }} -->
-          <col [style.width]="col.width" [style.min-width]="col.width" [style.max-width]="col.width">
-        }
-      </colgroup>
-    </ng-template>
 
     <ng-template pTemplate="header" let-columns>
-      <!-- 🔥 FORCE: Apply width directly to th elements as backup -->
       <tr class="header-row">
         @for(col of columns; track col.id) {
-          <th pResizableColumn 
-              [style.width]="col.width" 
-              [style.min-width]="col.width" 
-              [style.max-width]="col.width">
-            {{ col.displayName }}
-          </th>
+        <th style="width: 10px;">{{ col.displayName }}</th>
         }
       </tr>
 
       <tr class="filter-row">
-      @for(col of columns; track col.id) {
+        @for(col of columns; track col.id) {
         <th>
           @if(col.enableFiltering) {
-            <input 
-              type="text" 
-              pInputText 
-              class="custom-column-filter"
-              [placeholder]="'Filter ' + col.displayName"
-              (input)="applyColumnFilter($event, col.id+'_filter', 'contains')"
-              (click)="$event.stopPropagation()"
-              style="width: 100% !important; max-width: 100% !important; min-width: 0 !important; box-sizing: border-box !important;">
+          <input type="text" pInputText class="custom-column-filter"
+            (input)="applyColumnFilter($event, col.id+'_filter', 'contains')" (click)="$event.stopPropagation()"
+            style="width: 100% !important; max-width: 100% !important; min-width: 0 !important; box-sizing: border-box !important;">
           }
         </th>
-      }
-</tr>
+        }
+        </tr>
     </ng-template>
 
     <ng-template pTemplate="body" let-rowData let-columns="columns">
-      <tr class="elegant-row">
+      <tr class="elegant-row" style="width: 10px;">
         @for(col of columns; track col.id){
-          <!-- 🔥 FORCE: Apply width to td elements too -->
-          <td tooltipPosition="top" 
-              class="elegant-cell"
-              [style.width]="col.width" 
-              [style.min-width]="col.width" 
-              [style.max-width]="col.width"
-              [class.clickable-cell]="isCellClickable(col, rowData)"
-              (click)="handleCellClick(col, rowData, $event, getCellValue(rowData, col.field))">
-            <div class="cell-content" [innerHTML]="getCellDisplayValue(rowData, col)"></div>
-          </td>
+        <td tooltipPosition="top" class="elegant-cell"
+          [class.clickable-cell]="isCellClickable(col, rowData)"
+          (click)="handleCellClick(col, rowData, $event, getCellValue(rowData, col.field))">
+          <div class="cell-content" [innerHTML]="getCellDisplayValue(rowData, col)"></div>
+        </td>
         }
       </tr>
     </ng-template>
