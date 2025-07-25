@@ -1,6 +1,6 @@
 <div #tableContainer class="table-container">
   <p-table #logTable [value]="tableData" [columns]="visibleColumns" [totalRecords]="totalRecords" dataKey="_id"
-    [paginator]="true" [rows]="20" [scrollable]="true" scrollHeight="flex" >
+    [paginator]="true" [rows]="dynamicrows()" [scrollable]="true" scrollHeight="flex" >
 
 
     <ng-template pTemplate="header" let-columns>
