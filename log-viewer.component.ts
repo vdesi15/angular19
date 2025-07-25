@@ -103,10 +103,12 @@ private rowsEffect = effect(() => {
     console.log(`[LogViewer] Updating rows: ${this.dynamicRows()} -> ${optimalRows}`);
     this.dynamicRows.set(optimalRows);
     
-    // 🔥 KEY: Force table to update pagination
+    // 🔥 FIXED: Force table to refresh with new row count
     if (this.logTable) {
       this.logTable.rows = optimalRows;
-      this.logTable.updatePaginatorState();
+      // Reset to first page when rows change
+      this.logTable.first = 0;
+      this.cdr.detectChanges();
     }
   }
 });
