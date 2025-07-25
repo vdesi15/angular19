@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectorRef, Component, computed, effect, ElementRef, EventEmitter, inject, Input, OnChanges, OnDestroy, OnInit, Output, signal, Signal, SimpleChanges, ViewChild, WritableSignal } from '@angular/core';
+import { afterNextRender, AfterViewInit, ChangeDetectorRef, Component, computed, effect, ElementRef, EventEmitter, inject, Input, OnChanges, OnDestroy, OnInit, Output, signal, Signal, SimpleChanges, ViewChild, WritableSignal } from '@angular/core';
 import { CommonModule, JsonPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { get } from 'lodash-es';
@@ -12,6 +12,7 @@ import { ColumnDefinition } from '../../models/column-definition.model';
 import { ViewDefinitionService } from '../../services/view-definition.service';
 import { FilterService } from 'primeng/api';
 import { CellClickActionService } from '../../services/cell-click-action.service';
+import { DynamicRowsService } from '../../services/dynamic-rows.service';
 
 @Component({
   selector: 'app-log-viewer',
@@ -34,21 +35,21 @@ export class LogViewerComponent implements OnChanges{
 
   @ViewChild('logTable') logTable!: Table;
   @ViewChild('tableContainer', { static: true }) tableContainer!: ElementRef;
-  
-  private searchState: WritableSignal<ActiveSearch> = signal(this.searchInstance);  
+
+  private searchState: WritableSignal<ActiveSearch> = signal(this.searchInstance);
   public visibleColumnsState: WritableSignal<ColumnDefinition[]> = signal([]);
-   
+
   public tableData: any[] = [];
   public totalRecords: number = 0;
   public isLoading: boolean = false;
-  dynamicRows = signal<number>(20);
+  public dynamicRows = signal<number>(20);
 
   private cdr = inject(ChangeDetectorRef);
   private transformPipe = inject(TransformPipe);
   private viewService = inject(ViewDefinitionService);
   private cellClickActionService = inject(CellClickActionService);
   private dynamicRowsService = inject(DynamicRowsService);
-  
+
   constructor() {
     console.log("LogViewerComponent created.");
     afterNextRender(() => {
@@ -58,14 +59,14 @@ export class LogViewerComponent implements OnChanges{
 
   private setupResizeObserver(): void {
     if (!this.tableContainer?.nativeElement) return;
-    
+
     const resizeObserver = new ResizeObserver(entries => {
       for (const entry of entries) {
         const height = entry.contentRect.height;
         this.dynamicRowsService.updateContainerHeight(height);
       }
     });
-    
+
     resizeObserver.observe(this.tableContainer.nativeElement);
   }
 
@@ -73,8 +74,8 @@ export class LogViewerComponent implements OnChanges{
     const rows = this.dynamicRowsService.optimalRowsPerPage();
     this.dynamicRows.set(rows);
   });
-  
-  
+
+
   /**
    * Public method called by the parent to reset column visibility.
    */
@@ -91,7 +92,7 @@ export class LogViewerComponent implements OnChanges{
     const value = (event.target as HTMLInputElement).value;
     this.logTable.filterGlobal(value, 'contains');
   }
-  
+
   /**
    * Emits the original source data of a row when clicked for drill-down.
    */
@@ -107,8 +108,8 @@ export class LogViewerComponent implements OnChanges{
    */
   public isCellClickable(column: ColumnDefinition, rowData: any): boolean {
     // Make certain fields clickable for drilldown
-    const clickableFields = ['_source.tifw.txnid', '_source.message', '_source.timestamp', `_source['@timestamp']` ];
-    
+    const clickableFields = ['_source.tifw.txnid', '_source.message', '_source.timestamp', `_source['@timestamp']`];
+
     return clickableFields.includes(column.field);
   }
 
@@ -139,50 +140,50 @@ export class LogViewerComponent implements OnChanges{
     return value;
   }
 
- ngOnChanges(changes: SimpleChanges): void {
-  if (changes['searchInstance']) {
-    const currentSearch = changes['searchInstance'].currentValue as ActiveSearch;
-    const previousSearch = changes['searchInstance'].previousValue as ActiveSearch | undefined;
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['searchInstance']) {
+      const currentSearch = changes['searchInstance'].currentValue as ActiveSearch;
+      const previousSearch = changes['searchInstance'].previousValue as ActiveSearch | undefined;
 
-    // If this is a completely different search result, clear everything.
-    if (!previousSearch || currentSearch.id !== previousSearch.id) {
-      console.log("[LogViewer] New search detected. Resetting table.");
-      this.tableData = [];
+      // If this is a completely different search result, clear everything.
+      if (!previousSearch || currentSearch.id !== previousSearch.id) {
+        console.log("[LogViewer] New search detected. Resetting table.");
+        this.tableData = [];
 
-      // Reset paginator to the first page
-      if (this.logTable) {
-        this.logTable.first = 0;
+        // Reset paginator to the first page
+        if (this.logTable) {
+          this.logTable.first = 0;
+        }
+      }
+
+      // 🔥 FIX 1: Only process selectedViewId changes that are NOT first change
+      if (changes['selectedViewId'] && !changes['selectedViewId'].firstChange) {
+        console.log(`[LogViewer] View filter changed, reprocessing data. New View Filter : `, this.selectedViewFilter);
+        this.reProcessCurrentData();
+        return; // Early return to prevent duplicate processing
+      }
+
+      const newHits = this.getNewHits(currentSearch, previousSearch);
+
+      if (newHits.length > 0) {
+        const processedNewRows = this.processHits(newHits);
+        this.tableData.push(...processedNewRows);
+        this.totalRecords = this.tableData.length;
+        this.cdr.detectChanges();
+        console.log(`[LogViewer] Appended ${processedNewRows.length} rows. Total now: ${this.tableData.length}`);
       }
     }
 
-    // 🔥 FIX 1: Only process selectedViewId changes that are NOT first change
-    if(changes['selectedViewId'] && !changes['selectedViewId'].firstChange) {
-      console.log(`[LogViewer] View filter changed, reprocessing data. New View Filter : `, this.selectedViewFilter);
-      this.reProcessCurrentData();
-      return; // Early return to prevent duplicate processing
-    }
-
-    const newHits = this.getNewHits(currentSearch, previousSearch);
-
-    if (newHits.length > 0) {
-      const processedNewRows = this.processHits(newHits);
-      this.tableData.push(...processedNewRows);
-      this.totalRecords = this.tableData.length; 
-      this.cdr.detectChanges();
-      console.log(`[LogViewer] Appended ${processedNewRows.length} rows. Total now: ${this.tableData.length}`);
-    }
-  }
-
-  // This part handles a view change within the same search instance
+    // 🔥 FIX 1: Handle view filter changes separately to prevent duplication
     if (this.isViewChanged(changes)) {
       console.log('[LogViewer] View has changed. Reprocessing data and resetting paginator.');
       this.reProcessCurrentData();
     }
-}
+  }
 
-/**
-   * Helper function to detect if the view filter has actually changed.
-   */
+  /**
+     * Helper function to detect if the view filter has actually changed.
+     */
   private isViewChanged(changes: SimpleChanges): boolean {
     const viewFilterChange = changes['selectedViewFilter'];
     if (viewFilterChange && !viewFilterChange.firstChange && viewFilterChange.currentValue !== viewFilterChange.previousValue) {
@@ -191,68 +192,52 @@ export class LogViewerComponent implements OnChanges{
     // You can add other view-related inputs here if needed
     // const viewIdChange = changes['selectedViewId'];
     // if (viewIdChange && !viewIdChange.firstChange && ...) return true;
-    
+
     return false;
   }
 
-// 🔥 FIX 1: Enhanced reprocessing method
-public reProcessCurrentData(): void {
-  if(this.searchInstance.data.length > 0) {
-    console.log('[LogViewer] Reprocessing current data with view filter:', this.selectedViewFilter);
-    this.tableData = this.processHits(this.searchInstance.data);
-    this.totalRecords = this.tableData.length;
-    this.cdr.detectChanges();
-    
-    // Reset table to first page when reprocessing
-    if (this.logTable) {
-      this.logTable.first = 0;
+  // 🔥 FIX 1: Enhanced reprocessing method
+  public reProcessCurrentData(): void {
+    if (this.searchInstance.data.length > 0) {
+      console.log('[LogViewer] Reprocessing current data with view filter:', this.selectedViewFilter);
+      this.tableData = this.processHits(this.searchInstance.data);
+      this.totalRecords = this.tableData.length;
+      this.cdr.detectChanges();
+
+      // Reset table to first page when reprocessing
+      if (this.logTable) {
+        this.logTable.first = 0;
+      }
     }
   }
-}
 
-// 🔥 FIX 2: Dynamic rows calculation based on container height
-public getOptimalRowsPerPage(): number {
-  if (!this.tableContainer?.nativeElement) return 20;
-  
-  const containerHeight = this.tableContainer.nativeElement.offsetHeight;
-  const headerHeight = 80; // Approximate header + filter height
-  const paginatorHeight = 50; // Paginator height
-  const rowHeight = 35; // Approximate row height
-  
-  const availableHeight = containerHeight - headerHeight - paginatorHeight;
-  const calculatedRows = Math.floor(availableHeight / rowHeight);
-  
-  // Ensure reasonable bounds
-  return Math.max(10, Math.min(50, calculatedRows));
-}
+  // 🔥 FIX 2: Dynamic rows calculation based on container height
+  public getOptimalRowsPerPage(): number {
+    if (!this.tableContainer?.nativeElement) return 20;
 
-/**
-   * Helper function to detect if the view filter has actually changed.
-   */
-  private isViewChanged(changes: SimpleChanges): boolean {
-    const viewFilterChange = changes['selectedViewFilter'];
-    if (viewFilterChange && !viewFilterChange.firstChange && viewFilterChange.currentValue !== viewFilterChange.previousValue) {
-      return true;
-    }
-    // You can add other view-related inputs here if needed
-    // const viewIdChange = changes['selectedViewId'];
-    // if (viewIdChange && !viewIdChange.firstChange && ...) return true;
-    
-    return false;
+    const containerHeight = this.tableContainer.nativeElement.offsetHeight;
+    const headerHeight = 80; // Approximate header + filter height
+    const paginatorHeight = 50; // Paginator height
+    const rowHeight = 35; // Approximate row height
+
+    const availableHeight = containerHeight - headerHeight - paginatorHeight;
+    const calculatedRows = Math.floor(availableHeight / rowHeight);
+
+    // Ensure reasonable bounds
+    return Math.max(10, Math.min(50, calculatedRows));
   }
 
-// 🔥 FIX: Helper methods for template
-public getPaginatorEndRange(): number {
-  const start = (this.logTable?.first || 0);
-  const rows = (this.logTable?.rows || 20);
-  const end = start + rows;
-  return end > this.totalRecords ? this.totalRecords : end;
-}
+  // 🔥 FIX: Helper methods for template
+  public getPaginatorEndRange(): number {
+    const start = (this.logTable?.first || 0);
+    const rows = (this.logTable?.rows || 20);
+    const end = start + rows;
+    return end > this.totalRecords ? this.totalRecords : end;
+  }
 
-public getPaginatorStartRange(): number {
-  return (this.logTable?.first || 0) + 1;
-}
-
+  public getPaginatorStartRange(): number {
+    return (this.logTable?.first || 0) + 1;
+  }
 
   /**
    * Called when the user uses the filter bar.
@@ -288,7 +273,7 @@ public getPaginatorStartRange(): number {
     const columns = this.visibleColumns;
 
     let filteredHits = hits;
-    if(this.searchInstance.type === 'transaction' && this.selectedViewFilter) {
+    if (this.searchInstance.type === 'transaction' && this.selectedViewFilter) {
       filteredHits = this.viewService.filterByViews(hits, this.selectedViewFilter);
       this.filteredCountChange.emit(filteredHits.length);
     }
@@ -317,6 +302,6 @@ public getPaginatorStartRange(): number {
    * @returns value of the cell
    */
   getCellDisplayValue(rowData: any, col: ColumnDefinition): string {
-    return rowData[col.id+'_filter'];
+    return rowData[col.id + '_filter'];
   }
 }     
