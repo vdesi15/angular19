@@ -16,9 +16,6 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       <!-- Fixed Header -->
       <div class="timeline-header">
         <h5>Transaction Timeline</h5>
-        <div class="timeline-info-footer">
-          Showing 1 forward and {{ (transactionDetails?.hits?.hits?.length || 0) - 1 }} previous looking txns
-        </div>
       </div>
       
       <!-- Scrollable Timeline Content -->
@@ -57,10 +54,17 @@ import { FiltersService } from 'src/app/core/services/filters.service';
           </div>
         }
       </div>
+
+       <div class="timeline-info-footer">
+        Showing 1 forward and {{ (transactionDetails?.hits?.hits?.length || 0) - 1 }} previous looking txns
+      </div>
     </div>
   `,
   styles: [`
-   .timeline-container {
+   // ================================
+// TIMELINE CONTAINER - Keep existing
+// ================================
+.timeline-container {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -71,9 +75,11 @@ import { FiltersService } from 'src/app/core/services/filters.service';
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
-/* 🔥 Elegant Header - Matches table header height and style */
+// ================================
+// HEADER - Just title, no footer here
+// ================================
 .timeline-header {
-  height: 7rem !important; // Match table header (3.5rem) + filter row (3.5rem)
+  height: 7rem !important;
   padding: 1rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   color: white !important;
@@ -96,21 +102,9 @@ import { FiltersService } from 'src/app/core/services/filters.service';
   letter-spacing: 0.5px;
 }
 
-// 🔥 NEW: Info footer instead of event count
-.timeline-info-footer {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.9) !important;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  display: inline-block;
-  backdrop-filter: blur(10px);
-  font-weight: 500;
-  width: fit-content;
-}
-
-/* Scrollable Timeline Area */
+// ================================
+// SCROLLABLE AREA - Keep existing
+// ================================
 .timeline-scrollable {
   flex: 1;
   overflow-y: auto;
@@ -120,34 +114,49 @@ import { FiltersService } from 'src/app/core/services/filters.service';
   background: linear-gradient(to bottom, #f8fafc 0%, white 100%);
 }
 
-/* Enhanced Timeline Event Styling */
+// ================================
+// 🔥 NEW: INFO FOOTER - At bottom of container
+// ================================
+.timeline-info-footer {
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-top: 2px solid #5a67d8;
+  flex-shrink: 0;
+}
+
+// ================================
+// 🔥 FIXED: TIMELINE LAYOUT - Proper circles and lines
+// ================================
 :host ::ng-deep {
   
-  /* Hide the opposite side completely */
   .p-timeline-event-opposite {
     display: none !important;
   }
 
-  /* Enhanced timeline events */
   .p-timeline-event {
     position: relative !important;
-    margin-bottom: 1.5rem !important;
+    margin-bottom: 2rem !important;
     display: flex !important;
     align-items: flex-start !important;
   }
 
-  /* 🔥 FIXED: Enhanced timeline connector line - terminate properly */
+  // 🔥 FIXED: Line starts BELOW circle and connects to next circle
   .p-timeline-event-connector {
     position: absolute !important;
     left: 20px !important;
-    top: 0 !important;
+    top: 2rem !important; // 🔥 START: Below the circle (circle is at 0.5rem + 14px height)
     width: 3px !important;
     background: linear-gradient(to bottom, #667eea, #764ba2) !important;
-    height: calc(100% - 0.5rem) !important; // 🔥 FIX: Terminate before next circle
+    height: calc(100% - 1rem) !important; // 🔥 HEIGHT: Reach next circle
     border-radius: 2px !important;
+    transform: translateX(-50%) !important;
   }
 
-  /* 🔥 FIXED: Enhanced timeline marker positioning */
+  // 🔥 FIXED: Circle positioning
   .p-timeline-event-marker {
     position: absolute !important;
     left: 20px !important;
@@ -163,7 +172,7 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     z-index: 5 !important;
   }
 
-  /* Enhanced event content */
+  // Content boxes - keep existing
   .p-timeline-event-content {
     margin-left: 45px !important;
     width: calc(100% - 55px) !important;
@@ -181,7 +190,6 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       border-color: #667eea !important;
     }
     
-    /* Add elegant corner accent */
     &::before {
       content: '';
       position: absolute;
@@ -194,14 +202,14 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     }
   }
 
-  /* 🔥 ENHANCED: Event wrapper styling with better current transaction highlighting */
+  // 🔥 CURRENT TRANSACTION: Highlighted circle
   .timeline-event-wrapper {
     width: 100% !important;
     
     &.current-transaction {
       .p-timeline-event-content {
-        border-color: #f59e0b !important; // 🔥 HIGHLIGHT: Orange border
-        background: linear-gradient(135deg, #fef3c7, #fde68a) !important; // 🔥 HIGHLIGHT: Light orange bg
+        border-color: #f59e0b !important;
+        background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
         
         &::before {
           background: linear-gradient(135deg, #f59e0b, #d97706) !important;
@@ -209,23 +217,23 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       }
       
       .p-timeline-event-marker {
-        background: linear-gradient(135deg, #f59e0b, #d97706) !important; // 🔥 HIGHLIGHT: Orange circle
-        border: 4px solid white !important; // 🔥 HIGHLIGHT: Thicker border
-        width: 16px !important; // 🔥 HIGHLIGHT: Larger circle
-        height: 16px !important; // 🔥 HIGHLIGHT: Larger circle
-        box-shadow: 0 0 0 3px #fed7aa, 0 4px 12px rgba(245, 158, 11, 0.4) !important; // 🔥 HIGHLIGHT: Glow effect
+        background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+        border: 4px solid white !important;
+        width: 16px !important;
+        height: 16px !important;
+        box-shadow: 0 0 0 3px #fed7aa, 0 4px 12px rgba(245, 158, 11, 0.4) !important;
       }
     }
   }
 
-  /* 🔥 NEW: Last event - hide connector line completely */
+  // 🔥 LAST EVENT: No line after last circle
   .p-timeline-event:last-child {
     .p-timeline-event-connector {
-      display: none !important; // 🔥 FIX: No line after last event
+      display: none !important;
     }
   }
 
-  /* Event action styling */
+  // Keep existing content styling
   .event-action {
     margin-bottom: 0.75rem;
     
@@ -243,7 +251,6 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     }
   }
 
-  /* Event timestamp styling */
   .event-timestamp {
     display: block;
     font-size: 0.75rem;
@@ -256,7 +263,6 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   }
 
-  /* Event description styling */
   .event-description {
     font-size: 0.8rem;
     color: #4a5568 !important;
@@ -266,7 +272,6 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     margin-top: 0.5rem;
   }
 
-  /* No events state */
   .no-events {
     display: flex;
     flex-direction: column;
@@ -291,7 +296,9 @@ import { FiltersService } from 'src/app/core/services/filters.service';
   }
 }
 
-/* Dark mode support */
+// ================================
+// DARK MODE - Updated for footer
+// ================================
 :host-context(.app-dark) {
   .timeline-container {
     background: #1a202c !important;
@@ -306,11 +313,12 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     h5 {
       color: #e2e8f0 !important;
     }
-    
-    .timeline-info-footer {
-      color: #e2e8f0 !important;
-      background: rgba(255, 255, 255, 0.1) !important;
-    }
+  }
+
+  .timeline-info-footer {
+    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%) !important;
+    color: #e2e8f0 !important;
+    border-top-color: #4a5568 !important;
   }
 
   .timeline-scrollable {
@@ -332,7 +340,7 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     .timeline-event-wrapper.current-transaction {
       .p-timeline-event-content {
         border-color: #f59e0b !important;
-        background: linear-gradient(135deg, #92400e, #b45309) !important; // 🔥 DARK: Dark orange bg for current
+        background: linear-gradient(135deg, #92400e, #b45309) !important;
       }
     }
     
@@ -367,7 +375,7 @@ import { FiltersService } from 'src/app/core/services/filters.service';
   }
 }
 
-/* Custom scrollbar for timeline content */
+// Keep existing scrollbar and responsive styles
 .timeline-scrollable::-webkit-scrollbar {
   width: 6px;
 }
@@ -386,7 +394,6 @@ import { FiltersService } from 'src/app/core/services/filters.service';
   }
 }
 
-/* Dark mode scrollbar */
 :host-context(.app-dark) {
   .timeline-scrollable::-webkit-scrollbar-track {
     background: #2d3748;
@@ -400,61 +407,6 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     }
   }
 }
-
-/* Responsive adjustments */
-@media (max-width: 480px) {
-  ::ng-deep .p-timeline-event-content {
-    margin-left: 35px !important;
-    width: calc(100% - 45px) !important;
-    padding: 0.75rem !important;
-  }
-  
-  .timeline-header {
-    padding: 0.75rem !important;
-    height: 6rem !important;
-    
-    h5 {
-      font-size: 0.9rem !important;
-    }
-  }
-  
-  .timeline-scrollable {
-    padding: 1rem 0.75rem !important;
-  }
-  
-  ::ng-deep {
-    .event-action .action-link {
-      font-size: 0.8rem !important;
-    }
-    
-    .event-description {
-      font-size: 0.75rem !important;
-    }
-    
-    .event-timestamp {
-      font-size: 0.7rem !important;
-    }
-  }
-}
-
-/* Print styles */
-@media print {
-  .timeline-container {
-    border: 1px solid #000 !important;
-    box-shadow: none !important;
-  }
-  
-  .timeline-header {
-    background: #f5f5f5 !important;
-    color: #000 !important;
-  }
-  
-  ::ng-deep .p-timeline-event-content {
-    box-shadow: none !important;
-    border: 1px solid #ccc !important;
-  }
-}
-
   `]
 })
 export class TransactionTimelineComponent {
