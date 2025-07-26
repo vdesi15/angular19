@@ -1,18 +1,19 @@
 :host ::ng-deep .transaction-toolbar {
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, #0066b5 0%, #0080d4 100%);
   border: none;
   color: white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 102, 181, 0.25);
   
-  // COMPACT HEIGHT
+  // 🔥 COMPACT HEIGHT - 25px
   &.compact-toolbar {
-    min-height: 2.5rem; // Reduced height
-    padding: 0.5rem 1rem;
+    min-height: 25px !important;
+    padding: 0.25rem 0.75rem !important;
     
     .p-toolbar-group-left,
     .p-toolbar-group-right {
-      align-items: center;
-      gap: 0.75rem;
+      align-items: center !important;
+      gap: 0.5rem !important;
+      height: 25px !important;
     }
   }
 
@@ -22,113 +23,195 @@
     .view-selector {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
+      gap: 0.5rem;
 
       .view-label {
         color: white;
-        font-weight: 600;
-        font-size: 0.9rem;
+        font-weight: 500;
+        font-size: 0.8rem;
         white-space: nowrap;
+        
+        i {
+          margin-right: 0.3rem;
+          font-size: 0.75rem;
+        }
       }
 
-      .view-select {
-        min-width: 160px;
+      // 🔥 P-SELECT - 20px height
+      .p-select {
+        height: 20px !important;
+        min-width: 140px !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        border-radius: 4px !important;
         
-        // LIGHT BLUE BACKGROUND FOR p-select
-        &.light-blue-bg .p-select {
-          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
-          border: 1px solid #93c5fd !important;
-          color: #1e40af !important;
-          height: 2rem; // Compact height
-          
-          .p-select-label {
-            color: #1e40af !important;
-            font-weight: 500;
-            font-size: 0.875rem;
-          }
+        .p-select-label {
+          padding: 0.2rem 0.5rem !important;
+          font-size: 0.75rem !important;
+          line-height: 1 !important;
+          color: white !important;
+          font-weight: 500 !important;
+        }
+        
+        .p-select-dropdown {
+          width: 20px !important;
+          height: 20px !important;
           
           .p-select-dropdown-icon {
-            color: #1e40af !important;
+            font-size: 0.7rem !important;
+            color: white !important;
           }
-
-          &:hover {
-            background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%) !important;
-            border-color: #60a5fa !important;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
-          }
-          
-          &:focus {
-            outline: 2px solid #60a5fa;
-            outline-offset: 2px;
-          }
-          
-          &:disabled {
-            background: rgba(255, 255, 255, 0.3) !important;
-            color: rgba(255, 255, 255, 0.7) !important;
-            opacity: 0.6;
-          }
+        }
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.15) !important;
+          border-color: rgba(255, 255, 255, 0.4) !important;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        &:focus {
+          outline: none !important;
+          border-color: rgba(255, 255, 255, 0.6) !important;
+          box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) !important;
+        }
+        
+        &:disabled {
+          opacity: 0.5 !important;
+          background: rgba(255, 255, 255, 0.05) !important;
         }
       }
     }
   }
 
+  // 🔥 ACTION BUTTONS - 20px height with enhanced styling
   .p-toolbar-group-right {
-    gap: 0.5rem;
-
     .p-button {
-      border-color: rgba(255, 255, 255, 0.3);
-      color: white;
-      height: 2rem; // Compact height
-      padding: 0.25rem 0.75rem; // Smaller padding
-      font-size: 0.875rem;
-
-      &:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-        border-color: rgba(255, 255, 255, 0.5);
-        transform: translateY(-1px);
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      height: 20px !important;
+      padding: 0.2rem 0.5rem !important;
+      font-size: 0.75rem !important;
+      border-radius: 4px !important;
+      font-weight: 500 !important;
+      transition: all 0.2s ease !important;
+      
+      .p-button-icon {
+        font-size: 0.7rem !important;
+        margin-right: 0.3rem !important;
       }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
+      
+      .p-button-label {
+        font-size: 0.75rem !important;
+      }
+      
+      // 🔥 ENHANCED OUTLINED BUTTON STYLING
+      &.p-button-outlined {
+        background: rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        color: white !important;
+        
+        &:hover:not(:disabled) {
+          background: rgba(255, 255, 255, 0.2) !important;
+          border-color: rgba(255, 255, 255, 0.5) !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+        }
+        
+        &:active {
+          transform: translateY(0) !important;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+        }
+        
+        &:focus {
+          outline: none !important;
+          box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3) !important;
+        }
+        
+        &:disabled {
+          opacity: 0.4 !important;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border-color: rgba(255, 255, 255, 0.1) !important;
+          color: rgba(255, 255, 255, 0.5) !important;
+          transform: none !important;
+          cursor: not-allowed !important;
+          
+          &:hover {
+            transform: none !important;
+            box-shadow: none !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+          }
+        }
       }
     }
   }
 }
 
-// Metrics popover styling (replacing overlayPanel)
-:host ::ng-deep .metrics-popover {
-  max-width: 400px;
+// ================================
+// DARK MODE SUPPORT
+// ================================
+:host-context(.app-dark) ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #004a8a 0%, #0066b5 100%);
   
+  .p-toolbar-group-left .view-selector {
+    .p-select {
+      background: rgba(255, 255, 255, 0.08) !important;
+      border-color: rgba(255, 255, 255, 0.2) !important;
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.12) !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
+      }
+    }
+  }
+  
+  .p-toolbar-group-right .p-button.p-button-outlined {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.15) !important;
+      border-color: rgba(255, 255, 255, 0.4) !important;
+    }
+  }
+}
+
+// ================================
+// POPOVER AND MENU STYLING
+// ================================
+
+// Metrics Popover
+.metrics-popover {
   .p-popover-content {
-    padding: 0;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
   }
   
   .metrics-content {
-    padding: 1.5rem;
-    text-align: center;
+    padding: 1rem;
+    min-width: 320px;
     
-    .metrics-header h4 {
-      margin: 0 0 1rem 0;
-      color: var(--p-text-color);
-      font-size: 1.1rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
+    .metrics-header {
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--surface-border);
       
-      i {
-        color: var(--p-primary-color);
+      h4 {
+        margin: 0;
+        color: var(--text-color);
+        font-size: 1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        
+        i {
+          color: var(--primary-color);
+        }
       }
     }
     
     .metrics-chart {
-      margin-bottom: 1.5rem;
-      display: flex;
-      justify-content: center;
+      margin-bottom: 1rem;
     }
     
     .metrics-summary {
@@ -141,7 +224,7 @@
         justify-content: space-between;
         align-items: center;
         padding: 0.5rem 0;
-        border-bottom: 1px solid var(--p-content-border-color);
+        border-bottom: 1px solid var(--surface-border);
         
         &:last-child {
           border-bottom: none;
@@ -149,19 +232,21 @@
         
         .metric-label {
           font-weight: 500;
-          color: var(--p-text-muted-color);
+          color: var(--text-color-secondary);
+          font-size: 0.875rem;
         }
         
         .metric-value {
           font-weight: 600;
-          color: var(--p-primary-color);
-          font-size: 1.1rem;
+          color: var(--primary-color);
+          font-size: 1rem;
         }
       }
     }
 
     .no-metrics {
-      color: var(--p-text-muted-color);
+      text-align: center;
+      color: var(--text-color-secondary);
       font-style: italic;
       padding: 2rem;
       
@@ -169,33 +254,66 @@
         font-size: 2rem;
         margin-bottom: 1rem;
         display: block;
-        color: var(--p-text-muted-color);
+        opacity: 0.5;
+      }
+      
+      p {
+        margin: 0;
+        font-size: 0.875rem;
       }
     }
   }
 }
 
-// Dark mode support
-:host-context(.app-dark) ::ng-deep .transaction-toolbar {
-  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+// Menu styling
+.p-menu {
+  .p-menu-list {
+    .p-menu-item {
+      .p-menu-item-link {
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.875rem !important;
+        
+        .p-menu-item-icon {
+          font-size: 0.875rem !important;
+          margin-right: 0.5rem !important;
+        }
+      }
+    }
+  }
+}
 
-  &.compact-toolbar .p-toolbar-group-left .view-selector .view-select {
-    &.light-blue-bg .p-select {
-      background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%) !important;
-      border-color: #4f46e5 !important;
-      color: #ddd6fe !important;
+// ================================
+// RESPONSIVE DESIGN
+// ================================
+@media (max-width: 768px) {
+  :host ::ng-deep .transaction-toolbar {
+    &.compact-toolbar {
+      min-height: 30px !important;
+      padding: 0.5rem !important;
       
-      .p-select-label {
-        color: #ddd6fe !important;
+      .p-toolbar-group-left,
+      .p-toolbar-group-right {
+        flex-wrap: wrap;
+        gap: 0.25rem !important;
+        height: auto !important;
       }
       
-      .p-select-dropdown-icon {
-        color: #ddd6fe !important;
+      .view-selector {
+        .p-select {
+          min-width: 120px !important;
+        }
       }
-
-      &:hover {
-        background: linear-gradient(135deg, #3730a3 0%, #4338ca 100%) !important;
-        border-color: #6366f1 !important;
+      
+      .p-toolbar-group-right .p-button {
+        padding: 0.15rem 0.4rem !important;
+        
+        .p-button-label {
+          display: none; // Hide labels on mobile
+        }
+        
+        .p-button-icon {
+          margin-right: 0 !important;
+        }
       }
     }
   }
