@@ -96,27 +96,67 @@
     </div>
     
     @if (metricsData(); as metrics) {
+      <!-- Total Transaction Time -->
+      <div class="total-time-section">
+        <div class="total-time-item">
+          <span class="total-time-label">Total Transaction Time:</span>
+          <span class="total-time-value">{{ calculateTotalTime() }}ms</span>
+        </div>
+      </div>
+
       <div class="metrics-chart">
         <p-chart 
           type="doughnut" 
           [data]="metrics.chartData" 
-          [options]="metrics.chartOptions"
-          [style]="{ width: '300px', height: '300px' }">
+          [options]="getChartOptions()"
+          [style]="{ width: '280px', height: '280px' }">
         </p-chart>
+      </div>
+      
+      <!-- Custom Legend with Top 3 + Scrollable Rest -->
+      <div class="custom-legend">
+        <!-- Top 3 items -->
+        <div class="legend-top-items">
+          @for (item of getTopLegendItems(); track item.label) {
+            <div class="legend-item">
+              <span class="legend-color" [style.background-color]="item.color"></span>
+              <span class="legend-label">{{ item.label }}</span>
+              <span class="legend-value">{{ item.value }} ({{ item.percentage }}%)</span>
+            </div>
+          }
+        </div>
+        
+        <!-- Remaining items in scrollable container -->
+        @if (getRemainingLegendItems().length > 0) {
+          <div class="legend-scrollable">
+            <div class="legend-scroll-header">
+              <span>Additional Items ({{ getRemainingLegendItems().length }})</span>
+            </div>
+            <div class="legend-remaining-items">
+              @for (item of getRemainingLegendItems(); track item.label) {
+                <div class="legend-item">
+                  <span class="legend-color" [style.background-color]="item.color"></span>
+                  <span class="legend-label">{{ item.label }}</span>
+                  <span class="legend-value">{{ item.value }} ({{ item.percentage }}%)</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
       </div>
       
       <div class="metrics-summary">
         <div class="metric-item">
           <span class="metric-label">Total Transactions:</span>
-          <span class="metric-value">{{ data.length }}</span>
+          <span class="metric-value">{{ data?.hits?.hits?.length || 0 }}</span>
         </div>
         <div class="metric-item">
           <span class="metric-label">Applications:</span>
-          <span class="metric-value">{{ metrics.applicationCount || 0 }}</span>
+          <span class="metric-value">{{ transactionSummary()?.applicationCount || 0 }}</span>
         </div>
         <div class="metric-item">
           <span class="metric-label">Environments:</span>
-          <span class="metric-value">{{ metrics.environmentCount || 0 }}</span>
+          <span class="metric-value">{{ transactionSummary()?.environmentCount || 0 }}</span>
         </div>
       </div>
     } @else {
@@ -127,7 +167,6 @@
     }
   </div>
 </p-popover>
-
 <!-- ================================ -->
 <!-- SHARE MENU -->
 <!-- ================================ -->

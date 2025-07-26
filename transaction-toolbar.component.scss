@@ -169,82 +169,6 @@
   }
 }
 
-// Metrics popover styling (keeping your existing styling)
-:host ::ng-deep .metrics-popover {
-  max-width: 400px;
-  
-  .p-popover-content {
-    padding: 0;
-  }
-  
-  .metrics-content {
-    padding: 1.5rem;
-    text-align: center;
-    
-    .metrics-header h4 {
-      margin: 0 0 1rem 0;
-      color: var(--p-text-color);
-      font-size: 1.1rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      
-      i {
-        color: var(--p-primary-color);
-      }
-    }
-    
-    .metrics-chart {
-      margin-bottom: 1.5rem;
-      display: flex;
-      justify-content: center;
-    }
-    
-    .metrics-summary {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      
-      .metric-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid var(--p-content-border-color);
-        
-        &:last-child {
-          border-bottom: none;
-        }
-        
-        .metric-label {
-          font-weight: 500;
-          color: var(--p-text-muted-color);
-        }
-        
-        .metric-value {
-          font-weight: 600;
-          color: var(--p-primary-color);
-          font-size: 1.1rem;
-        }
-      }
-    }
-
-    .no-metrics {
-      color: var(--p-text-muted-color);
-      font-style: italic;
-      padding: 2rem;
-      
-      i {
-        font-size: 2rem;
-        margin-bottom: 1rem;
-        display: block;
-        color: var(--p-text-muted-color);
-      }
-    }
-  }
-}
 
 // Dark mode support
 :host-context(.app-dark) ::ng-deep .transaction-toolbar {
@@ -267,6 +191,214 @@
       &:hover {
         background: linear-gradient(135deg, #3730a3 0%, #4338ca 100%) !important;
         border-color: #6366f1 !important;
+      }
+    }
+  }
+}
+
+:host ::ng-deep .metrics-popover {
+  max-width: 420px;
+  
+  .p-popover-content {
+    padding: 0;
+  }
+  
+  .metrics-content {
+    padding: 1.5rem;
+    text-align: left; // Changed from center to left for better alignment
+    
+    .metrics-header h4 {
+      margin: 0 0 1rem 0;
+      color: var(--p-text-color);
+      font-size: 1.1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      
+      i {
+        color: var(--p-primary-color);
+      }
+    }
+    
+    // Total Transaction Time Section
+    .total-time-section {
+      margin-bottom: 1rem;
+      padding: 0.75rem;
+      background: var(--p-content-background);
+      border: 1px solid var(--p-content-border-color);
+      border-radius: 6px;
+      
+      .total-time-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        
+        .total-time-label {
+          font-weight: 600;
+          color: var(--p-text-color);
+          font-size: 0.95rem;
+        }
+        
+        .total-time-value {
+          font-weight: 700;
+          color: var(--p-primary-color);
+          font-size: 1.1rem;
+          background: linear-gradient(135deg, var(--p-primary-color), var(--p-primary-600));
+          background-clip: text;
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+      }
+    }
+    
+    .metrics-chart {
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: center;
+    }
+    
+    // Custom Legend Styles
+    .custom-legend {
+      margin-bottom: 1.5rem;
+      
+      .legend-top-items {
+        margin-bottom: 0.75rem;
+      }
+      
+      .legend-scrollable {
+        .legend-scroll-header {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: var(--p-text-muted-color);
+          margin-bottom: 0.5rem;
+          padding-bottom: 0.25rem;
+          border-bottom: 1px solid var(--p-content-border-color);
+        }
+        
+        .legend-remaining-items {
+          max-height: 120px;
+          overflow-y: auto;
+          padding-right: 0.25rem;
+          
+          // Custom scrollbar
+          &::-webkit-scrollbar {
+            width: 4px;
+          }
+          
+          &::-webkit-scrollbar-track {
+            background: var(--p-content-background);
+            border-radius: 2px;
+          }
+          
+          &::-webkit-scrollbar-thumb {
+            background: var(--p-primary-color);
+            border-radius: 2px;
+            
+            &:hover {
+              background: var(--p-primary-600);
+            }
+          }
+        }
+      }
+      
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.35rem 0;
+        font-size: 0.875rem;
+        
+        .legend-color {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          flex-shrink: 0;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .legend-label {
+          flex: 1;
+          color: var(--p-text-color); // Fixed light mode visibility
+          font-weight: 500;
+          word-break: break-word;
+        }
+        
+        .legend-value {
+          font-weight: 600;
+          color: var(--p-text-muted-color);
+          font-size: 0.8rem;
+          text-align: right;
+          min-width: 60px;
+        }
+      }
+    }
+    
+    .metrics-summary {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      
+      .metric-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--p-content-border-color);
+        
+        &:last-child {
+          border-bottom: none;
+        }
+        
+        .metric-label {
+          font-weight: 500;
+          color: var(--p-text-color); // Fixed light mode visibility
+        }
+        
+        .metric-value {
+          font-weight: 600;
+          color: var(--p-primary-color);
+          font-size: 1.1rem;
+        }
+      }
+    }
+
+    .no-metrics {
+      color: var(--p-text-muted-color);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+      
+      i {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        display: block;
+        color: var(--p-text-muted-color);
+      }
+    }
+  }
+}
+
+// Dark mode enhancements
+:host-context(.app-dark) ::ng-deep .metrics-popover {
+  .metrics-content {
+    .total-time-section {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .custom-legend {
+      .legend-item {
+        .legend-color {
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+      }
+      
+      .legend-scrollable .legend-remaining-items {
+        &::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+        }
       }
     }
   }

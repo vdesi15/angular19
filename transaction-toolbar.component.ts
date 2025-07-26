@@ -229,4 +229,83 @@ export class TransactionToolbarComponent {
       current && current[key] !== undefined ? current[key] : null, obj
     );
   }
+
+  // Calculate total transaction time from your data
+public calculateTotalTime(): number {
+  const hits = this.data?.hits?.hits || [];
+  let totalTime = 0;
+  
+  hits.forEach(hit => {
+    const responseTime = hit._source?.response?.time || 
+                        hit._source?.response_time || 
+                        hit._source?.duration || 0;
+    totalTime += Number(responseTime) || 0;
+  });
+  
+  return totalTime;
+}
+
+// Get chart options without legend (we'll use custom legend)
+public getChartOptions(): any {
+  const metrics = this.metricsData();
+  if (!metrics) return {};
+  
+  return {
+    ...metrics.chartOptions,
+    plugins: {
+      ...metrics.chartOptions.plugins,
+      legend: {
+        display: false // Disable built-in legend
+      }
+    }
+  };
+}
+
+// Get top 3 legend items
+public getTopLegendItems(): Array<{label: string, value: number, percentage: string, color: string}> {
+  const metrics = this.metricsData();
+  if (!metrics) return [];
+  
+  const { labels, datasets } = metrics.chartData;
+  const values = datasets[0].data;
+  const colors = datasets[0].backgroundColor;
+  const total = values.reduce((sum: number, val: number) => sum + val, 0);
+  
+  // Create all items with percentages
+  const allItems = labels.map((label: string, index: number) => ({
+    label,
+    value: values[index],
+    percentage: ((values[index] / total) * 100).toFixed(1),
+    color: colors[index]
+  }));
+  
+  // Sort by value and return top 3
+  return allItems
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 3);
+}
+
+// Get remaining legend items (after top 3)
+public getRemainingLegendItems(): Array<{label: string, value: number, percentage: string, color: string}> {
+  const metrics = this.metricsData();
+  if (!metrics) return [];
+  
+  const { labels, datasets } = metrics.chartData;
+  const values = datasets[0].data;
+  const colors = datasets[0].backgroundColor;
+  const total = values.reduce((sum: number, val: number) => sum + val, 0);
+  
+  // Create all items with percentages
+  const allItems = labels.map((label: string, index: number) => ({
+    label,
+    value: values[index],
+    percentage: ((values[index] / total) * 100).toFixed(1),
+    color: colors[index]
+  }));
+  
+  // Sort by value and return items after top 3
+  return allItems
+    .sort((a, b) => b.value - a.value)
+    .slice(3);
+}
 }
