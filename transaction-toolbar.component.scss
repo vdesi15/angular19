@@ -1,19 +1,74 @@
+// 🎨 OPTION 1: SOPHISTICATED NAVY GRADIENT (Recommended)
+// Creates depth with darker navy transitioning to your header blue
+:host ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #1e3a8a 0%, #0066b5 50%, #0077cc 100%);
+  box-shadow: 0 2px 12px rgba(30, 58, 138, 0.3);
+}
+:host-context(.app-dark) ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #0f1629 0%, #1e3a8a 50%, #0066b5 100%);
+}
+
+// 🎨 OPTION 2: PREMIUM STEEL BLUE (Very Elegant)
+// Sophisticated steel blue with subtle shimmer effect
+:host ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #334155 0%, #475569 25%, #0066b5 100%);
+  box-shadow: 0 2px 16px rgba(51, 65, 85, 0.25);
+}
+:host-context(.app-dark) ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 25%, #475569 100%);
+}
+
+// 🎨 OPTION 3: RICH SAPPHIRE (Luxurious)
+// Deep sapphire creating premium feel
+:host ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #0066b5 100%);
+  box-shadow: 0 3px 20px rgba(30, 64, 175, 0.4);
+}
+:host-context(.app-dark) ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #2563eb 100%);
+}
+
+// 🎨 OPTION 4: OCEAN DEPTH (Professional & Modern)
+// Ocean-inspired gradient for modern professional look
+:host ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 25%, #0066b5 75%, #0284c7 100%);
+  box-shadow: 0 2px 15px rgba(12, 74, 110, 0.35);
+}
+:host-context(.app-dark) ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #082f49 0%, #0c4a6e 25%, #0369a1 100%);
+}
+
+// 🎨 OPTION 5: MIDNIGHT PROFESSIONAL (Ultra-Premium)
+// Sophisticated midnight blue with subtle highlights
+:host ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #1a202c 0%, #2d3748 20%, #4a5568 40%, #0066b5 100%);
+  box-shadow: 0 4px 25px rgba(26, 32, 44, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+:host-context(.app-dark) ::ng-deep .transaction-toolbar {
+  background: linear-gradient(135deg, #0d1117 0%, #1a202c 20%, #2d3748 100%);
+}
+
+
 :host ::ng-deep .transaction-toolbar {
   background: linear-gradient(135deg, #0066b5 0%, #0080d4 100%);
   border: none;
   color: white;
   box-shadow: 0 2px 8px rgba(0, 102, 181, 0.25);
   
-  // 🔥 COMPACT HEIGHT - 25px
+  // 🔥 COMPACT HEIGHT - 2.5rem (40px)
   &.compact-toolbar {
-    min-height: 25px !important;
-    padding: 0.25rem 0.75rem !important;
+    min-height: 2.5rem !important;
+    padding: 0.5rem 0.75rem !important;
+    position: relative !important;
+    z-index: 100 !important;
+    overflow: visible !important;
     
     .p-toolbar-group-left,
     .p-toolbar-group-right {
       align-items: center !important;
       gap: 0.5rem !important;
-      height: 25px !important;
+      height: 2.5rem !important;
     }
   }
 
@@ -37,28 +92,37 @@
         }
       }
 
-      // 🔥 P-SELECT - 20px height
+      // 🔥 P-SELECT - 2rem height with centered text
       .p-select {
-        height: 20px !important;
+        height: 2rem !important;
         min-width: 140px !important;
         background: rgba(255, 255, 255, 0.1) !important;
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
         border-radius: 4px !important;
+        position: relative !important;
+        z-index: 1000 !important;
         
         .p-select-label {
-          padding: 0.2rem 0.5rem !important;
-          font-size: 0.75rem !important;
+          padding: 0.5rem !important;
+          font-size: 0.875rem !important;
           line-height: 1 !important;
           color: white !important;
           font-weight: 500 !important;
+          text-align: center !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
         }
         
         .p-select-dropdown {
-          width: 20px !important;
-          height: 20px !important;
+          width: 2rem !important;
+          height: 2rem !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
           
           .p-select-dropdown-icon {
-            font-size: 0.7rem !important;
+            font-size: 0.75rem !important;
             color: white !important;
           }
         }
@@ -81,26 +145,36 @@
           background: rgba(255, 255, 255, 0.05) !important;
         }
       }
+      
+      // 🔥 ENSURE DROPDOWN PANEL IS VISIBLE
+      .p-select-overlay {
+        z-index: 9999 !important;
+        position: fixed !important;
+      }
     }
   }
 
-  // 🔥 ACTION BUTTONS - 20px height with enhanced styling
+  // 🔥 ACTION BUTTONS - 2rem height with centered text
   .p-toolbar-group-right {
     .p-button {
-      height: 20px !important;
-      padding: 0.2rem 0.5rem !important;
-      font-size: 0.75rem !important;
+      height: 2rem !important;
+      padding: 0.5rem 0.75rem !important;
+      font-size: 0.875rem !important;
       border-radius: 4px !important;
       font-weight: 500 !important;
       transition: all 0.2s ease !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
       
       .p-button-icon {
-        font-size: 0.7rem !important;
+        font-size: 0.75rem !important;
         margin-right: 0.3rem !important;
       }
       
       .p-button-label {
-        font-size: 0.75rem !important;
+        font-size: 0.875rem !important;
+        text-align: center !important;
       }
       
       // 🔥 ENHANCED OUTLINED BUTTON STYLING
@@ -175,8 +249,32 @@
 }
 
 // ================================
-// POPOVER AND MENU STYLING
+// GLOBAL DROPDOWN OVERLAY Z-INDEX FIX
 // ================================
+
+// 🔥 ENSURE ALL DROPDOWNS ARE VISIBLE ABOVE TOOLBAR
+:host ::ng-deep {
+  .p-select-overlay,
+  .p-dropdown-panel,
+  .p-multiselect-panel {
+    z-index: 9999 !important;
+    position: fixed !important;
+  }
+  
+  // Ensure overlay items have proper styling
+  .p-select-overlay .p-select-list {
+    .p-select-option {
+      padding: 0.5rem 0.75rem !important;
+      font-size: 0.875rem !important;
+      text-align: center !important;
+      
+      &:hover {
+        background: var(--primary-color) !important;
+        color: white !important;
+      }
+    }
+  }
+}
 
 // Metrics Popover
 .metrics-popover {
