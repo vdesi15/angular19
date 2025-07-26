@@ -16,7 +16,9 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       <!-- Fixed Header -->
       <div class="timeline-header">
         <h5>Transaction Timeline</h5>
-        <span class="event-count">{{ processedEvents().length }} events</span>
+        <div class="timeline-info-footer">
+          Showing 1 forward and {{ (transactionDetails?.hits?.hits?.length || 0) - 1 }} previous looking txns
+        </div>
       </div>
       
       <!-- Scrollable Timeline Content -->
@@ -62,179 +64,6 @@ import { FiltersService } from 'src/app/core/services/filters.service';
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-/* 🔥 Clean Header - EXACTLY matches table header + filter height */
-.timeline-header {
-  /* Calculate exact height: header (3.5rem) + filter (3rem) + borders */
-  height: 6.5rem !important;
-  padding: 1rem;
-  background: #f8fafc !important; // Match table header
-  color: #1a202c !important;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.timeline-header h5 {
-  margin: 0;
-  color: #1a202c !important;
-  font-weight: 600;
-  font-size: 0.875rem; // Match table header font size
-  letter-spacing: 0.3px;
-}
-
-.event-count {
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
-  color: #6b7280 !important;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  display: inline-block;
-  font-weight: 500;
-  width: fit-content;
-}
-
-/* Scrollable Timeline Area */
-.timeline-scrollable {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 1rem;
-  position: relative;
-  background: #ffffff;
-}
-
-/* 🔥 FIXED Timeline Styling - Proper line and circles */
-:host ::ng-deep {
-  
-  /* Hide the opposite side */
-  .p-timeline-event-opposite {
-    display: none !important;
-  }
-
-  /* Timeline events positioning */
-  .p-timeline-event {
-    position: relative !important;
-    margin-bottom: 1.5rem !important;
-    display: flex !important;
-    align-items: flex-start !important;
-  }
-
-  /* 🔥 FIXED: Timeline connector line - properly positioned */
-  .p-timeline-event-connector {
-    position: absolute !important;
-    left: 16px !important; // Centered on marker
-    top: 0 !important;
-    width: 2px !important;
-    background: #d1d5db !important; // Clean gray line
-    height: calc(100% + 1.5rem) !important; // Extend to next event
-    z-index: 1 !important;
-  }
-
-  /* 🔥 FIXED: Timeline marker - clean circle */
-  .p-timeline-event-marker {
-    position: absolute !important;
-    left: 16px !important;
-    top: 1rem !important;
-    width: 12px !important;
-    height: 12px !important;
-    margin: 0 !important;
-    transform: translateX(-50%) !important;
-    background: #3b82f6 !important; // Your blue theme
-    border: 3px solid #ffffff !important;
-    border-radius: 50% !important;
-    box-shadow: 0 0 0 2px #e5e7eb !important;
-    z-index: 2 !important;
-  }
-
-  /* 🔥 Timeline content cards - clean and elegant */
-  .p-timeline-event-content {
-    margin-left: 40px !important; // Space for line and marker
-    width: calc(100% - 45px) !important;
-    background: #ffffff !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 8px !important;
-    padding: 1rem !important;
-    transition: all 0.2s ease !important;
-    position: relative !important;
-    
-    &:hover {
-      border-color: #3b82f6 !important;
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1) !important;
-    }
-  }
-
-  /* Event wrapper styling */
-  .timeline-event-wrapper {
-    width: 100% !important;
-    
-    &.current-transaction {
-      .p-timeline-event-content {
-        border-color: #f59e0b !important; // Orange for current
-        background: #fffbeb !important; // Light orange background
-      }
-      
-      .p-timeline-event-marker {
-        background: #f59e0b !important; // Orange marker
-        box-shadow: 0 0 0 2px #fed7aa !important;
-      }
-    }
-  }
-
-  /* Event action styling */
-  .event-action {
-    margin-bottom: 0.75rem;
-    
-    .action-link {
-      font-weight: 600;
-      font-size: 0.875rem;
-      color: #3b82f6 !important;
-      text-decoration: none;
-      transition: color 0.2s ease;
-      
-      &:hover {
-        color: #1d4ed8 !important;
-        text-decoration: underline;
-      }
-    }
-  }
-
-  /* Event timestamp styling */
-  .event-timestamp {
-    display: block;
-    font-size: 0.75rem;
-    color: #6b7280 !important;
-    margin-bottom: 0.5rem;
-    padding: 0.25rem 0.5rem;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    display: inline-block;
-    font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
-  }
-
-  /* Event description styling */
-  .event-description {
-    font-size: 0.8rem;
-    color: #374151 !important;// transaction-timeline.component.scss - Elegant styling to match the table
-
-.timeline-container {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
   background: white;
   border: 2px solid #667eea;
   border-radius: 8px;
@@ -267,7 +96,8 @@ import { FiltersService } from 'src/app/core/services/filters.service';
   letter-spacing: 0.5px;
 }
 
-.event-count {
+// 🔥 NEW: Info footer instead of event count
+.timeline-info-footer {
   margin-top: 0.5rem;
   font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.9) !important;
@@ -306,18 +136,18 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     align-items: flex-start !important;
   }
 
-  /* Enhanced timeline connector line */
+  /* 🔥 FIXED: Enhanced timeline connector line - terminate properly */
   .p-timeline-event-connector {
     position: absolute !important;
     left: 20px !important;
     top: 0 !important;
     width: 3px !important;
     background: linear-gradient(to bottom, #667eea, #764ba2) !important;
-    height: 100% !important;
+    height: calc(100% - 0.5rem) !important; // 🔥 FIX: Terminate before next circle
     border-radius: 2px !important;
   }
 
-  /* Enhanced timeline marker */
+  /* 🔥 FIXED: Enhanced timeline marker positioning */
   .p-timeline-event-marker {
     position: absolute !important;
     left: 20px !important;
@@ -364,14 +194,14 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     }
   }
 
-  /* Event wrapper styling */
+  /* 🔥 ENHANCED: Event wrapper styling with better current transaction highlighting */
   .timeline-event-wrapper {
     width: 100% !important;
     
     &.current-transaction {
       .p-timeline-event-content {
-        border-color: #667eea !important;
-        background: linear-gradient(135deg, #667eea10, #764ba210) !important;
+        border-color: #f59e0b !important; // 🔥 HIGHLIGHT: Orange border
+        background: linear-gradient(135deg, #fef3c7, #fde68a) !important; // 🔥 HIGHLIGHT: Light orange bg
         
         &::before {
           background: linear-gradient(135deg, #f59e0b, #d97706) !important;
@@ -379,10 +209,19 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       }
       
       .p-timeline-event-marker {
-        background: linear-gradient(135deg, #f59e0b, #d97706) !important;
-        border-color: white !important;
-        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4) !important;
+        background: linear-gradient(135deg, #f59e0b, #d97706) !important; // 🔥 HIGHLIGHT: Orange circle
+        border: 4px solid white !important; // 🔥 HIGHLIGHT: Thicker border
+        width: 16px !important; // 🔥 HIGHLIGHT: Larger circle
+        height: 16px !important; // 🔥 HIGHLIGHT: Larger circle
+        box-shadow: 0 0 0 3px #fed7aa, 0 4px 12px rgba(245, 158, 11, 0.4) !important; // 🔥 HIGHLIGHT: Glow effect
       }
+    }
+  }
+
+  /* 🔥 NEW: Last event - hide connector line completely */
+  .p-timeline-event:last-child {
+    .p-timeline-event-connector {
+      display: none !important; // 🔥 FIX: No line after last event
     }
   }
 
@@ -468,7 +307,7 @@ import { FiltersService } from 'src/app/core/services/filters.service';
       color: #e2e8f0 !important;
     }
     
-    .event-count {
+    .timeline-info-footer {
       color: #e2e8f0 !important;
       background: rgba(255, 255, 255, 0.1) !important;
     }
@@ -492,8 +331,8 @@ import { FiltersService } from 'src/app/core/services/filters.service';
     
     .timeline-event-wrapper.current-transaction {
       .p-timeline-event-content {
-        border-color: #667eea !important;
-        background: linear-gradient(135deg, #667eea20, #764ba220) !important;
+        border-color: #f59e0b !important;
+        background: linear-gradient(135deg, #92400e, #b45309) !important; // 🔥 DARK: Dark orange bg for current
       }
     }
     
