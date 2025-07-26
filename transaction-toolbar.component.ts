@@ -262,7 +262,7 @@ public getChartOptions(): any {
 }
 
 // Get top 3 legend items
-public getTopLegendItems(): Array<{label: string, value: number, percentage: string, color: string}> {
+public getSortedLegendItems(): Array<{label: string, percentage: string, color: string}> {
   const metrics = this.metricsData();
   if (!metrics) return [];
   
@@ -271,41 +271,13 @@ public getTopLegendItems(): Array<{label: string, value: number, percentage: str
   const colors = datasets[0].backgroundColor;
   const total = values.reduce((sum: number, val: number) => sum + val, 0);
   
-  // Create all items with percentages
-  const allItems = labels.map((label: string, index: number) => ({
-    label,
-    value: values[index],
-    percentage: ((values[index] / total) * 100).toFixed(1),
-    color: colors[index]
-  }));
-  
-  // Sort by value and return top 3
-  return allItems
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 3);
-}
-
-// Get remaining legend items (after top 3)
-public getRemainingLegendItems(): Array<{label: string, value: number, percentage: string, color: string}> {
-  const metrics = this.metricsData();
-  if (!metrics) return [];
-  
-  const { labels, datasets } = metrics.chartData;
-  const values = datasets[0].data;
-  const colors = datasets[0].backgroundColor;
-  const total = values.reduce((sum: number, val: number) => sum + val, 0);
-  
-  // Create all items with percentages
-  const allItems = labels.map((label: string, index: number) => ({
-    label,
-    value: values[index],
-    percentage: ((values[index] / total) * 100).toFixed(1),
-    color: colors[index]
-  }));
-  
-  // Sort by value and return items after top 3
-  return allItems
-    .sort((a, b) => b.value - a.value)
-    .slice(3);
+  return labels
+    .map((label: string, index: number) => ({
+      label,
+      value: values[index],
+      percentage: ((values[index] / total) * 100).toFixed(1),
+      color: colors[index]
+    }))
+    .sort((a: any, b: any) => b.value - a.value);
 }
 }

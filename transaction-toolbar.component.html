@@ -82,10 +82,6 @@
   
 </p-toolbar>
 
-<!-- ================================ -->
-<!-- METRICS OVERLAY PANEL -->
-<!-- ================================ -->
-
 <p-popover #metricsPopover styleClass="metrics-popover">
   <div class="metrics-content">
     <div class="metrics-header">
@@ -97,66 +93,47 @@
     
     @if (metricsData(); as metrics) {
       <!-- Total Transaction Time -->
-      <div class="total-time-section">
-        <div class="total-time-item">
-          <span class="total-time-label">Total Transaction Time:</span>
-          <span class="total-time-value">{{ calculateTotalTime() }}ms</span>
-        </div>
+      <div class="total-time">
+        <span class="total-time-label">Total Transaction Time:</span>
+        <span class="total-time-value">{{ calculateTotalTime() }}ms</span>
       </div>
 
-      <div class="metrics-chart">
+      <!-- Chart - Center Aligned -->
+      <div class="chart-container">
         <p-chart 
           type="doughnut" 
           [data]="metrics.chartData" 
           [options]="getChartOptions()"
-          [style]="{ width: '280px', height: '280px' }">
+          [style]="{ width: '240px', height: '240px' }">
         </p-chart>
       </div>
       
-      <!-- Custom Legend with Top 3 + Scrollable Rest -->
-      <div class="custom-legend">
-        <!-- Top 3 items -->
-        <div class="legend-top-items">
-          @for (item of getTopLegendItems(); track item.label) {
+      <!-- Simple Sorted Legend List -->
+      <div class="legend-list">
+        <div class="legend-items" [class.scrollable]="getSortedLegendItems().length > 3">
+          @for (item of getSortedLegendItems(); track item.label) {
             <div class="legend-item">
-              <span class="legend-color" [style.background-color]="item.color"></span>
-              <span class="legend-label">{{ item.label }}</span>
-              <span class="legend-value">{{ item.value }} ({{ item.percentage }}%)</span>
+              <span class="legend-dot" [style.background-color]="item.color"></span>
+              <span class="legend-text">{{ item.label }}</span>
+              <span class="legend-percent">{{ item.percentage }}%</span>
             </div>
           }
         </div>
-        
-        <!-- Remaining items in scrollable container -->
-        @if (getRemainingLegendItems().length > 0) {
-          <div class="legend-scrollable">
-            <div class="legend-scroll-header">
-              <span>Additional Items ({{ getRemainingLegendItems().length }})</span>
-            </div>
-            <div class="legend-remaining-items">
-              @for (item of getRemainingLegendItems(); track item.label) {
-                <div class="legend-item">
-                  <span class="legend-color" [style.background-color]="item.color"></span>
-                  <span class="legend-label">{{ item.label }}</span>
-                  <span class="legend-value">{{ item.value }} ({{ item.percentage }}%)</span>
-                </div>
-              }
-            </div>
-          </div>
-        }
       </div>
       
-      <div class="metrics-summary">
-        <div class="metric-item">
-          <span class="metric-label">Total Transactions:</span>
-          <span class="metric-value">{{ data?.hits?.hits?.length || 0 }}</span>
+      <!-- Summary Stats -->
+      <div class="summary-stats">
+        <div class="stat">
+          <span>Total:</span>
+          <span>{{ data?.hits?.hits?.length || 0 }}</span>
         </div>
-        <div class="metric-item">
-          <span class="metric-label">Applications:</span>
-          <span class="metric-value">{{ transactionSummary()?.applicationCount || 0 }}</span>
+        <div class="stat">
+          <span>Apps:</span>
+          <span>{{ transactionSummary()?.applicationCount || 0 }}</span>
         </div>
-        <div class="metric-item">
-          <span class="metric-label">Environments:</span>
-          <span class="metric-value">{{ transactionSummary()?.environmentCount || 0 }}</span>
+        <div class="stat">
+          <span>Envs:</span>
+          <span>{{ transactionSummary()?.environmentCount || 0 }}</span>
         </div>
       </div>
     } @else {

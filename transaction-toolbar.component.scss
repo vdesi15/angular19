@@ -196,21 +196,24 @@
   }
 }
 
+// ================================
+// CLEAN STYLES - Replace .metrics-popover section in transaction-toolbar.component.scss
+// ================================
+
 :host ::ng-deep .metrics-popover {
-  max-width: 420px;
+  max-width: 350px;
   
   .p-popover-content {
     padding: 0;
   }
   
   .metrics-content {
-    padding: 1.5rem;
-    text-align: left; // Changed from center to left for better alignment
+    padding: 1.25rem;
     
     .metrics-header h4 {
       margin: 0 0 1rem 0;
       color: var(--p-text-color);
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: 600;
       display: flex;
       align-items: center;
@@ -222,73 +225,56 @@
       }
     }
     
-    // Total Transaction Time Section
-    .total-time-section {
+    // Total time row
+    .total-time {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-bottom: 1rem;
-      padding: 0.75rem;
-      background: var(--p-content-background);
-      border: 1px solid var(--p-content-border-color);
-      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      background: var(--p-highlight-bg);
+      border-radius: 4px;
+      font-size: 0.85rem;
       
-      .total-time-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        
-        .total-time-label {
-          font-weight: 600;
-          color: var(--p-text-color);
-          font-size: 0.95rem;
-        }
-        
-        .total-time-value {
-          font-weight: 700;
-          color: var(--p-primary-color);
-          font-size: 1.1rem;
-          background: linear-gradient(135deg, var(--p-primary-color), var(--p-primary-600));
-          background-clip: text;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
+      .total-time-label {
+        font-weight: 500;
+        color: var(--p-text-color);
+      }
+      
+      .total-time-value {
+        font-weight: 700;
+        color: var(--p-primary-color);
       }
     }
     
-    .metrics-chart {
-      margin-bottom: 1.5rem;
+    // Chart container - center aligned
+    .chart-container {
       display: flex;
       justify-content: center;
+      margin-bottom: 1rem;
     }
     
-    // Custom Legend Styles
-    .custom-legend {
-      margin-bottom: 1.5rem;
+    // Legend list
+    .legend-list {
+      margin-bottom: 1rem;
       
-      .legend-top-items {
-        margin-bottom: 0.75rem;
-      }
-      
-      .legend-scrollable {
-        .legend-scroll-header {
-          font-size: 0.85rem;
-          font-weight: 600;
-          color: var(--p-text-muted-color);
-          margin-bottom: 0.5rem;
-          padding-bottom: 0.25rem;
-          border-bottom: 1px solid var(--p-content-border-color);
-        }
+      .legend-items {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
         
-        .legend-remaining-items {
-          max-height: 120px;
+        // Add scroll for more than 3 items
+        &.scrollable {
+          max-height: 90px;
           overflow-y: auto;
           padding-right: 0.25rem;
           
-          // Custom scrollbar
           &::-webkit-scrollbar {
             width: 4px;
           }
           
           &::-webkit-scrollbar-track {
-            background: var(--p-content-background);
+            background: var(--p-surface-200);
             border-radius: 2px;
           }
           
@@ -307,98 +293,90 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        padding: 0.35rem 0;
-        font-size: 0.875rem;
+        padding: 0.25rem 0;
+        font-size: 0.8rem; // Small text as requested
         
-        .legend-color {
-          width: 12px;
-          height: 12px;
+        .legend-dot {
+          width: 8px;
+          height: 8px;
           border-radius: 50%;
           flex-shrink: 0;
-          border: 1px solid rgba(0, 0, 0, 0.1);
         }
         
-        .legend-label {
+        .legend-text {
           flex: 1;
-          color: var(--p-text-color); // Fixed light mode visibility
+          color: var(--p-text-color);
           font-weight: 500;
-          word-break: break-word;
+          word-wrap: break-word; // Handle long text
+          overflow-wrap: break-word;
+          line-height: 1.2;
         }
         
-        .legend-value {
+        .legend-percent {
           font-weight: 600;
           color: var(--p-text-muted-color);
-          font-size: 0.8rem;
+          min-width: 35px;
           text-align: right;
-          min-width: 60px;
         }
       }
     }
     
-    .metrics-summary {
+    // Summary stats - horizontal layout
+    .summary-stats {
       display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
+      justify-content: space-between;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--p-surface-border);
       
-      .metric-item {
+      .stat {
         display: flex;
-        justify-content: space-between;
+        flex-direction: column;
         align-items: center;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid var(--p-content-border-color);
+        gap: 0.25rem;
+        font-size: 0.8rem;
         
-        &:last-child {
-          border-bottom: none;
-        }
-        
-        .metric-label {
+        span:first-child {
+          color: var(--p-text-muted-color);
           font-weight: 500;
-          color: var(--p-text-color); // Fixed light mode visibility
         }
         
-        .metric-value {
-          font-weight: 600;
+        span:last-child {
           color: var(--p-primary-color);
-          font-size: 1.1rem;
+          font-weight: 700;
+          font-size: 0.9rem;
         }
       }
     }
 
     .no-metrics {
       color: var(--p-text-muted-color);
-      font-style: italic;
-      padding: 2rem;
       text-align: center;
+      padding: 2rem 1rem;
       
       i {
-        font-size: 2rem;
-        margin-bottom: 1rem;
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
         display: block;
-        color: var(--p-text-muted-color);
+      }
+      
+      p {
+        margin: 0;
+        font-size: 0.9rem;
       }
     }
   }
 }
 
-// Dark mode enhancements
+// Dark mode
 :host-context(.app-dark) ::ng-deep .metrics-popover {
   .metrics-content {
-    .total-time-section {
+    .total-time {
       background: rgba(255, 255, 255, 0.05);
-      border-color: rgba(255, 255, 255, 0.1);
     }
     
-    .custom-legend {
-      .legend-item {
-        .legend-color {
-          border-color: rgba(255, 255, 255, 0.2);
-        }
-      }
-      
-      .legend-scrollable .legend-remaining-items {
-        &::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
-        }
+    .legend-list .legend-items.scrollable {
+      &::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
       }
     }
   }
