@@ -100,23 +100,35 @@ export class TransformPipe implements PipeTransform {
 
     // Existing concatenation logic (unchanged)
     if (transformStr.includes('+')) {
-      const fieldPaths = transformStr.match(/([a-zA-Z0-9\._-]+)/g) || [];
-      let evaluatedStr = transformStr;
-      
-      fieldPaths.forEach(path => {
-        if (!path.startsWith("'") && !path.startsWith('"')) {
-          const fieldValue = get(context, path, '');
-          evaluatedStr = evaluatedStr.replace(path, `'${fieldValue}'`);
+  try {
+    // Split by '+' and handle each part
+    const parts = transformStr.split('+').map(p => p.trim());
+    let result = '';
+
+    for (const part of parts) {
+      if (part.startsWith("'") && part.endsWith("'")) {
+        // Literal string like '.' or ','
+        result += part.slice(1, -1); // Remove quotes
+      } else if (part.startsWith('"') && part.endsWith('"')) {
+        // Double quoted literal string
+        result += part.slice(1, -1); // Remove quotes
+      } else {
+        // Field path - only process if it looks like a valid field path
+        if (part.includes('.') && part.length > 1) {
+          const fieldValue = get(context, part, '');
+          result += String(fieldValue);
+        } else {
+          // If it's not a valid field path, treat as literal
+          result += part;
         }
-      });
-      
-      try {
-        return new Function(`return ${evaluatedStr}`)();
-      } catch (e) {
-        console.error('Invalid concatenation transform:', transformStr, e);
-        return value;
       }
     }
+
+    return result;
+  } catch (e) {
+    console.error('Invalid concatenation transform:', transformStr, e);
+    return value;
+  }
     
     return value;
   }
