@@ -50,7 +50,7 @@ import { accordionAnimations } from '../animations/accordion.animations';
     ProgressBarModule, ChipModule, TagModule,
     TransactionToolbarComponent, StreamingToolbarComponent, BatchToolbarComponent, JiraToolbarComponent,
     LogViewerComponent, BatchViewerComponent, JiraViewerComponent, TransactionTimelineComponent, 
-    TableSkeletonComponent
+    TableSkeletonComponent, FilterValidationComponent
   ],
   templateUrl: './search-result.component.html',
   styleUrls: ['./search-result.component.scss']
@@ -95,6 +95,18 @@ export class SearchResultComponent {
     return this.search.type === 'transaction' && 
            this.search.transactionDetails && 
            this.search.transactionDetails.TRANSACTION_TIMELINE?.length > 0;
+  });
+
+  public areFiltersValidForStreaming = computed(() => {
+    // Only check for browse/error searches
+    if (this.searchInstance.type !== 'browse' && this.searchInstance.type !== 'error') {
+      return true; // Transaction searches don't need this validation
+    }
+
+    const filters = this.filtersService.filters();
+    return filters?.application?.length > 0 && 
+           filters?.environment && 
+           filters?.location;
   });
 
   // Derived Signals

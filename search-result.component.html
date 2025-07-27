@@ -130,13 +130,16 @@
             </div>
           </div>
         } @else if (shouldShowLogViewer()) {
-          <!-- Regular log viewer -->
-          <app-log-viewer #logViewer 
-            [searchInstance]="search" 
-            [visibleColumns]="finalVisibleColumns()"
-            (rowDrilldown)="onDrilldown($event)" 
-            (filteredCountChange)="updateFilteredCount($event)">
-          </app-log-viewer>
+          @if (!areGlobalFiltersValid()) {
+            <app-filter-validation></app-filter-validation>
+          } @else {
+            <app-log-viewer #logViewer 
+              [searchInstance]="search" 
+              [visibleColumns]="finalVisibleColumns()"
+              (rowDrilldown)="onDrilldown($event)" 
+              (filteredCountChange)="updateFilteredCount($event)">
+            </app-log-viewer>
+          }
         }
 
         <!-- Add Batch Viewer section in the result content wrapper, after the log viewer checks -->
