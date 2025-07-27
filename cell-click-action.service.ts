@@ -3,6 +3,7 @@ import { Injectable, signal, WritableSignal, inject } from '@angular/core';
 import { ColumnDefinition, TransactionDetailsResponse } from '../models/column-definition.model';
 import { SearchOrchestratorService } from '../../features/search/services/search-orchestrator.service';
 import { ActiveSearch } from './search.model';
+import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 
 export interface EditorTab {
   title: string;
@@ -31,6 +32,30 @@ export class CellClickActionService {
   
   private _editorConfig: WritableSignal<EditorConfig | null> = signal(null);
   private _isEditorVisible: WritableSignal<boolean> = signal(false);
+
+  // Configure fast-xml-parser options
+  private xmlParserOptions = {
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    textNodeName: '#text',
+    format: true,
+    indentBy: '  ', // 2 spaces
+    suppressEmptyNode: false,
+    preserveOrder: false
+  };
+
+  private xmlBuilderOptions = {
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    textNodeName: '#text',
+    format: true,
+    indentBy: '  ', // 2 spaces
+    suppressEmptyNode: false
+  };
+
+  private xmlParser = new XMLParser(this.xmlParserOptions);
+  private xmlBuilder = new XMLBuilder(this.xmlBuilderOptions);
+
 
   // Public readonly signals
   public readonly editorConfig = this._editorConfig.asReadonly();
@@ -203,7 +228,7 @@ export class CellClickActionService {
   }
 
   /**
-   * Format content based on the specified format using vkbeautify
+   * Format content based on the specified format using fast-xml-parser
    */
   private formatContent(content: any, format: string): string {
     if (content === null || content === undefined) {
@@ -213,13 +238,13 @@ export class CellClickActionService {
     try {
       if (typeof content === 'string') {
         if (format === 'xml') {
-          return this.formatXMLWithVkbeautify(content);
+          return this.formatXMLWithFastParser(content);
         }
         if (format === 'json') {
           // Try to parse and re-stringify if it's a JSON string
           try {
             const parsed = JSON.parse(content);
-            return vkbeautify.json(JSON.stringify(parsed));
+            return JSON.stringify(parsed, null, 2);
           } catch {
             // If not valid JSON, return as-is
             return content;
@@ -229,13 +254,12 @@ export class CellClickActionService {
       }
 
       if (format === 'json') {
-        const jsonString = JSON.stringify(content, null, 2);
-        return vkbeautify.json(jsonString);
+        return JSON.stringify(content, null, 2);
       }
 
       if (format === 'xml') {
-        const jsonString = JSON.stringify(content, null, 2);
-        return this.formatXMLWithVkbeautify(jsonString);
+        // Convert object to XML
+        return this.objectToXML(content);
       }
 
       return String(content);
@@ -246,32 +270,38 @@ export class CellClickActionService {
   }
 
   /**
-   * Format XML using vkbeautify with enhanced options
+   * Format XML using fast-xml-parser with validation and beautification
    */
-  private formatXMLWithVkbeautify(xml: string): string {
+  private formatXMLWithFastParser(xml: string): string {
     try {
       // Clean up the XML string first
       let cleanXml = xml.trim();
       
       // If it doesn't look like XML, try to detect if it's wrapped JSON
       if (!cleanXml.startsWith('<')) {
-        // Check if it's a JSON string containing XML
         try {
           const parsed = JSON.parse(cleanXml);
           if (typeof parsed === 'string' && parsed.trim().startsWith('<')) {
             cleanXml = parsed;
+          } else {
+            // If it's not XML in JSON, treat as regular content
+            return cleanXml;
           }
         } catch {
-          // Not JSON, proceed with original
+          // Not JSON, might be malformed XML
+          return cleanXml;
         }
       }
 
-      // Use vkbeautify to format XML with custom indentation
-      const formatted = vkbeautify.xml(cleanXml, 2); // 2 spaces indentation
+      // Parse XML to validate and get object representation
+      const parsedXml = this.xmlParser.parse(cleanXml);
       
-      return formatted;
+      // Convert back to formatted XML
+      const formattedXml = this.xmlBuilder.build(parsedXml);
+      
+      return formattedXml;
     } catch (error) {
-      console.warn('[CellClickActionService] vkbeautify XML formatting failed:', error);
+      console.warn('[CellClickActionService] fast-xml-parser formatting failed:', error);
       
       // Fallback to basic formatting
       return this.basicXMLFormat(xml);
@@ -279,7 +309,31 @@ export class CellClickActionService {
   }
 
   /**
-   * Fallback basic XML formatting if vkbeautify fails
+   * Convert JavaScript object to formatted XML
+   */
+  private objectToXML(obj: any): string {
+    try {
+      // If it's already a string, try to parse it first
+      if (typeof obj === 'string') {
+        try {
+          obj = JSON.parse(obj);
+        } catch {
+          // Not JSON, return as-is
+          return obj;
+        }
+      }
+
+      // Convert object to XML using fast-xml-parser
+      const xmlString = this.xmlBuilder.build(obj);
+      return xmlString;
+    } catch (error) {
+      console.warn('[CellClickActionService] Object to XML conversion failed:', error);
+      return JSON.stringify(obj, null, 2);
+    }
+  }
+
+  /**
+   * Fallback basic XML formatting if fast-xml-parser fails
    */
   private basicXMLFormat(xml: string): string {
     try {
