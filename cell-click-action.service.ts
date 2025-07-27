@@ -203,35 +203,86 @@ export class CellClickActionService {
   }
 
   /**
-   * Format content based on the specified format
+   * Format content based on the specified format using vkbeautify
    */
   private formatContent(content: any, format: string): string {
     if (content === null || content === undefined) {
       return 'No data available';
     }
 
-    if (typeof content === 'string') {
-      return format === 'xml' ? this.prettyXML(content) : content;
-    }
+    try {
+      if (typeof content === 'string') {
+        if (format === 'xml') {
+          return this.formatXMLWithVkbeautify(content);
+        }
+        if (format === 'json') {
+          // Try to parse and re-stringify if it's a JSON string
+          try {
+            const parsed = JSON.parse(content);
+            return vkbeautify.json(JSON.stringify(parsed));
+          } catch {
+            // If not valid JSON, return as-is
+            return content;
+          }
+        }
+        return content;
+      }
 
-    if (format === 'json') {
-      return JSON.stringify(content, null, 2);
-    }
+      if (format === 'json') {
+        const jsonString = JSON.stringify(content, null, 2);
+        return vkbeautify.json(jsonString);
+      }
 
-    if (format === 'xml') {
-      return this.prettyXML(JSON.stringify(content, null, 2));
-    }
+      if (format === 'xml') {
+        const jsonString = JSON.stringify(content, null, 2);
+        return this.formatXMLWithVkbeautify(jsonString);
+      }
 
-    return String(content);
+      return String(content);
+    } catch (error) {
+      console.warn('[CellClickActionService] Error formatting content:', error);
+      return String(content);
+    }
   }
 
   /**
-   * Pretty format XML string
+   * Format XML using vkbeautify with enhanced options
    */
-  private prettyXML(xml: string): string {
+  private formatXMLWithVkbeautify(xml: string): string {
     try {
-      // Use a simple library approach - vkbeautify or similar would be ideal
-      // For now, use a clean regex-based approach
+      // Clean up the XML string first
+      let cleanXml = xml.trim();
+      
+      // If it doesn't look like XML, try to detect if it's wrapped JSON
+      if (!cleanXml.startsWith('<')) {
+        // Check if it's a JSON string containing XML
+        try {
+          const parsed = JSON.parse(cleanXml);
+          if (typeof parsed === 'string' && parsed.trim().startsWith('<')) {
+            cleanXml = parsed;
+          }
+        } catch {
+          // Not JSON, proceed with original
+        }
+      }
+
+      // Use vkbeautify to format XML with custom indentation
+      const formatted = vkbeautify.xml(cleanXml, 2); // 2 spaces indentation
+      
+      return formatted;
+    } catch (error) {
+      console.warn('[CellClickActionService] vkbeautify XML formatting failed:', error);
+      
+      // Fallback to basic formatting
+      return this.basicXMLFormat(xml);
+    }
+  }
+
+  /**
+   * Fallback basic XML formatting if vkbeautify fails
+   */
+  private basicXMLFormat(xml: string): string {
+    try {
       return xml
         .replace(/></g, '>\n<')
         .replace(/^\s*\n/gm, '')
@@ -241,20 +292,18 @@ export class CellClickActionService {
           if (!trimmed) return '';
           
           let indent = 0;
-          // Count opening tags before this line
           for (let i = 0; i < index; i++) {
             const prevLine = arr[i].trim();
             if (prevLine.match(/<[^\/!][^>]*[^\/]>/) && !prevLine.includes('</')) {
-              indent += 4;
+              indent += 2;
             }
             if (prevLine.includes('</')) {
-              indent = Math.max(0, indent - 4);
+              indent = Math.max(0, indent - 2);
             }
           }
           
-          // Adjust for closing tags
           if (trimmed.startsWith('</')) {
-            indent = Math.max(0, indent - 4);
+            indent = Math.max(0, indent - 2);
           }
           
           return ' '.repeat(indent) + trimmed;
@@ -262,10 +311,11 @@ export class CellClickActionService {
         .filter(line => line.trim())
         .join('\n');
     } catch (error) {
-      console.warn('[CellClickActionService] XML formatting failed, returning original:', error);
+      console.warn('[CellClickActionService] Basic XML formatting failed:', error);
       return xml;
     }
   }
+
   /**
    * Show the editor dialog
    */
