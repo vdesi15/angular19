@@ -1,129 +1,249 @@
-// streaming-toolbar.component.scss - Professional layout with consistent heights
-:host {
-  --toolbar-height: 2.5rem; // ✨ Consistent with filter bar height
+:host ::ng-deep .streaming-toolbar {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+  min-height: 2.5rem;
+  padding: 0.5rem 1rem;
+  
+  .p-toolbar-group-left,
+  .p-toolbar-group-right {
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .p-toolbar-group-left {
+    flex: 1;
+  }
+
+  .p-toolbar-group-right {
+    gap: 0.5rem;
+
+    .p-multiselect {
+      min-width: 180px;
+      height: 2rem;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+      color: white;
+      font-size: 0.875rem;
+
+      .p-multiselect-label {
+        color: white;
+        font-size: 0.875rem;
+        padding: 0.25rem 0.75rem;
+      }
+
+      .p-multiselect-dropdown-icon {
+        color: white;
+      }
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      }
+
+      &:focus {
+        outline: 2px solid #60a5fa;
+        outline-offset: 2px;
+      }
+
+      &:disabled {
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(255, 255, 255, 0.5);
+        opacity: 0.6;
+      }
+    }
+
+    .p-button {
+      border-color: rgba(255, 255, 255, 0.3);
+      color: white;
+      height: 2rem;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
 }
 
-:host ::ng-deep {
-  .p-toolbar.streaming-toolbar {
-    border: none;
-    padding: 0.5rem 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    align-items: center; // ✨ Ensure vertical alignment
+// ================================
+// STREAMING FILTER STYLES
+// ================================
+
+:host ::ng-deep .streaming-filter-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  .p-button {
+    height: 2rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: translateY(-1px);
+    }
   }
-  
-  .p-toolbar-group-left, .p-toolbar-group-right {
+
+  .filter-chip {
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .p-chip-remove-icon {
+      color: white;
+    }
+  }
+}
+
+// ================================
+// FILTER POPOVER STYLES
+// ================================
+
+:host ::ng-deep .filter-popover {
+  .p-popover-content {
+    background: var(--p-content-background);
+    border: 1px solid var(--p-content-border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .filter-popover-header {
+    padding: 1rem 1.5rem 0.5rem;
+    color: var(--p-text-color);
+    font-size: 0.875rem;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    height: var(--toolbar-height); // ✨ Consistent height
+    border-bottom: 1px solid var(--p-content-border-color);
+    background: var(--p-content-background);
+
+    i {
+      color: var(--p-primary-color);
+    }
   }
 
-  // ✨ Ensure all interactive elements have the same height
-  .p-toolbar-group-left {
-    // Add Filter button styling
+  .filter-popover-content {
+    padding: 1.5rem;
+
+    .filter-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      min-width: 280px;
+
+      .p-floatlabel {
+        label {
+          color: var(--p-text-muted-color);
+          font-size: 0.875rem;
+        }
+      }
+
+      .p-dropdown,
+      .p-multiselect {
+        width: 100%;
+        background: var(--p-inputtext-background);
+        border-color: var(--p-inputtext-border-color);
+        color: var(--p-text-color);
+
+        &:hover {
+          border-color: var(--p-primary-color);
+        }
+
+        &:focus {
+          border-color: var(--p-primary-color);
+          box-shadow: 0 0 0 1px var(--p-primary-color);
+        }
+      }
+    }
+  }
+
+  .filter-popover-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.75rem 1.5rem;
+    border-top: 1px solid var(--p-content-border-color);
+    background: var(--p-surface-ground);
+
     .p-button {
-      height: var(--toolbar-height);
-      padding: 0 0.75rem;
+      height: 2rem;
+      padding: 0.25rem 1rem;
       font-size: 0.875rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      
-      .p-button-icon {
-        font-size: 0.875rem;
-      }
-    }
-    
-    // Filter chips styling
-    .filter-chip {
-      height: calc(var(--toolbar-height) - 0.25rem); // ✨ Slightly shorter for visual balance
-      display: flex;
-      align-items: center;
-      font-size: 0.8rem;
-      
-      .p-chip-text {
-        padding: 0.25rem 0.5rem;
-      }
-      
-      .p-chip-remove-icon {
-        margin-left: 0.25rem;
-        font-size: 0.75rem;
-      }
     }
   }
+}
 
-  // ✨ Right side controls with overlapping reset button
+// ================================
+// DARK MODE OVERRIDES
+// ================================
+
+:host-context(.app-dark) ::ng-deep .streaming-toolbar {
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+
   .p-toolbar-group-right {
-    position: relative;
-    
     .p-multiselect {
-      height: var(--toolbar-height);
-      min-width: 200px; // ✨ Ensure adequate width
-      
-      .p-multiselect-label {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.875rem;
-        line-height: 1.2;
-      }
-      
-      .p-multiselect-trigger {
-        width: 2rem;
-        height: var(--toolbar-height);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+      color: white;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.5);
       }
     }
-    
-    // ✨ Reset button positioned to overlap with multiselect right edge
-    .reset-button {
-      height: var(--toolbar-height);
-      width: 2.5rem;
-      margin-left: -0.5rem; // ✨ Overlap the multiselect edge
-      border-radius: 0 6px 6px 0; // ✨ Only round the right side
-      border-left: 1px solid var(--surface-d);
-      background: var(--surface-b);
-      z-index: 10;
-      
+
+    .p-button {
+      border-color: rgba(255, 255, 255, 0.3);
+      color: white;
+
       &:hover {
-        background: var(--surface-c);
-      }
-      
-      .p-button-icon {
-        font-size: 0.875rem;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.5);
       }
     }
   }
 }
 
-// ✨ Responsive behavior
-@media (max-width: 768px) {
-  :host ::ng-deep {
-    .p-toolbar.streaming-toolbar {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 0.75rem;
-      
-      .p-toolbar-group-left,
-      .p-toolbar-group-right {
-        width: 100%;
-        justify-content: space-between;
-      }
-      
-      .p-toolbar-group-right {
-        .p-multiselect {
-          flex: 1;
-          min-width: auto;
-        }
-        
-        .reset-button {
-          margin-left: 0.5rem;
-          border-radius: 6px;
-          border-left: none;
-        }
-      }
+:host-context(.app-dark) ::ng-deep .streaming-filter-container {
+  .filter-chip {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.2);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
     }
+  }
+}
+
+:host-context(.app-dark) ::ng-deep .filter-popover {
+  .filter-popover-header {
+    background: var(--p-surface-900);
+    border-color: var(--p-surface-700);
+  }
+
+  .filter-popover-footer {
+    background: var(--p-surface-900);
+    border-color: var(--p-surface-700);
   }
 }
