@@ -24,13 +24,15 @@
     <div class="filter-controls">
       <!-- Field Selector Dropdown -->
       <p-floatLabel>
-        <p-dropdown 
+        <p-multiselect 
           inputId="field-selector"
           [options]="filterableFields()" 
-          [(ngModel)]="selectedField" 
+          [ngModel]="selectedField()" 
+          (ngModelChange) = "onFieldSelected($event)"
           optionLabel="displayName" 
-          placeholder="Select a field"
+          placeholder=""
           [filter]="true"
+          [selectionLimit] = "1"
           styleClass="w-full"
           (onChange)="selectedValues.set([])">
         </p-dropdown>
